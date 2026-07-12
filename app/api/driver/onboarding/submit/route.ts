@@ -120,18 +120,13 @@ export async function POST() {
     // Record the submission as a verification_event.
     // The trigger from Slice 2 flips verification_status to 'submitted'.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Record the submission as a verification_event.
+    // The trigger from Slice 2 flips verification_status to 'submitted'.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: eventErr } = await (admin as any).from('verification_events').insert({
       driver_id: profile.id,
       event_type: 'submitted',
-      actor_user_id: user.id,
-      document_ids: [
-        submission.identity.idFrontDocumentId,
-        submission.identity.selfieDocumentId,
-        submission.licence.licenceFrontDocumentId,
-        submission.address.addressProofDocumentId,
-        ...(state.identity?.idBackDocumentId ? [state.identity.idBackDocumentId] : []),
-        ...(state.licence?.licenceBackDocumentId ? [state.licence.licenceBackDocumentId] : []),
-      ],
+      to_status: 'submitted',
     });
     if (eventErr) {
       return NextResponse.json(

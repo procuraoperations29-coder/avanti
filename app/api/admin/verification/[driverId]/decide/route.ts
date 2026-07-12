@@ -76,7 +76,7 @@ export async function POST(
           event_type: eventType,
           from_tier: fromTier,
           to_tier: body.tier ?? null,
-          actor_user_id: user.id,
+          reviewer_user_id: user.id,
           rationale: body.rationale,
         });
         if (error) throw new Error(`event insert failed: ${error.message}`);
