@@ -131,25 +131,32 @@ set search_path = public, auth
 as $$
 declare
   full_name_val text;
+  normalized_phone text;
 begin
   full_name_val := coalesce(
-    new.raw_user_meta_data ->> 'full_name',
-    split_part(coalesce(new.email, new.phone, ''), '@', 1),
+    nullif(new.raw_user_meta_data ->> 'full_name', ''),
+    nullif(split_part(coalesce(new.email, new.phone, ''), '@', 1), ''),
     'User'
   );
+
+  -- Normalise phone: ensure it starts with +
+  normalized_phone := case
+    when new.phone is null or new.phone = '' then null
+    when left(new.phone, 1) = '+' then new.phone
+    else '+' || new.phone
+  end;
 
   insert into public.users (id, email, phone, full_name, country_code, preferred_language)
   values (
     new.id,
     new.email,
-    new.phone,
+    normalized_phone,
     full_name_val,
     coalesce(new.raw_user_meta_data ->> 'country_code', 'NG'),
     coalesce(new.raw_user_meta_data ->> 'preferred_language', 'en')
   )
   on conflict (id) do nothing;
 
-  -- Initialise app_metadata with empty arrays so the JWT has stable shape
   update auth.users
      set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb)
        || jsonb_build_object(
