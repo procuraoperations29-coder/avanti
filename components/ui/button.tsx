@@ -1,42 +1,52 @@
-import { forwardRef } from 'react';
+import * as React from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/cn';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 focus-visible:ring-offset-paper',
+  cn(
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap',
+    'font-body text-sm font-medium leading-none',
+    'transition-colors focus-visible:outline-none',
+    'disabled:pointer-events-none disabled:opacity-50'
+  ),
   {
     variants: {
       variant: {
-        primary: 'bg-ink text-paper border border-ink hover:bg-ink-2 hover:-translate-y-px',
-        secondary: 'bg-transparent text-ink border border-line-strong hover:bg-paper-2 hover:-translate-y-px',
-        ghost: 'bg-transparent text-ink border border-transparent hover:bg-paper-2',
-        danger: 'bg-oxblood text-paper border border-oxblood hover:opacity-90 hover:-translate-y-px',
-        success: 'bg-green text-white border border-green hover:opacity-90 hover:-translate-y-px',
-        link: 'bg-transparent text-ink underline underline-offset-4 hover:text-ink-2',
+        default: 'border border-ink bg-ink text-paper hover:bg-ink-2',
+        secondary: 'border border-line-strong bg-paper-2 text-ink hover:bg-paper-3',
+        ghost: 'text-ink hover:bg-paper-2',
+        destructive: 'border border-oxblood bg-oxblood text-paper hover:bg-oxblood/90',
+        link: 'text-ink underline underline-offset-4 hover:text-ink-2',
       },
       size: {
-        sm: 'text-xs px-3 py-1.5',
-        md: 'text-sm px-4 py-2.5',
-        lg: 'text-base px-6 py-3',
+        default: 'h-10 px-4 py-2',
+        sm: 'h-8 px-3 text-xs',
+        lg: 'h-12 px-5 text-base',
+        icon: 'h-10 w-10',
       },
     },
-    defaultVariants: { variant: 'primary', size: 'md' },
+    defaultVariants: {
+      variant: 'default',
+      size: 'default',
+    },
   }
 );
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  asChild?: boolean;
+}
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button
-      ref={ref}
-      className={cn(buttonVariants({ variant, size }), className)}
-      {...props}
-    />
-  )
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button';
+    return (
+      <Comp className={cn(buttonVariants({ variant, size }), className)} ref={ref} {...props} />
+    );
+  }
 );
 Button.displayName = 'Button';
 
-export { buttonVariants };
+export { Button, buttonVariants };

@@ -1,67 +1,78 @@
 import type { Config } from 'tailwindcss';
+import tailwindcssAnimate from 'tailwindcss-animate';
 
+/**
+ * Avanti Tailwind config.
+ *
+ * Colours resolve from CSS variables in globals.css so light/dark modes
+ * can swap by changing variables — not rewriting classes.
+ */
 const config: Config = {
+  darkMode: ['class'],
   content: [
     './app/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './lib/**/*.{ts,tsx}',
   ],
   theme: {
+    container: {
+      center: true,
+      padding: '1rem',
+      screens: {
+        '2xl': '1400px',
+      },
+    },
     extend: {
       colors: {
         paper: {
-          DEFAULT: 'rgb(var(--paper) / <alpha-value>)',
-          2: 'rgb(var(--paper-2) / <alpha-value>)',
-          3: 'rgb(var(--paper-3) / <alpha-value>)',
+          DEFAULT: 'var(--paper)',
+          2: 'var(--paper-2)',
+          3: 'var(--paper-3)',
         },
         ink: {
-          DEFAULT: 'rgb(var(--ink) / <alpha-value>)',
-          2: 'rgb(var(--ink-2) / <alpha-value>)',
-          muted: 'rgb(var(--ink-muted) / <alpha-value>)',
-          faint: 'rgb(var(--ink-faint) / <alpha-value>)',
-        },
-        green: {
-          DEFAULT: 'rgb(var(--green) / <alpha-value>)',
-          soft: 'rgb(var(--green-soft) / <alpha-value>)',
+          DEFAULT: 'var(--ink)',
+          2: 'var(--ink-2)',
+          muted: 'var(--ink-muted)',
+          faint: 'var(--ink-faint)',
         },
         brass: {
-          DEFAULT: 'rgb(var(--brass) / <alpha-value>)',
-          soft: 'rgb(var(--brass-soft) / <alpha-value>)',
+          DEFAULT: 'var(--brass)',
+          soft: 'var(--brass-soft)',
+        },
+        green: {
+          DEFAULT: 'var(--green)',
+          soft: 'var(--green-soft)',
         },
         oxblood: {
-          DEFAULT: 'rgb(var(--oxblood) / <alpha-value>)',
-          soft: 'rgb(var(--oxblood-soft) / <alpha-value>)',
+          DEFAULT: 'var(--oxblood)',
         },
         line: {
-          DEFAULT: 'rgb(var(--line) / <alpha-value>)',
-          strong: 'rgb(var(--line-strong) / <alpha-value>)',
+          DEFAULT: 'var(--line)',
+          strong: 'var(--line-strong)',
         },
       },
       fontFamily: {
-        display: ['var(--font-display)', 'Georgia', 'serif'],
-        body: ['var(--font-body)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
-      },
-      letterSpacing: {
-        widest: '0.12em',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.35s ease-out',
-        'slide-up': 'slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1)',
+        display: ['var(--font-display)', 'ui-serif', 'Georgia', 'serif'],
+        body: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0', transform: 'translateY(4px)' },
-          '100%': { opacity: '1', transform: 'none' },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
         },
-        slideUp: {
-          '0%': { opacity: '0', transform: 'translateY(12px)' },
-          '100%': { opacity: '1', transform: 'none' },
+        'slide-up': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+      },
+      animation: {
+        'fade-in': 'fade-in 240ms ease-out',
+        'slide-up': 'slide-up 280ms ease-out',
       },
     },
   },
-  plugins: [],
+  plugins: [tailwindcssAnimate],
 };
 
 export default config;

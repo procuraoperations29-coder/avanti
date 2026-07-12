@@ -1,0 +1,16 @@
+This slice adds four packages. Run these from the project root:
+
+    pnpm add @radix-ui/react-dialog @radix-ui/react-avatar @radix-ui/react-dropdown-menu sonner
+    pnpm add -D tailwindcss-animate
+
+They compile into small, well-audited primitives — combined size ~30 KB gzip.
+
+Rationale:
+  @radix-ui/react-dialog        Dialog + Sheet + tooltip trigger primitives
+  @radix-ui/react-avatar        Avatar with fallback + image loading
+  @radix-ui/react-dropdown-menu Dropdown menu (used in TopNav user menu)
+  sonner                        Toast notifications, better UX than raw Radix
+  tailwindcss-animate           Tailwind plugin for animate-in / animate-out
+                                classes Radix components rely on
+
+Nothing else in this slice needs a new dep. Everything else is styling.

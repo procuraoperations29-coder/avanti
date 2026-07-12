@@ -1,78 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Avanti design tokens.
+ *
+ * The palette leans on an editorial/financial-newspaper feel: paper cream
+ * base, deep petrol navy ink, brass tier accents, credential green,
+ * oxblood for errors. Deliberately not the AI-cream/terracotta or
+ * black+acid-green defaults so many apps default to.
+ */
+
 @layer base {
   :root {
-    /* Palette — see Phase 2 §17.5 and prototype design plan.
-       Deliberately NOT the AI-cream/terracotta or black/acid-green defaults. */
-    --paper: 237 236 228;         /* #EDECE4 barely-warm neutral paper */
-    --paper-2: 229 227 217;       /* #E5E3D9 */
-    --paper-3: 223 220 209;       /* #DFDCD1 */
-    --ink: 18 37 61;              /* #12253D deep petrol navy */
-    --ink-2: 30 50 82;            /* #1E3252 */
-    --ink-muted: 74 90 114;       /* #4A5A72 */
-    --ink-faint: 122 134 152;     /* #7A8698 */
-    --green: 44 95 60;            /* #2C5F3C credential/passport-stamp green */
-    --green-soft: 229 235 225;    /* #E5EBE1 */
-    --brass: 166 124 60;          /* #A67C3C antique brass — tier badges */
-    --brass-soft: 239 231 213;    /* #EFE7D5 */
-    --oxblood: 122 38 38;         /* #7A2626 alert red, restrained */
-    --oxblood-soft: 241 221 221;  /* #F1DDDD */
-    --line: 205 201 188;          /* #CDC9BC */
-    --line-strong: 181 176 160;   /* #B5B0A0 */
+    /* Neutrals */
+    --paper: #EDECE4;        /* base background */
+    --paper-2: #F4F3EB;      /* cards, slightly lighter than paper */
+    --paper-3: #E3E2D9;      /* hover state, slightly darker */
 
-    /* Font faces are set via next/font (see app/layout.tsx) */
-  }
+    /* Ink */
+    --ink: #12253D;          /* primary text, deep petrol navy */
+    --ink-2: #0C1B2E;        /* darker for hover */
+    --ink-muted: #4A5568;    /* secondary text */
+    --ink-faint: #8B8D8F;    /* tertiary / placeholder */
 
-  * {
-    @apply border-line;
+    /* Accents */
+    --brass: #A67C3C;        /* tier badge, accent */
+    --brass-soft: #E8DBC1;   /* brass tinted background */
+
+    --green: #2C5F3C;        /* credential green, verification stamps */
+    --green-soft: #DDE8DE;   /* green tinted background */
+
+    --oxblood: #7C2D2D;      /* error red */
+
+    /* Lines */
+    --line: #D6D4CB;         /* subtle border */
+    --line-strong: #BDBBB1;  /* stronger border */
+
+    /* Fonts */
+    --font-display: 'Instrument Serif', serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
   }
 
   html {
+    font-family: var(--font-body);
+    color: var(--ink);
+    background: var(--paper);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-paper text-ink font-body;
-    font-feature-settings: 'rlig' 1, 'calt' 1;
+    background: var(--paper);
+    min-height: 100dvh;
   }
 
+  /* Sharp corners by default — no rounded pills or cards */
+  * {
+    border-radius: 0;
+  }
+
+  /* Selection uses ink */
   ::selection {
-    @apply bg-brass-soft text-ink;
+    background: var(--ink);
+    color: var(--paper);
   }
 
-  input:focus-visible,
-  textarea:focus-visible,
-  select:focus-visible,
-  button:focus-visible {
-    outline: 2px solid rgb(var(--ink));
-    outline-offset: 2px;
-  }
-}
-
-@layer components {
-  .section-label {
-    @apply font-mono uppercase text-ink-faint text-[0.7rem] tracking-widest font-medium;
-  }
-
-  .ledger-row {
-    @apply flex items-baseline gap-4 py-2.5 border-b border-line font-mono text-sm;
-  }
-
-  .ledger-key {
-    @apply text-ink-faint uppercase tracking-wider text-[0.72rem];
-    min-width: 180px;
-  }
-
-  @media (max-width: 640px) {
-    .ledger-key {
-      min-width: 130px;
-    }
-  }
-
-  .ledger-val {
-    @apply flex-1 text-ink;
+  /* Tighter type in mono */
+  .font-mono {
+    font-feature-settings: 'ss01', 'ss02', 'zero';
   }
 }

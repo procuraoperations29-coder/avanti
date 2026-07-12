@@ -1,9 +1,14 @@
 import { cn } from '@/lib/utils/cn';
 
 /**
- * The mono-typographic section label used throughout Avanti's UI.
- * Establishes hierarchy without headings; sets the "dossier" register.
+ * SectionLabel — small monospace uppercase label used above every
+ * section head. The editorial device that makes Avanti feel like a
+ * newspaper rather than a SaaS app.
+ *
+ *   <SectionLabel>Sign in</SectionLabel>
+ *   <h1>Welcome back.</h1>
  */
+
 export function SectionLabel({
   children,
   className,
@@ -13,10 +18,7 @@ export function SectionLabel({
 }) {
   return (
     <div
-      className={cn(
-        'font-mono uppercase text-ink-faint text-[0.7rem] tracking-widest font-medium',
-        className
-      )}
+      className={cn('font-mono text-xs uppercase tracking-wider text-ink-muted', className)}
     >
       {children}
     </div>

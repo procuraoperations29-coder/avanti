@@ -1319,6 +1319,8 @@ export type Database = {
           min_acceptable_tier:
             | Database["public"]["Enums"]["verification_tier"]
             | null
+          onboarding_state: Json
+          onboarding_submitted_at: string | null
           reliability_score: number
           service_radius_km: number | null
           suspended: boolean
@@ -1347,6 +1349,8 @@ export type Database = {
           min_acceptable_tier?:
             | Database["public"]["Enums"]["verification_tier"]
             | null
+          onboarding_state?: Json
+          onboarding_submitted_at?: string | null
           reliability_score?: number
           service_radius_km?: number | null
           suspended?: boolean
@@ -1375,6 +1379,8 @@ export type Database = {
           min_acceptable_tier?:
             | Database["public"]["Enums"]["verification_tier"]
             | null
+          onboarding_state?: Json
+          onboarding_submitted_at?: string | null
           reliability_score?: number
           service_radius_km?: number | null
           suspended?: boolean
