@@ -1,182 +1,163 @@
-# Slice 5 — Driver onboarding + admin verification
+# Slice 7 — Driver-side engagements
 
-25 files. Adds the 8-step driver onboarding wizard, document upload to
-Supabase Storage, and the admin verification queue with approve/reject/
-more-info decisioning.
+9 files. The operational half of the booking loop — drivers see incoming
+engagements, mark themselves en-route, check in, complete.
 
 ## Apply
 
-1. Extract into your project root:
-   ```
-   cd ~/Downloads
-   cp -r slice5/* ~/Desktop/Avanti/
-   ```
+```bash
+cd ~/Downloads
+cp -r slice7/* ~/Desktop/Avanti/
 
-2. Apply the new migration:
-   ```
-   cd ~/Desktop/Avanti
-   supabase db push
-   ```
-   Answer Y when it lists `20260812000000_onboarding_storage.sql`.
-   The migration creates the `driver-documents` Storage bucket and its
-   RLS policies, and adds two columns to `driver_profiles`.
+cd ~/Desktop/Avanti
+rm -rf .next
+pnpm dev
+```
 
-3. Regenerate types (picks up the new columns):
-   ```
-   supabase gen types typescript --linked > types/database.ts
-   ```
+No migration, no new dependencies. Just files landing on top of what's
+there.
 
-4. Typecheck:
-   ```
-   pnpm typecheck
-   ```
+Commit:
 
-5. Restart the dev server:
-   ```
-   pnpm dev
-   ```
+```bash
+git add .
+git commit -m "slice 7: driver-side engagement flow — activate, start, complete"
+git push
+```
 
-6. Confirm the Storage bucket exists in the Supabase dashboard →
-   **Storage** → left sidebar. You should see `driver-documents` listed as
-   a private bucket.
+## Test the loop
 
-7. Commit:
-   ```
-   git add .
-   git commit -m "slice 5: driver onboarding + admin verification"
-   git push
-   ```
+You'll need to be signed in as your **approved driver** account
+(phone `+2348105122729`, code `234567` if using Supabase test numbers,
+or whichever phone number matches the approved `driver_profiles` row).
 
-## Test end-to-end
+**Setup — if the driver account doesn't have `driver` role yet:**
 
-### As a driver
-
-- Sign up as a driver (or use your existing driver account) → lands at
-  `/driver/onboarding/pending`
-- Because the status is `not_started`, the page redirects to
-  `/driver/onboarding` (the wizard)
-- Walk through the 8 steps: Start → Identity → Licence → Address →
-  Background → Experience → Payout → Review
-- Upload real photos (or PDFs) at each document step; they appear as
-  thumbnails once uploaded
-- On Review, ensure all six checks are green
-- Submit — you land back on `/driver/onboarding/pending` showing "under
-  review"
-
-### As an admin
-
-To test this you need an account with the `admin_verifier` (or
-`super_admin`) role. Two ways to give yourself the role:
-
-**Option A — Supabase dashboard SQL editor:**
 ```sql
 insert into user_roles (user_id, role)
-values ('YOUR_USER_ID', 'admin_verifier');
+values ('757c87c6-06a5-4a87-b285-5764e36ae375', 'driver')
+on conflict do nothing;
+
+select fn_rebuild_user_claims('757c87c6-06a5-4a87-b285-5764e36ae375');
 ```
-Where `YOUR_USER_ID` is the uuid of one of your existing signed-up users
-(look in `auth.users`).
 
-**Option B — Sign up a fresh user with a different phone, then run the
-same SQL against that user's id.**
+Then sign out + sign back in as that driver so the JWT picks up the role.
 
-After the role is assigned, sign out and sign back in as that user —
-the JWT will now carry the admin_verifier role via the claim-shaping
-trigger.
+**Walk-through:**
 
-Then:
-- Visit `/admin` → module cards render, verification queue shows count
-- Click "Verification queue" → list of pending drivers
-- Click a driver → their submission with documents, spec sheet, and the
-  decision panel
-- Pick Approve + a tier + rationale ≥10 chars → submit
-- Driver's `verification_status` flips to `approved`, `verification_tier`
-  moves to the chosen tier (via the Slice 2 trigger), and an audit_logs
-  row is written (via serviceRoleWrite)
-- The driver, if signed in and refreshing `/driver/onboarding/pending`,
-  sees the approved state with their new tier
+1. Sign in as the driver → land at `/driver/onboarding/pending`, which
+   sees your `approved` status and (with the Slice 7 code in place)
+   the new driver home at `/driver` takes over.
+
+   Actually — `/driver/onboarding/pending` doesn't auto-redirect to
+   `/driver` yet. You'll need to type `/driver` directly in the URL bar.
+   (Cleaning that redirect up is a polish item.)
+
+2. `/driver` → the new dashboard renders with:
+   - Your portrait + tier badge (T2 or whatever you approved yourself at)
+   - "Now" section if there's an active engagement
+   - "Upcoming" section listing confirmed bookings
+   - "All engagements" link
+
+3. Click your existing confirmed engagement (the one from Slice 6
+   testing, or a fresh one).
+
+4. Engagement detail shows:
+   - Customer name
+   - Contact phone (tap-to-call)
+   - Timing, pickup, instructions
+   - Your payout amount (T2 sedan hourly ≈ ₦2,880/hr driver-side)
+   - **Action panel** with the next-step button
+
+5. Click **"I'm on my way"** → confirms → status flips to `activated`,
+   button changes to "I've started the engagement".
+
+6. Click **"I've started the engagement"** → status → `in_progress`,
+   button changes to "Complete engagement".
+
+7. Click **"Complete engagement"** → status → `completed`. Action panel
+   replaced with a completion notice: "Payout will process on the next
+   batch."
+
+## Info isolation verified
+
+Every driver-side query in this slice explicitly lists safe columns:
+`driver_payout_total`, `currency`, timing, pickup, instructions,
+customer name for pickup identification. **Never** selects
+`customer_price_total` or `commission_total`.
+
+Grep to confirm:
+
+```bash
+grep -r "customer_price_total\|commission_total" app/api/driver/ app/\(driver\)/
+```
+
+Should return nothing. If it does, that's a leak.
 
 ## What's in the zip
 
-**Migration (1)**
-- `supabase/migrations/20260812000000_onboarding_storage.sql`
+**Library (1)**
+- `lib/engagement/driver-transitions.ts` — state graph, action metadata,
+  human-readable labels
 
-**Library (3)**
-- `lib/onboarding/steps.ts` — step definitions
-- `lib/onboarding/schema.ts` — Zod schemas for draft + submission
-- `lib/storage/upload.ts` — server-side Storage upload + signed URL helper
+**API routes (3)**
+- `app/api/driver/engagements/route.ts` — GET list
+- `app/api/driver/engagements/[engagementId]/route.ts` — GET single
+- `app/api/driver/engagements/[engagementId]/transition/route.ts` — POST transition
 
-**API routes (5)**
-- `app/api/driver/onboarding/state/route.ts` — GET/PUT draft
-- `app/api/driver/onboarding/documents/route.ts` — POST/GET/DELETE docs
-- `app/api/driver/onboarding/submit/route.ts` — POST submit
-- `app/api/admin/verification/queue/route.ts` — GET queue (+ helper)
-- `app/api/admin/verification/[driverId]/decide/route.ts` — POST decision
+**Pages (3)**
+- `app/(driver)/driver/page.tsx` — home dashboard
+- `app/(driver)/driver/engagements/page.tsx` — grouped list
+- `app/(driver)/driver/engagements/[engagementId]/page.tsx` — detail with actions
 
-**Driver pages + components (11)**
-- `app/(driver)/onboarding/page.tsx` — wizard entry
-- `app/(driver)/onboarding/pending/page.tsx` — status-aware landing
-- `components/driver/document-upload.tsx` — reusable file picker
-- `components/driver/onboarding/wizard.tsx` — wizard shell
-- 8 step components under `components/driver/onboarding/steps/`
+**Components (2)**
+- `components/driver/engagement-card.tsx` — list row
+- `components/driver/engagement-actions.tsx` — the action buttons (client)
 
-**Admin pages + components (5)**
-- `app/(admin)/admin/page.tsx` — admin home with module cards
-- `app/(admin)/admin/verification/page.tsx` — queue list
-- `app/(admin)/admin/verification/[driverId]/page.tsx` — review + decide
-- `components/admin/decision-panel.tsx` — approve/reject/more-info form
+## Architecture notes
 
-## Key architectural notes
+**State transitions live in the API, guarded by DB triggers.** The
+API route validates the from-status, applies the update, and lets
+Slice 2's `fn_check_engagement_status_transition` trigger enforce
+legality at the DB level. If we ever accidentally allow an illegal
+transition, the DB rejects. Belt-and-suspenders.
 
-- **State model**: the wizard runs client-side. Draft state persists in
-  `driver_profiles.onboarding_state` (jsonb) via PUT to
-  `/api/driver/onboarding/state` on every step transition. Cross-device
-  continuation works because state lives on the server.
+**Timestamps.** `activated_at` and `completed_at` are dedicated
+columns; the mid-state `started_at` lives in `metadata` jsonb (no
+dedicated column in the schema). This is fine — the important
+timestamps are activation and completion.
 
-- **Document upload**: multipart POST → server computes SHA-256, uploads
-  to Supabase Storage with a path like
-  `driver-documents/{user_id}/{kind}/{timestamp}-{filename}`. RLS on
-  `storage.objects` restricts uploads to your own folder and reads to
-  yourself + admin_verifier/compliance/super_admin.
+**Service-role for cross-role reads.** Drivers need customer names for
+pickup identification. RLS on `public.users` restricts cross-user
+reads, so we use the service role client with a driver_id guard on the
+engagement query. The customer name is projected into the response —
+customer's email, other engagements, etc. never surface.
 
-- **Submit path**: `/api/driver/onboarding/submit` validates the entire
-  state with `submitReadinessSchema` (strict — every required field
-  must be present), writes profile fields, inserts `driver_payout_methods`,
-  and creates a `verification_events` row with `event_type='submitted'`.
-  The Slice 2 trigger `fn_apply_verification_event` flips
-  `verification_status` to `submitted`.
+## Deferred to later
 
-- **Decision path**: `/api/admin/verification/[driverId]/decide` goes
-  through `serviceRoleWrite` (Slice 3b) — re-verifies the actor has
-  `verification.decide`, requires ≥10-char rationale, writes an
-  audit_logs row alongside the verification_events insert. Tier moves
-  automatically via the trigger when `event_type='approved'` and
-  `to_tier` is set.
-
-- **No image compression yet**: client-side image compression (to keep
-  African mobile bandwidth in mind) is deferred. Add
-  `browser-image-compression` in a small follow-up.
-
-- **No admin decision-page image compression yet**: images render at
-  full storage resolution. For large PDFs / scans this is fine on
-  desktop-first admin usage.
-
-## Deferred to later slices
-
-- **Real background check integration** — the consent step only records
-  consent. Actual API call to a background-check provider (e.g. Prembly
-  or Youverify for Nigeria) is a separate integration slice.
-- **Push notifications on decision** — admin decision doesn't yet notify
-  the driver. The notification pipeline lands in Slice 7 (or wherever
-  notifications end up).
-- **Client-side image compression** — small, ship-later.
-- **Bulk decision + queue filtering** — admin queue is flat + FIFO;
-  filters / bulk actions later.
+- **Notifications** on new bookings — driver has to open the app
+- **Decline / cancel** from driver — requires refund flow (Slice 8)
+- **Substitution** when a driver can't make it
+- **Real-time location tracking** during activation → in_progress
+- **Rating flow** after completion — customer rates driver, driver
+  rates customer
+- **Dispute** raising
 
 ## What's next
 
-**Slice 6 — Customer booking.** Real pricing engine reading rate cards,
-search, driver profile dossier, book flow, contract generation,
-Paystack integration.
+Now that Slice 7 works, engagements can actually complete. That
+unlocks:
 
-Or a small follow-up: **image compression + notifications** as a polish
-slice.
+**Slice 8 — Payouts.** Real money out to drivers. WHT deduction,
+payout batching, invoicing, admin finance dashboard. Requires
+completed engagements (which we now have).
+
+**Polish slice.** Strip `as any` casts, wrap pages in `<PageShell>`,
+client-side image compression, fix booking form UX. Overdue.
+
+**Notifications slice.** Push + SMS on state changes. Small.
+Would tie the customer + driver + admin experiences together.
+
+Slice 8 is the biggest business unlock — makes drivers actually get
+paid. Notifications are highest-leverage UX improvement. Polish is
+technical debt cleanup.
