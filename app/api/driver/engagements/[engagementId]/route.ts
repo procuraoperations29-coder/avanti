@@ -5,7 +5,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * GET /api/driver/engagements/[engagementId]
  *
- * Single engagement, driver-safe columns.
+ * Single engagement, driver-safe columns only.
  */
 
 export async function GET(
@@ -35,16 +35,15 @@ export async function GET(
     const { data: engagement, error } = await (admin as any)
       .from('engagements')
       .select(
-        'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, special_instructions, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, metadata, customer_user_id'
+        'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, special_instructions, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, customer_user_id'
       )
       .eq('id', engagementId)
-      .eq('driver_id', profile.id) // guard: only their own
+      .eq('driver_id', profile.id)
       .single();
     if (error || !engagement) {
       return NextResponse.json({ error: 'engagement_not_found' }, { status: 404 });
     }
 
-    // Fetch customer name + phone for pickup identification
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: customer } = await (admin as any)
       .from('users')

@@ -8,11 +8,6 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  * Returns this driver's engagements with driver-safe columns only.
  * Never returns customer_price_total or commission_total — info
  * isolation invariant (Phase 3 D26).
- *
- * Uses service-role client because we need to join engagements with
- * users to fetch customer names, and standard RLS would block that
- * cross-role read. The query is guarded by driver_id = this driver's
- * driver_profiles.id.
  */
 
 export async function GET() {
@@ -24,7 +19,6 @@ export async function GET() {
 
     const admin = createServiceRoleClient();
 
-    // Fetch this user's driver_profiles.id
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: profErr } = await (admin as any)
       .from('driver_profiles')
@@ -42,7 +36,7 @@ export async function GET() {
         'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, customer_user_id'
       )
       .eq('driver_id', profile.id)
-      .in('status', ['confirmed', 'activated', 'in_progress', 'completed'])
+      .in('status', ['confirmed', 'active', 'completed'])
       .order('starts_at', { ascending: false })
       .limit(100);
     if (error) {
@@ -71,8 +65,6 @@ export async function GET() {
     const engagements = (data ?? []).map(
       (e: { customer_user_id: string } & Record<string, unknown>) => {
         const customer = customersById[e.customer_user_id];
-        // Strip customer_user_id from the response (driver doesn't need
-        // it exposed); replace with just the display name + phone.
         const { customer_user_id: _cust, ...rest } = e;
         return {
           ...rest,

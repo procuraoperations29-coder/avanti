@@ -7,13 +7,6 @@ import { getTransition, type DriverAction } from '@/lib/engagement/driver-transi
 /**
  * POST /api/driver/engagements/[engagementId]/transition
  * Body: { action: 'activate' | 'start' | 'complete' }
- *
- * Validates the transition is legal (right driver, right current status),
- * updates the engagement status + timestamp column, returns the new
- * state.
- *
- * If the DB status guard trigger (Slice 2) rejects, that surfaces here
- * as the update error.
  */
 
 const bodySchema = z.object({
@@ -56,7 +49,7 @@ export async function POST(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: engagement, error: engErr } = await (admin as any)
       .from('engagements')
-      .select('id, status, metadata')
+      .select('id, status')
       .eq('id', engagementId)
       .eq('driver_id', profile.id)
       .single();
@@ -81,10 +74,6 @@ export async function POST(
     const patch: Record<string, any> = { status: transition.to };
     if (transition.timestampCol) {
       patch[transition.timestampCol] = now;
-    }
-    if (transition.metadataStamp) {
-      const existingMeta = engagement.metadata ?? {};
-      patch.metadata = { ...existingMeta, [transition.metadataStamp]: now };
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

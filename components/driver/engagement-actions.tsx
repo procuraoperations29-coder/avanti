@@ -2,20 +2,18 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, MapPin, Play, Check } from 'lucide-react';
+import { Loader2, MapPin, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { nextActionFor, type DriverAction, type EngagementStatus } from '@/lib/engagement/driver-transitions';
 
 /**
- * DriverEngagementActions — the state-transition buttons on the
- * engagement detail page.
+ * DriverEngagementActions — the state-transition buttons.
  *
  * Given the current status, renders the next legal button:
- *   confirmed → "On my way" (activate)
- *   activated → "Start engagement" (start)
- *   in_progress → "Complete engagement" (complete)
- *   completed / cancelled → nothing
+ *   confirmed → "I'm on my way" (activate)
+ *   active    → "Complete engagement" (complete)
+ *   completed / cancelled / others → nothing (or terminal notice)
  */
 
 const ACTION_META: Record<
@@ -25,25 +23,23 @@ const ACTION_META: Record<
     Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
     confirmPrompt: string;
     successMessage: string;
+    helperText: string;
   }
 > = {
   activate: {
     label: "I'm on my way",
     Icon: MapPin,
     confirmPrompt: 'Confirm you\'re heading to the pickup?',
-    successMessage: 'Marked as en route',
-  },
-  start: {
-    label: "I've started the engagement",
-    Icon: Play,
-    confirmPrompt: 'Confirm the engagement has started?',
-    successMessage: 'Engagement started',
+    successMessage: 'Engagement is now active',
+    helperText:
+      "Tap when you're heading to the pickup or ready to start. The customer will be notified.",
   },
   complete: {
     label: 'Complete engagement',
     Icon: Check,
     confirmPrompt: 'Mark this engagement complete?',
     successMessage: 'Engagement completed',
+    helperText: 'When the engagement is finished, tap to mark it complete. Payout processes on the next batch.',
   },
 };
 
@@ -74,6 +70,18 @@ export function DriverEngagementActions({
       return (
         <div className="border border-oxblood/40 bg-paper-2 p-5">
           <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">Cancelled</div>
+        </div>
+      );
+    }
+    if (currentStatus === 'disputed' || currentStatus === 'partially_resolved') {
+      return (
+        <div className="border border-oxblood/40 bg-paper-2 p-5">
+          <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">
+            Under dispute
+          </div>
+          <p className="mt-2 font-body text-sm text-ink">
+            This engagement is in dispute review. Payout is on hold pending resolution.
+          </p>
         </div>
       );
     }
@@ -110,13 +118,7 @@ export function DriverEngagementActions({
     <div className="border border-ink bg-paper-2 p-6">
       <div className="mb-4">
         <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">Next</div>
-        <p className="mt-1 font-body text-sm text-ink">
-          {action === 'activate' &&
-            "When you're ready to head to the pickup, tap the button. The customer will be notified."}
-          {action === 'start' && 'When you meet the customer at pickup, tap to start the engagement.'}
-          {action === 'complete' &&
-            'When the engagement is finished, tap to mark it complete. Payout processes on the next batch.'}
-        </p>
+        <p className="mt-1 font-body text-sm text-ink">{meta.helperText}</p>
       </div>
       <Button onClick={submit} disabled={busy} size="lg" className="w-full">
         {busy ? (

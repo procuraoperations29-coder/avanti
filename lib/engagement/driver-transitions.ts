@@ -1,60 +1,59 @@
 /**
  * Driver-side engagement state transitions.
  *
- * The state machine (Phase 3 D24):
+ * The real engagement_status enum in the DB has:
+ *   draft, requested, accepted, declined, expired, contract_pending,
+ *   confirmed, active, reassigning_pre, reassigning_mid, completed,
+ *   cancelled, disputed, partially_resolved, refunded
  *
- *   confirmed  → activated       (driver marks: "on my way")
- *   activated  → in_progress     (driver marks: "started the engagement")
- *   in_progress → completed      (driver marks: "complete")
+ * The driver-facing lifecycle simplifies to two transitions:
  *
- * Every transition sets the appropriate timestamp column on the
- * engagement. The `activated_at` and `completed_at` columns exist on
- * the table; there's no dedicated `started_at` — we track that in
- * the `metadata` jsonb blob under `started_at`.
+ *   confirmed  → active     (driver marks: on my way / started)
+ *   active     → completed  (driver marks: complete)
+ *
+ * `activated_at` and `completed_at` are dedicated timestamp columns.
  *
  * Slice 2's status guard (fn_check_engagement_status_transition)
- * enforces the graph at the DB level so any drift here becomes a
- * caught constraint error, not silent corruption.
+ * enforces the graph at the DB level.
  */
 
-export type DriverAction = 'activate' | 'start' | 'complete';
+export type DriverAction = 'activate' | 'complete';
 export type EngagementStatus =
   | 'draft'
-  | 'pending_confirmation'
+  | 'requested'
+  | 'accepted'
+  | 'declined'
+  | 'expired'
+  | 'contract_pending'
   | 'confirmed'
-  | 'activated'
-  | 'in_progress'
+  | 'active'
+  | 'reassigning_pre'
+  | 'reassigning_mid'
   | 'completed'
   | 'cancelled'
-  | 'expired'
+  | 'disputed'
+  | 'partially_resolved'
   | 'refunded';
 
 interface TransitionSpec {
   from: EngagementStatus;
   to: EngagementStatus;
   timestampCol?: 'activated_at' | 'completed_at';
-  metadataStamp?: 'started_at';
   actionLabel: string;
 }
 
 const TRANSITIONS: Record<DriverAction, TransitionSpec> = {
   activate: {
     from: 'confirmed',
-    to: 'activated',
+    to: 'active',
     timestampCol: 'activated_at',
-    actionLabel: "On my way",
-  },
-  start: {
-    from: 'activated',
-    to: 'in_progress',
-    metadataStamp: 'started_at',
-    actionLabel: 'Start engagement',
+    actionLabel: "I'm on my way",
   },
   complete: {
-    from: 'in_progress',
+    from: 'active',
     to: 'completed',
     timestampCol: 'completed_at',
-    actionLabel: 'Complete',
+    actionLabel: 'Complete engagement',
   },
 };
 
@@ -64,24 +63,26 @@ export function getTransition(action: DriverAction): TransitionSpec {
 
 export function nextActionFor(status: EngagementStatus): DriverAction | null {
   if (status === 'confirmed') return 'activate';
-  if (status === 'activated') return 'start';
-  if (status === 'in_progress') return 'complete';
+  if (status === 'active') return 'complete';
   return null;
 }
 
-/**
- * Human-readable label for a status, used across driver views.
- */
 export function statusLabel(status: EngagementStatus): string {
   const map: Record<EngagementStatus, string> = {
     draft: 'Draft',
-    pending_confirmation: 'Awaiting payment',
+    requested: 'Requested',
+    accepted: 'Accepted',
+    declined: 'Declined',
+    expired: 'Expired',
+    contract_pending: 'Contract pending',
     confirmed: 'Confirmed',
-    activated: 'En route',
-    in_progress: 'In progress',
+    active: 'Active',
+    reassigning_pre: 'Reassigning',
+    reassigning_mid: 'Reassigning mid-engagement',
     completed: 'Completed',
     cancelled: 'Cancelled',
-    expired: 'Expired',
+    disputed: 'Disputed',
+    partially_resolved: 'Partially resolved',
     refunded: 'Refunded',
   };
   return map[status] ?? status;

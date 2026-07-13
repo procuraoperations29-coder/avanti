@@ -11,15 +11,6 @@ import { DriverEngagementCard } from '@/components/driver/engagement-card';
 import { statusLabel, type EngagementStatus } from '@/lib/engagement/driver-transitions';
 import { SignOutButton } from '@/app/(customer)/sign-out-button';
 
-/**
- * Driver home. Highlights whatever needs attention now — an active
- * engagement in flight, or the next upcoming one. Below that, recent
- * history and a link to the full list.
- *
- * Info-isolated: only driver_payout_total ever shown, never customer's
- * price or Avanti commission.
- */
-
 function initialsOf(name: string): string {
   return name
     .split(/\s+/)
@@ -40,7 +31,6 @@ export default async function DriverHomePage() {
 
   const admin = createServiceRoleClient();
 
-  // Load driver profile — need id + verification status
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (admin as any)
     .from('driver_profiles')
@@ -48,7 +38,6 @@ export default async function DriverHomePage() {
     .eq('user_id', user.id)
     .single();
 
-  // If not yet approved, route them back to onboarding/pending
   if (!profile || profile.verification_status !== 'approved') {
     redirect('/driver/onboarding/pending');
   }
@@ -61,7 +50,7 @@ export default async function DriverHomePage() {
       'id, engagement_type, status, starts_at, driver_payout_total, currency, customer_user_id'
     )
     .eq('driver_id', profile.id)
-    .in('status', ['activated', 'in_progress'])
+    .eq('status', 'active')
     .order('starts_at', { ascending: true })
     .limit(1);
 
@@ -76,7 +65,6 @@ export default async function DriverHomePage() {
     .order('starts_at', { ascending: true })
     .limit(10);
 
-  // Batch-look-up customer names
   const allIds = [
     ...(activeRows ?? []),
     ...(upcomingRows ?? []),
@@ -117,7 +105,6 @@ export default async function DriverHomePage() {
         <SignOutButton />
       </div>
 
-      {/* Verification badge line */}
       <div className="mb-8 flex items-center gap-3">
         <TierBadge tier={profile.verification_tier as TierLevel} label="long" />
         <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">
@@ -125,7 +112,6 @@ export default async function DriverHomePage() {
         </span>
       </div>
 
-      {/* Active engagement — big card */}
       {active && (
         <div className="mb-8">
           <SectionLabel>Now</SectionLabel>
@@ -167,7 +153,6 @@ export default async function DriverHomePage() {
         </div>
       )}
 
-      {/* Upcoming */}
       <div className="mb-8">
         <div className="mb-3 flex items-baseline justify-between">
           <SectionLabel>Upcoming</SectionLabel>
@@ -215,7 +200,6 @@ export default async function DriverHomePage() {
         )}
       </div>
 
-      {/* Link to full list */}
       <Link
         href="/driver/engagements"
         className="flex items-center justify-between border border-line bg-paper-2 px-4 py-3 font-body text-sm text-ink transition-colors hover:bg-paper-3"

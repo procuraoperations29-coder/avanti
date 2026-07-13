@@ -8,13 +8,6 @@ import { EmptyState } from '@/components/avanti/empty-state';
 import { DriverEngagementCard } from '@/components/driver/engagement-card';
 import type { EngagementStatus } from '@/lib/engagement/driver-transitions';
 
-/**
- * All engagements — grouped by status band.
- *   Active (activated + in_progress)
- *   Upcoming (confirmed, future)
- *   Past (completed)
- */
-
 export default async function DriverEngagementsListPage() {
   const user = await getAuthUser();
   if (!user) redirect('/sign-in');
@@ -38,13 +31,12 @@ export default async function DriverEngagementsListPage() {
       'id, engagement_type, status, starts_at, driver_payout_total, currency, customer_user_id'
     )
     .eq('driver_id', profile.id)
-    .in('status', ['confirmed', 'activated', 'in_progress', 'completed'])
+    .in('status', ['confirmed', 'active', 'completed', 'cancelled'])
     .order('starts_at', { ascending: false })
     .limit(200);
 
   const items = rows ?? [];
 
-  // Customer names in batch
   const uniqueIds = Array.from(
     new Set(items.map((e: { customer_user_id: string }) => e.customer_user_id))
   );
@@ -60,11 +52,11 @@ export default async function DriverEngagementsListPage() {
     );
   }
 
-  const active = items.filter((e: { status: string }) =>
-    ['activated', 'in_progress'].includes(e.status)
-  );
+  const active = items.filter((e: { status: string }) => e.status === 'active');
   const upcoming = items.filter((e: { status: string }) => e.status === 'confirmed');
-  const past = items.filter((e: { status: string }) => e.status === 'completed');
+  const past = items.filter((e: { status: string }) =>
+    ['completed', 'cancelled'].includes(e.status)
+  );
 
   const renderRow = (e: {
     id: string;

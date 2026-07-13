@@ -38,7 +38,7 @@ export default async function DriverEngagementDetailPage({
   const { data: engagement } = await (admin as any)
     .from('engagements')
     .select(
-      'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, special_instructions, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, metadata, customer_user_id'
+      'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, special_instructions, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, customer_user_id'
     )
     .eq('id', engagementId)
     .eq('driver_id', profile.id)
@@ -79,7 +79,7 @@ export default async function DriverEngagementDetailPage({
         </div>
       </div>
 
-      {/* Actions — the primary UX */}
+      {/* Actions */}
       <div className="mb-8">
         <DriverEngagementActions
           engagementId={engagementId}
@@ -144,16 +144,6 @@ export default async function DriverEngagementDetailPage({
               variant="mono"
             />
           )}
-          {engagement.metadata?.started_at && (
-            <SpecRow
-              label="Started at"
-              value={new Date(engagement.metadata.started_at).toLocaleTimeString('en-GB', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-              variant="mono"
-            />
-          )}
           {engagement.completed_at && (
             <SpecRow
               label="Completed at"
@@ -189,7 +179,7 @@ export default async function DriverEngagementDetailPage({
         </div>
       )}
 
-      {/* Payout — DRIVER SIDE ONLY. Never shows customer_price or commission. */}
+      {/* Payout — DRIVER SIDE ONLY */}
       <div className="border border-line bg-paper-2 p-5">
         <SectionLabel>Your payout</SectionLabel>
         <div className="mt-3 font-display text-3xl leading-none text-ink">
