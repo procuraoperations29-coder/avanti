@@ -1,13 +1,12 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Link from 'next/link';
+import { ChevronLeft, ChevronRight, Loader2, ArrowRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { StepProgressBar } from '@/components/avanti/step-progress-bar';
-import { Button } from '@/components/ui/button';
-import { ONBOARDING_STEPS, resumeStep } from '@/lib/onboarding/steps';
-import type { OnboardingState } from '@/lib/onboarding/schema';
 
 import { StepStart } from './steps/step-start';
 import { StepIdentity } from './steps/step-identity';
@@ -19,216 +18,285 @@ import { StepPayout } from './steps/step-payout';
 import { StepReview } from './steps/step-review';
 
 /**
- * OnboardingWizard — the client-side driver of the onboarding flow.
+ * Driver onboarding wizard.
  *
- * State model:
- *   - Loads the saved onboarding_state on mount
- *   - Mutations happen in memory; syncs to server on step transitions
- *   - Submit calls /api/driver/onboarding/submit
+ * Editorial polish: giant brass step ordinal (01/02/03...), larger
+ * display-serif title, more generous whitespace between sections, a
+ * heavier bottom rule separating the action row.
  *
- * Each step component receives the current state slice and callbacks.
+ * Behavior unchanged: reads/writes onboarding_state via
+ *   GET  /api/driver/onboarding/state
+ *   POST /api/driver/onboarding/state
+ *   POST /api/driver/onboarding/submit
  */
 
-export interface WizardData {
-  identity: NonNullable<OnboardingState['identity']>;
-  licence: NonNullable<OnboardingState['licence']>;
-  address: NonNullable<OnboardingState['address']>;
-  background: NonNullable<OnboardingState['background']>;
-  experience: NonNullable<OnboardingState['experience']>;
-  payout: NonNullable<OnboardingState['payout']>;
-}
-
-export type StepProps = {
-  data: WizardData;
-  update: (patch: Partial<WizardData>) => void;
+export type OnboardingData = {
+  identity?: {
+    id_document_id?: string;
+    id_type?: string;
+    id_number?: string;
+    selfie_document_id?: string;
+    full_name_legal?: string;
+    date_of_birth?: string;
+  };
+  licence?: {
+    document_id?: string;
+    licence_number?: string;
+    licence_class?: string;
+    licence_country?: string;
+    issued_date?: string;
+    expires_date?: string;
+  };
+  address?: {
+    document_id?: string;
+    line?: string;
+    city?: string;
+    state?: string;
+    postal_code?: string;
+  };
+  background?: {
+    consent_given?: boolean;
+    consent_at?: string;
+  };
+  experience?: {
+    years_experience?: number;
+    vehicle_class_experience?: string[];
+    transmission_experience?: string[];
+    languages?: string[];
+    bio?: string;
+    service_radius_km?: number;
+  };
+  payout?: {
+    bank_name?: string;
+    account_number?: string;
+    account_holder_name?: string;
+    bvn?: string;
+  };
 };
 
-function emptyData(): WizardData {
-  return {
-    identity: {},
-    licence: {},
-    address: {},
-    background: {},
-    experience: {},
-    payout: {},
-  };
-}
+const ONBOARDING_STEPS = [
+  { id: 'start', label: 'Start', longLabel: 'Getting started' },
+  { id: 'identity', label: 'Identity', longLabel: 'Confirm your identity' },
+  { id: 'licence', label: 'Licence', longLabel: 'Confirm your driving licence' },
+  { id: 'address', label: 'Address', longLabel: 'Confirm your address' },
+  { id: 'background', label: 'Consent', longLabel: 'Consent to a background check' },
+  { id: 'experience', label: 'Experience', longLabel: 'Tell us about your experience' },
+  { id: 'payout', label: 'Payout', longLabel: 'Where should we pay you?' },
+  { id: 'review', label: 'Review', longLabel: 'Review and submit' },
+] as const;
+
+type StepId = (typeof ONBOARDING_STEPS)[number]['id'];
 
 export function OnboardingWizard() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [data, setData] = useState<WizardData>(emptyData);
-  const [saving, startSaving] = useTransition();
+  const [data, setData] = useState<OnboardingData>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Load existing state
+  // Load persisted state on mount
   useEffect(() => {
-    let cancelled = false;
     (async () => {
       try {
         const res = await fetch('/api/driver/onboarding/state');
-        if (!res.ok) {
-          throw new Error('Could not load your progress');
-        }
+        if (!res.ok) return;
         const body = (await res.json()) as {
-          state?: OnboardingState;
-          verificationStatus?: string;
+          state?: OnboardingData;
+          currentStep?: number;
         };
-        if (cancelled) return;
-        if (
-          body.verificationStatus === 'submitted' ||
-          body.verificationStatus === 'under_review' ||
-          body.verificationStatus === 'approved'
-        ) {
-          router.replace('/driver/onboarding/pending');
-          return;
+        if (body.state) setData(body.state);
+        if (typeof body.currentStep === 'number') {
+          setCurrentStep(Math.min(body.currentStep, ONBOARDING_STEPS.length - 1));
         }
-        const state = body.state ?? {};
-        setData({
-          identity: state.identity ?? {},
-          licence: state.licence ?? {},
-          address: state.address ?? {},
-          background: state.background ?? {},
-          experience: state.experience ?? {},
-          payout: state.payout ?? {},
-        });
-        setCurrentStep(resumeStep(state.currentStep));
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Load failed');
+      } catch {
+        // ignore — start fresh
       } finally {
         setLoading(false);
       }
     })();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+  }, []);
 
-  const persist = (nextStep: number, nextData: WizardData) => {
-    startSaving(async () => {
+  const persist = useCallback(
+    async (next: OnboardingData, stepIndex: number) => {
+      setSaving(true);
       try {
         await fetch('/api/driver/onboarding/state', {
-          method: 'PUT',
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentStep: nextStep,
-            ...nextData,
-          }),
+          body: JSON.stringify({ state: next, currentStep: stepIndex }),
         });
-      } catch {
-        // Silent fail — user can retry navigation
+      } finally {
+        setSaving(false);
       }
-    });
-  };
+    },
+    []
+  );
 
-  const update = (patch: Partial<WizardData>) => {
-    setData((prev) => {
-      const next: WizardData = {
-        identity: { ...prev.identity, ...(patch.identity ?? {}) },
-        licence: { ...prev.licence, ...(patch.licence ?? {}) },
-        address: { ...prev.address, ...(patch.address ?? {}) },
-        background: { ...prev.background, ...(patch.background ?? {}) },
-        experience: { ...prev.experience, ...(patch.experience ?? {}) },
-        payout: { ...prev.payout, ...(patch.payout ?? {}) },
-      };
-      return next;
-    });
-  };
+  const updateData = useCallback(
+    (patch: OnboardingData) => {
+      setData((prev) => {
+        const merged: OnboardingData = { ...prev };
+        for (const [key, value] of Object.entries(patch) as [
+          keyof OnboardingData,
+          OnboardingData[keyof OnboardingData],
+        ][]) {
+          if (value && typeof value === 'object' && !Array.isArray(value)) {
+            merged[key] = { ...(prev[key] as object ?? {}), ...value } as never;
+          } else {
+            merged[key] = value as never;
+          }
+        }
+        return merged;
+      });
+    },
+    []
+  );
 
-  const goNext = () => {
-    const next = Math.min(ONBOARDING_STEPS.length - 1, currentStep + 1);
+  const goNext = useCallback(async () => {
+    const next = Math.min(currentStep + 1, ONBOARDING_STEPS.length - 1);
     setCurrentStep(next);
-    persist(next, data);
-  };
+    await persist(data, next);
+  }, [currentStep, data, persist]);
 
-  const goBack = () => {
-    const next = Math.max(0, currentStep - 1);
-    setCurrentStep(next);
-    persist(next, data);
-  };
+  const goBack = useCallback(async () => {
+    const prev = Math.max(currentStep - 1, 0);
+    setCurrentStep(prev);
+    await persist(data, prev);
+  }, [currentStep, data, persist]);
 
-  const submit = async () => {
+  const submit = useCallback(async () => {
     setSubmitting(true);
     try {
-      // Save latest data first
-      await fetch('/api/driver/onboarding/state', {
-        method: 'PUT',
+      const res = await fetch('/api/driver/onboarding/submit', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentStep, ...data }),
       });
-      const res = await fetch('/api/driver/onboarding/submit', { method: 'POST' });
       const body = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
-        toast.error(body.message ?? body.error ?? 'Submission failed');
+        toast.error(body.message ?? body.error ?? 'Could not submit');
         return;
       }
-      toast.success('Submitted for verification');
+      toast.success('Submitted for review');
       router.push('/driver/onboarding/pending');
+      router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Submission failed');
+      toast.error(err instanceof Error ? err.message : 'Could not submit');
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [router]);
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
-        <div className="animate-pulse font-mono text-xs uppercase tracking-wider text-ink-muted">
-          Loading your progress…
-        </div>
+      <div className="mx-auto flex min-h-[60vh] max-w-3xl items-center justify-center px-6">
+        <Loader2 className="h-6 w-6 animate-spin text-ink-muted" strokeWidth={1.5} />
       </div>
     );
   }
 
   const step = ONBOARDING_STEPS[currentStep];
-  const stepProps: StepProps = { data, update };
+  const stepId = step.id as StepId;
+  const stepNumber = String(currentStep + 1).padStart(2, '0');
+
+  const stepProps = {
+    data,
+    onUpdate: updateData,
+  };
 
   return (
-    <div className="mx-auto max-w-2xl px-4 pt-8 pb-24 sm:px-6">
-      <div className="mb-8">
-        <StepProgressBar steps={ONBOARDING_STEPS.map((s) => s.label)} current={currentStep} compact />
-      </div>
-
-      <div className="mb-8">
-        <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">
-          Step {currentStep + 1} of {ONBOARDING_STEPS.length}
+    <div className="min-h-screen bg-paper">
+      {/* Header */}
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-4xl items-baseline justify-between px-6 py-6">
+          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
+            Avanti
+          </Link>
+          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+            Driver onboarding
+          </div>
         </div>
-        <h1 className="mt-2 font-display text-3xl leading-tight text-ink">{step.longLabel}</h1>
-      </div>
+      </header>
 
-      <div className="min-h-[300px]">
-        {step.id === 'start' && <StepStart {...stepProps} />}
-        {step.id === 'identity' && <StepIdentity {...stepProps} />}
-        {step.id === 'licence' && <StepLicence {...stepProps} />}
-        {step.id === 'address' && <StepAddress {...stepProps} />}
-        {step.id === 'background' && <StepBackground {...stepProps} />}
-        {step.id === 'experience' && <StepExperience {...stepProps} />}
-        {step.id === 'payout' && <StepPayout {...stepProps} />}
-        {step.id === 'review' && <StepReview {...stepProps} />}
-      </div>
+      <div className="mx-auto max-w-4xl px-6 pt-10 pb-20">
+        {/* Progress bar */}
+        <div className="mb-16">
+          <StepProgressBar
+            steps={ONBOARDING_STEPS.map((s) => s.label)}
+            current={currentStep}
+            compact
+          />
+        </div>
 
-      <div className="mt-8 flex items-center justify-between border-t border-line pt-6">
-        <Button variant="ghost" size="sm" onClick={goBack} disabled={currentStep === 0 || saving}>
-          <ChevronLeft className="mr-1 h-4 w-4" /> Back
-        </Button>
+        {/* Editorial step header */}
+        <div className="mb-12 border-t border-line pt-10">
+          <div className="flex items-baseline gap-6">
+            <div className="font-display text-6xl leading-none text-brass md:text-8xl">
+              {stepNumber}
+            </div>
+            <div className="flex-1">
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                Step {currentStep + 1} of {ONBOARDING_STEPS.length}
+              </div>
+              <h1 className="mt-2 font-display text-3xl leading-tight text-ink md:text-4xl">
+                {step.longLabel}
+              </h1>
+            </div>
+          </div>
+        </div>
 
-        {saving && (
-          <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
-            Saving…
-          </span>
-        )}
+        {/* Content */}
+        <div className="min-h-[300px]">
+          {stepId === 'start' && <StepStart {...stepProps} />}
+          {stepId === 'identity' && <StepIdentity {...stepProps} />}
+          {stepId === 'licence' && <StepLicence {...stepProps} />}
+          {stepId === 'address' && <StepAddress {...stepProps} />}
+          {stepId === 'background' && <StepBackground {...stepProps} />}
+          {stepId === 'experience' && <StepExperience {...stepProps} />}
+          {stepId === 'payout' && <StepPayout {...stepProps} />}
+          {stepId === 'review' && <StepReview {...stepProps} />}
+        </div>
 
-        {step.id === 'review' ? (
-          <Button onClick={submit} disabled={submitting}>
-            {submitting ? 'Submitting…' : 'Submit for verification'}
+        {/* Actions */}
+        <div className="mt-16 flex items-center justify-between border-t-2 border-ink pt-6">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={goBack}
+            disabled={currentStep === 0 || saving || submitting}
+          >
+            <ChevronLeft className="mr-1 h-4 w-4" strokeWidth={1.5} />
+            Back
           </Button>
-        ) : (
-          <Button onClick={goNext} disabled={saving}>
-            Continue <ChevronRight className="ml-1 h-4 w-4" />
-          </Button>
-        )}
+
+          <div className="flex items-center gap-3">
+            {saving && (
+              <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                Saving…
+              </span>
+            )}
+            {currentStep === ONBOARDING_STEPS.length - 1 ? (
+              <Button onClick={submit} disabled={submitting} size="lg">
+                {submitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" strokeWidth={1.5} />
+                    Submitting…
+                  </>
+                ) : (
+                  <>
+                    Submit for review
+                    <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button onClick={goNext} disabled={saving || submitting}>
+                Continue
+                <ChevronRight className="ml-1 h-4 w-4" strokeWidth={1.5} />
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

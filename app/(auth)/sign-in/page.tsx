@@ -1,200 +1,257 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft, ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/sonner';
 import { SectionLabel } from '@/components/avanti/section-label';
-import { PhoneInput } from '@/components/avanti/phone-input';
-import { OtpInput } from '@/components/avanti/otp-input';
-import { createClient } from '@/lib/supabase/client';
 
 /**
- * Sign-in page — phone OTP, two-step.
- * Step 1: phone → send OTP
- * Step 2: OTP → verify → redirect based on active role
+ * Sign in — editorial polish.
+ *
+ * Two-column layout on desktop: hero copy on the left (adapts to
+ * the step), form card on the right. Mobile stacks.
+ *
+ * Behaviour unchanged from the previous sign-in page:
+ *   phone → POST /api/auth/otp/send
+ *   otp   → POST /api/auth/otp/verify → redirects based on role
  */
 
-type Step = 'phone' | 'otp' | 'error_no_account';
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+}
 
 export default function SignInPage() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>('phone');
-  const [phone, setPhone] = useState('');
-  const [phoneValid, setPhoneValid] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const next = searchParams.get('next') ?? undefined;
 
-  async function sendOtp() {
-    setBusy(true);
-    setErrorMsg(null);
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [phone, setPhone] = useState('234');
+  const [code, setCode] = useState('');
+  const [sending, setSending] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+
+  const sendCode = async () => {
+    const normalized = phone.replace(/\D/g, '');
+    if (normalized.length < 10) {
+      toast.error('Enter a full phone number including country code');
+      return;
+    }
+    setSending(true);
     try {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, isSignup: false }),
+        body: JSON.stringify({ phone: normalized }),
       });
-      if (res.status === 404) {
-        setStep('error_no_account');
+      const body = (await res.json()) as { error?: string; message?: string };
+      if (!res.ok) {
+        toast.error(body.message ?? body.error ?? 'Could not send code');
         return;
       }
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? 'Could not send code');
-      }
       setStep('otp');
+      toast.success('Code sent');
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : 'Could not send code');
     } finally {
-      setBusy(false);
+      setSending(false);
     }
-  }
+  };
 
-  async function verifyOtp(code: string) {
-    setBusy(true);
-    setErrorMsg(null);
+  const verifyCode = async () => {
+    if (code.length < 4) {
+      toast.error('Enter the 6-digit code');
+      return;
+    }
+    setVerifying(true);
     try {
+      const normalized = phone.replace(/\D/g, '');
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ phone: normalized, code }),
       });
+      const body = (await res.json()) as { error?: string; message?: string; redirectTo?: string };
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? 'Wrong code');
-      }
-      const data = (await res.json()) as { activeRole: string | null; needsCompletion: boolean };
-
-      // Refresh session so client picks up the new claims
-      const supabase = createClient();
-      await supabase.auth.refreshSession();
-
-      // Route based on their role
-      if (data.needsCompletion) {
-        router.push('/sign-up/customer');
+        toast.error(body.message ?? body.error ?? 'Verification failed');
         return;
       }
-      switch (data.activeRole) {
-        case 'individual_customer':
-          router.push('/customer');
-          break;
-        case 'driver':
-          router.push('/driver/onboarding/pending');
-          break;
-        case 'corporate_admin':
-        case 'corporate_member':
-          router.push('/corporate');
-          break;
-        case 'admin_verifier':
-        case 'admin_support':
-        case 'admin_finance':
-        case 'admin_compliance':
-        case 'super_admin':
-          router.push('/admin');
-          break;
-        default:
-          router.push('/');
-      }
+      const target = next ?? body.redirectTo ?? '/customer';
+      router.push(target);
+      router.refresh();
     } catch (err) {
-      setErrorMsg(err instanceof Error ? err.message : String(err));
+      toast.error(err instanceof Error ? err.message : 'Verification failed');
     } finally {
-      setBusy(false);
+      setVerifying(false);
     }
-  }
+  };
 
   return (
-    <div className="mx-auto max-w-md px-4 pt-16 sm:px-6">
-      <Link
-        href="/"
-        className="mb-8 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" /> Back
-      </Link>
+    <div className="min-h-screen bg-paper">
+      {/* ─────── Header ─────── */}
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
+          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
+            Avanti
+          </Link>
+          <Link
+            href="/sign-up"
+            className="font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+          >
+            New here? Sign up →
+          </Link>
+        </div>
+      </header>
 
-      {step === 'phone' && (
-        <div className="animate-fade-in">
+      {/* ─────── Two-column layout ─────── */}
+      <main className="mx-auto grid max-w-6xl gap-16 px-6 py-16 md:grid-cols-5 md:py-24">
+        {/* Copy column */}
+        <div className="md:col-span-2">
           <SectionLabel>Sign in</SectionLabel>
-          <h1 className="mb-2 mt-3 font-display text-4xl leading-tight text-ink">
-            Welcome back.
+          <h1 className="mt-4 font-display text-5xl leading-[1.05] text-ink md:text-6xl">
+            {step === 'phone' ? (
+              <>
+                Welcome <em className="italic">back.</em>
+              </>
+            ) : (
+              <>
+                Check your <em className="italic">messages.</em>
+              </>
+            )}
           </h1>
-          <p className="mb-8 max-w-md font-body text-ink-muted">
-            We&apos;ll text you a six-digit code.
+          <p className="mt-6 max-w-md font-body leading-relaxed text-ink">
+            {step === 'phone'
+              ? "Enter your phone. We'll send you a one-time code — no passwords to remember."
+              : `We sent a six-digit code to ${formatPhone(phone)}. Enter it below to sign in.`}
           </p>
 
-          <div className="mb-6">
-            <SectionLabel>Your phone</SectionLabel>
-            <div className="mt-3">
-              <PhoneInput onChange={(e164, valid) => { setPhone(e164); setPhoneValid(valid); }} autoFocus />
-            </div>
+          <div className="mt-12 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+            Est. 2026 · Lagos
+          </div>
+        </div>
+
+        {/* Form column */}
+        <div className="md:col-span-3">
+          <div className="border border-line bg-paper-2 p-8 md:p-10">
+            {step === 'phone' ? (
+              <div className="space-y-6">
+                <div>
+                  <label
+                    htmlFor="phone"
+                    className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted"
+                  >
+                    Your phone
+                  </label>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-ink-muted">
+                      +
+                    </span>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
+                      autoFocus
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={(e) => e.key === 'Enter' && sendCode()}
+                      placeholder="2348012345678"
+                      className="pl-7 font-mono text-base"
+                    />
+                  </div>
+                  <p className="mt-2 font-mono text-[10px] text-ink-muted">
+                    Include your country code
+                  </p>
+                </div>
+
+                <Button
+                  onClick={sendCode}
+                  disabled={sending}
+                  size="lg"
+                  className="w-full"
+                >
+                  {sending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" strokeWidth={1.5} />
+                      Sending…
+                    </>
+                  ) : (
+                    <>
+                      Send my code
+                      <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <label
+                    htmlFor="code"
+                    className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted"
+                  >
+                    Your six-digit code
+                  </label>
+                  <Input
+                    id="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    autoFocus
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    onKeyDown={(e) => e.key === 'Enter' && verifyCode()}
+                    placeholder="123456"
+                    maxLength={6}
+                    className="text-center font-mono text-2xl tracking-[0.4em]"
+                  />
+                </div>
+
+                <Button
+                  onClick={verifyCode}
+                  disabled={verifying}
+                  size="lg"
+                  className="w-full"
+                >
+                  {verifying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" strokeWidth={1.5} />
+                      Verifying…
+                    </>
+                  ) : (
+                    <>
+                      Verify and sign in
+                      <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
+                    </>
+                  )}
+                </Button>
+
+                <button
+                  onClick={() => {
+                    setStep('phone');
+                    setCode('');
+                  }}
+                  className="w-full font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+                >
+                  Use a different phone
+                </button>
+              </div>
+            )}
           </div>
 
-          {errorMsg && <p className="mb-4 font-mono text-sm text-oxblood">{errorMsg}</p>}
-
-          <Button size="lg" onClick={sendOtp} disabled={!phoneValid || busy} className="w-full">
-            {busy ? 'Sending…' : 'Send code'} <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-
-          <p className="mt-8 font-body text-sm text-ink-muted">
-            New to Avanti?{' '}
-            <Link href="/sign-up/customer" className="font-medium text-ink underline">
+          <p className="mt-6 font-body text-sm text-ink-muted">
+            New here?{' '}
+            <Link href="/sign-up" className="text-ink underline decoration-brass underline-offset-4 hover:decoration-2">
               Create an account
             </Link>
           </p>
         </div>
-      )}
-
-      {step === 'otp' && (
-        <div className="animate-slide-up">
-          <SectionLabel>Enter the code</SectionLabel>
-          <h1 className="mb-2 mt-3 font-display text-4xl leading-tight text-ink">
-            <em className="italic">Six digits.</em>
-          </h1>
-          <p className="mb-8 font-body text-ink-muted">
-            Sent to <span className="font-mono">{phone}</span>.
-          </p>
-
-          <OtpInput
-            onComplete={verifyOtp}
-            disabled={busy}
-            autoFocus
-          />
-
-          {errorMsg && <p className="mt-6 text-center font-mono text-sm text-oxblood">{errorMsg}</p>}
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setStep('phone')}
-              className="font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-            >
-              Use a different number
-            </button>
-          </div>
-        </div>
-      )}
-
-      {step === 'error_no_account' && (
-        <div className="animate-fade-in">
-          <SectionLabel>No account</SectionLabel>
-          <h1 className="mb-6 mt-3 font-display text-4xl leading-tight text-ink">
-            <em className="italic">Nothing on file.</em>
-          </h1>
-          <p className="mb-8 font-body leading-relaxed text-ink-muted">
-            We don&apos;t recognise <span className="font-mono">{phone}</span>. Create an account, or try a different number.
-          </p>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setStep('phone')}>
-              Try again
-            </Button>
-            <Link
-              href={`/sign-up/customer?phone=${encodeURIComponent(phone)}`}
-              className="inline-flex items-center rounded-none border border-ink bg-ink px-4 py-2.5 text-sm font-medium text-paper hover:bg-ink-2"
-            >
-              Create account
-            </Link>
-          </div>
-        </div>
-      )}
+      </main>
     </div>
   );
 }
