@@ -9,15 +9,12 @@ import { EmptyState } from '@/components/avanti/empty-state';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { Portrait } from '@/components/avanti/portrait';
 import { DriverEngagementCard } from '@/components/driver/engagement-card';
+import { AvailabilityToggle } from '@/components/driver/availability-toggle';
 import { statusLabel, type EngagementStatus } from '@/lib/engagement/driver-transitions';
+import { monthlySalaryForTier } from '@/lib/permanent/salary';
 
 function initialsOf(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? '')
-    .join('');
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
 }
 
 function formatNaira(n: number): string {
@@ -34,7 +31,7 @@ export default async function DriverHomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (admin as any)
     .from('driver_profiles')
-    .select('id, verification_tier, verification_status')
+    .select('id, verification_tier, verification_status, available_on_demand, available_permanent')
     .eq('user_id', user.id)
     .single();
 
@@ -42,7 +39,10 @@ export default async function DriverHomePage() {
     redirect('/driver/onboarding/pending');
   }
 
-  // Payouts — real paid/pending split
+  const tier = profile.verification_tier as TierLevel;
+  const monthlySalary = monthlySalaryForTier(tier);
+
+  // Payouts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: payoutsData } = await (admin as any)
     .from('payouts')
@@ -52,7 +52,7 @@ export default async function DriverHomePage() {
   const payouts = payoutsData ?? [];
   const paidPayouts = payouts.filter((p: { status: string }) => p.status === 'completed');
   const pendingPayouts = payouts.filter((p: { status: string }) =>
-    ['pending', 'processing'].includes(p.status)
+    ['batched', 'initiated'].includes(p.status)
   );
   const activePayoutEngagementIds = new Set(
     payouts
@@ -70,7 +70,6 @@ export default async function DriverHomePage() {
     0
   );
 
-  // Completed engagements NOT yet in an active payout
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: completedData } = await (admin as any)
     .from('engagements')
@@ -82,15 +81,13 @@ export default async function DriverHomePage() {
   const unbatched = completed.filter(
     (e: { id: string }) => !activePayoutEngagementIds.has(e.id)
   );
-  const unbatchedGross = unbatched.reduce(
+  const unbatchedNet = unbatched.reduce(
     (sum: number, e: { driver_payout_total: number | null }) =>
       sum + Number(e.driver_payout_total ?? 0),
     0
-  );
-  const unbatchedNet = unbatchedGross * 0.95;
+  ) * 0.95;
   const totalPendingNet = pendingBatchedNet + unbatchedNet;
 
-  // Paid this month
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -151,7 +148,7 @@ export default async function DriverHomePage() {
           <Portrait
             initials={initialsOf(user.email || user.phone || 'D')}
             size="md"
-            tier={profile.verification_tier as TierLevel}
+            tier={tier}
           />
           <div>
             <SectionLabel>Driver · {user.phone}</SectionLabel>
@@ -162,13 +159,22 @@ export default async function DriverHomePage() {
         </div>
 
         <div className="mb-8 flex items-center gap-3">
-          <TierBadge tier={profile.verification_tier as TierLevel} label="long" />
+          <TierBadge tier={tier} label="long" />
           <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">
             Verified · bookable
           </span>
         </div>
 
-        {/* ─── EARNINGS ─── */}
+        {/* Availability toggle */}
+        <div className="mb-10">
+          <AvailabilityToggle
+            initialOnDemand={profile.available_on_demand}
+            initialPermanent={profile.available_permanent}
+            monthlySalary={monthlySalary}
+          />
+        </div>
+
+        {/* Earnings */}
         <div className="mb-10 border border-line bg-paper-2 p-6">
           <div className="flex items-baseline justify-between">
             <SectionLabel>Earnings</SectionLabel>
@@ -198,9 +204,7 @@ export default async function DriverHomePage() {
               <div className="mt-2 font-display text-3xl leading-none text-ink">
                 {formatNaira(thisMonthPaidNet)}
               </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">
-                Net after tax
-              </div>
+              <div className="mt-2 font-mono text-xs text-ink-muted">Net after tax</div>
             </div>
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
@@ -209,9 +213,7 @@ export default async function DriverHomePage() {
               <div className="mt-2 font-display text-3xl leading-none text-brass">
                 {formatNaira(totalPendingNet)}
               </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">
-                Next batch: Friday
-              </div>
+              <div className="mt-2 font-mono text-xs text-ink-muted">Next batch: Friday</div>
             </div>
           </div>
           <div className="mt-6 border-t border-line pt-4 font-mono text-[10px] uppercase tracking-wider text-ink-muted">

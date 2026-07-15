@@ -1308,6 +1308,8 @@ export type Database = {
       driver_profiles: {
         Row: {
           accepts_engagement_types: Database["public"]["Enums"]["engagement_type"][]
+          available_on_demand: boolean
+          available_permanent: boolean
           average_rating: number | null
           bio: string | null
           completed_jobs: number
@@ -1338,6 +1340,8 @@ export type Database = {
         }
         Insert: {
           accepts_engagement_types?: Database["public"]["Enums"]["engagement_type"][]
+          available_on_demand?: boolean
+          available_permanent?: boolean
           average_rating?: number | null
           bio?: string | null
           completed_jobs?: number
@@ -1368,6 +1372,8 @@ export type Database = {
         }
         Update: {
           accepts_engagement_types?: Database["public"]["Enums"]["engagement_type"][]
+          available_on_demand?: boolean
+          available_permanent?: boolean
           average_rating?: number | null
           bio?: string | null
           completed_jobs?: number
@@ -2542,6 +2548,178 @@ export type Database = {
             columns: ["substitution_id"]
             isOneToOne: false
             referencedRelation: "substitutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placement_enquiries: {
+        Row: {
+          admin_notes: string | null
+          contact_detail: string
+          contact_method: string
+          created_at: string
+          customer_user_id: string
+          driver_id: string
+          id: string
+          preferred_start_date: string | null
+          requirements: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          contact_detail: string
+          contact_method?: string
+          created_at?: string
+          customer_user_id: string
+          driver_id: string
+          id?: string
+          preferred_start_date?: string | null
+          requirements: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          contact_detail?: string
+          contact_method?: string
+          created_at?: string
+          customer_user_id?: string
+          driver_id?: string
+          id?: string
+          preferred_start_date?: string | null
+          requirements?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placement_enquiries_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_enquiries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placement_enquiries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_driver_earnings_monthly"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "placement_enquiries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_driver_summary"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "placement_enquiries_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_verification_queue"
+            referencedColumns: ["driver_id"]
+          },
+        ]
+      }
+      placements: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          currency: string
+          customer_user_id: string
+          driver_id: string
+          end_date: string | null
+          end_reason: string | null
+          ended_at: string | null
+          enquiry_id: string | null
+          id: string
+          monthly_salary: number
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_user_id: string
+          driver_id: string
+          end_date?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          enquiry_id?: string | null
+          id?: string
+          monthly_salary: number
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          currency?: string
+          customer_user_id?: string
+          driver_id?: string
+          end_date?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          enquiry_id?: string | null
+          id?: string
+          monthly_salary?: number
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placements_customer_user_id_fkey"
+            columns: ["customer_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "driver_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "placements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_driver_earnings_monthly"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "placements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_public_driver_summary"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "placements_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "v_verification_queue"
+            referencedColumns: ["driver_id"]
+          },
+          {
+            foreignKeyName: "placements_enquiry_id_fkey"
+            columns: ["enquiry_id"]
+            isOneToOne: false
+            referencedRelation: "placement_enquiries"
             referencedColumns: ["id"]
           },
         ]

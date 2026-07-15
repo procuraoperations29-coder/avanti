@@ -12,11 +12,12 @@ function formatNaira(n: number): string {
 }
 
 const ITEM_STATUS_STYLE: Record<string, string> = {
-  pending: 'text-brass',
-  processing: 'text-brass',
+  batched: 'text-brass',
+  initiated: 'text-brass',
   completed: 'text-green',
   failed: 'text-oxblood',
   reversed: 'text-oxblood',
+  held: 'text-oxblood',
 };
 
 export default async function PayoutBatchDetailPage({

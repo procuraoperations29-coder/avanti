@@ -11,11 +11,12 @@ function formatNaira(n: number): string {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  pending: 'text-brass',
-  processing: 'text-brass',
+  batched: 'text-brass',
+  initiated: 'text-brass',
   completed: 'text-green',
   failed: 'text-oxblood',
   reversed: 'text-oxblood',
+  held: 'text-oxblood',
 };
 
 export default async function DriverEarningsPage() {
@@ -43,8 +44,8 @@ export default async function DriverEarningsPage() {
   const payouts = payoutsData ?? [];
 
   const paidPayouts = payouts.filter((p: { status: string }) => p.status === 'completed');
-  const pendingPayouts = payouts.filter((p: { status: string }) =>
-    ['pending', 'processing'].includes(p.status)
+ const pendingPayouts = payouts.filter((p: { status: string }) =>
+    ['batched', 'initiated'].includes(p.status)
   );
 
   const totalPaid = paidPayouts.reduce(

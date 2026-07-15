@@ -1,8 +1,15 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ClipboardList, Users, DollarSign, ShieldAlert, LayoutGrid } from 'lucide-react';
+import {
+  ClipboardList,
+  Users,
+  DollarSign,
+  ShieldAlert,
+  LayoutGrid,
+  UserCheck,
+} from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/avanti/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 
@@ -23,11 +30,20 @@ export default async function AdminHomePage() {
     .from('v_verification_queue')
     .select('driver_id', { count: 'exact', head: true });
 
+  // New enquiries count for placements card
+  const admin = createServiceRoleClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: newEnquiryCount } = await (admin as any)
+    .from('placement_enquiries')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'new');
+
   const isSuper = user.roles.includes('super_admin');
   const canVerify = user.roles.includes('admin_verifier') || isSuper;
   const canSupport = user.roles.includes('admin_support') || isSuper;
   const canFinance = user.roles.includes('admin_finance') || isSuper;
   const canCompliance = user.roles.includes('admin_compliance') || isSuper;
+  const canPlacements = canSupport || canVerify;
 
   return (
     <PageShell>
@@ -49,6 +65,19 @@ export default async function AdminHomePage() {
               emphasis={(queueCount ?? 0) > 0}
             />
           )}
+          {canPlacements && (
+            <ModuleCard
+              href="/admin/placements"
+              Icon={UserCheck}
+              title="Placements"
+              description={
+                (newEnquiryCount ?? 0) > 0
+                  ? `${newEnquiryCount} new enquiries`
+                  : 'Permanent driver enquiries'
+              }
+              emphasis={(newEnquiryCount ?? 0) > 0}
+            />
+          )}
           {canSupport && (
             <ModuleCard
               href="/admin/support"
@@ -62,7 +91,7 @@ export default async function AdminHomePage() {
               href="/admin/finance"
               Icon={DollarSign}
               title="Finance"
-              description="Revenue, payouts, rate cards"
+              description="Revenue, payouts, batches"
             />
           )}
           {canCompliance && (
