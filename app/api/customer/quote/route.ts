@@ -3,19 +3,11 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { buildQuote } from '@/lib/pricing/quote';
 
-/**
- * POST /api/customer/quote
- *
- * Returns a price_quote for a given driver + engagement configuration.
- * The quote is written to the DB (immutable), assigned an id, and
- * expires in 10 minutes.
- */
-
 const bodySchema = z.object({
   driverId: z.string().uuid(),
   engagementType: z.enum(['hourly', 'full_day']),
   vehicleClass: z.enum(['sedan', 'suv', 'executive', 'van', 'pickup']),
-  startsAt: z.string(), // ISO
+  startsAt: z.string(),
   durationHours: z.number().int().min(1).max(24 * 30),
 });
 
@@ -42,7 +34,6 @@ export async function POST(req: Request) {
     }
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[customer/quote]', err);
-    // Some error strings from the pricing engine are user-facing
     const userVisible = new Set([
       'driver_not_found',
       'driver_unavailable',

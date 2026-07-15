@@ -4,19 +4,6 @@ import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { verifyTransaction } from '@/lib/payments/paystack';
 
-/**
- * POST /api/payments/paystack/verify
- * Body: { reference }
- *
- * Called by the client after Paystack redirects back to the callback URL.
- * Verifies the transaction with Paystack (or accepts the mock in dev),
- * updates payment.status = 'captured', and moves engagement.status
- * 'draft' → 'confirmed' — which triggers the price-lock (Slice 2) to
- * copy quote totals onto the engagement.
- *
- * Idempotent: safe to call repeatedly (webhook and callback both do it).
- */
-
 const bodySchema = z.object({
   reference: z.string().min(3),
 });
@@ -33,8 +20,7 @@ export async function POST(req: Request) {
     }
 
     const admin = createServiceRoleClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: payment, error: payErr } = await (admin as any)
+    const { data: payment, error: payErr } = await admin
       .from('payments')
       .select('*')
       .eq('provider_ref', body.reference)
@@ -43,25 +29,20 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'payment_not_found' }, { status: 404 });
     }
 
-    // Already captured — idempotent success
     if (payment.status === 'captured') {
       return NextResponse.json({ ok: true, status: 'captured', engagementId: payment.engagement_id });
     }
 
-    // Verify with Paystack (or accept mock)
     const verified = await verifyTransaction(body.reference);
     if (verified.status !== 'success') {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (admin as any)
+      await admin
         .from('payments')
         .update({ status: 'failed', failure_reason: verified.status })
         .eq('id', payment.id);
       return NextResponse.json({ error: 'payment_not_successful', status: verified.status }, { status: 400 });
     }
 
-    // Mark payment captured
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updPayErr } = await (admin as any)
+    const { error: updPayErr } = await admin
       .from('payments')
       .update({
         status: 'captured',
@@ -76,16 +57,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Confirm the engagement. The Slice 2 price-lock trigger will copy
-    // the price_quote totals onto the engagement in this transaction.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: engErr } = await (admin as any)
+    const { error: engErr } = await admin
       .from('engagements')
       .update({
         status: 'confirmed',
         confirmed_at: new Date().toISOString(),
       })
-      .eq('id', payment.engagement_id);
+      .eq('id', payment.engagement_id!);
     if (engErr) {
       return NextResponse.json(
         { error: 'engagement_confirm_failed', message: engErr.message },

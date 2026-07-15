@@ -2,12 +2,6 @@ import { NextResponse } from 'next/server';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
-/**
- * GET /api/driver/engagements/[engagementId]
- *
- * Single engagement, driver-safe columns only.
- */
-
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ engagementId: string }> }
@@ -21,8 +15,7 @@ export async function GET(
 
     const admin = createServiceRoleClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (admin as any)
+    const { data: profile } = await admin
       .from('driver_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -31,8 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'driver_profile_not_found' }, { status: 404 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: engagement, error } = await (admin as any)
+    const { data: engagement, error } = await admin
       .from('engagements')
       .select(
         'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, special_instructions, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, customer_user_id'
@@ -44,8 +36,7 @@ export async function GET(
       return NextResponse.json({ error: 'engagement_not_found' }, { status: 404 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: customer } = await (admin as any)
+    const { data: customer } = await admin
       .from('users')
       .select('full_name, phone')
       .eq('id', engagement.customer_user_id)

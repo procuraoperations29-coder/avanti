@@ -5,9 +5,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * GET /api/driver/engagements
  *
- * Returns this driver's engagements with driver-safe columns only.
- * Never returns customer_price_total or commission_total — info
- * isolation invariant (Phase 3 D26).
+ * Driver-safe columns only. Never returns customer_price_total or
+ * commission_total — info isolation invariant.
  */
 
 export async function GET() {
@@ -19,8 +18,7 @@ export async function GET() {
 
     const admin = createServiceRoleClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile, error: profErr } = await (admin as any)
+    const { data: profile, error: profErr } = await admin
       .from('driver_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -29,8 +27,7 @@ export async function GET() {
       return NextResponse.json({ error: 'driver_profile_not_found' }, { status: 404 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (admin as any)
+    const { data, error } = await admin
       .from('engagements')
       .select(
         'id, engagement_type, status, starts_at, ends_at, expected_daily_hours, timezone, pickup_address, driver_payout_total, currency, activated_at, completed_at, requested_at, confirmed_at, customer_user_id'
@@ -43,36 +40,31 @@ export async function GET() {
       return NextResponse.json({ error: 'list_failed', message: error.message }, { status: 500 });
     }
 
-    // Look up customer names in one batch
-    const customerIds = Array.from(
-      new Set((data ?? []).map((e: { customer_user_id: string }) => e.customer_user_id))
-    );
+    const customerIds = Array.from(new Set((data ?? []).map((e) => e.customer_user_id)));
+
     let customersById: Record<string, { full_name: string; phone: string }> = {};
     if (customerIds.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: customers } = await (admin as any)
+      const { data: customers } = await admin
         .from('users')
         .select('id, full_name, phone')
         .in('id', customerIds);
       customersById = Object.fromEntries(
-        (customers ?? []).map((c: { id: string; full_name: string; phone: string }) => [
+        (customers ?? []).map((c) => [
           c.id,
-          { full_name: c.full_name, phone: c.phone },
+          { full_name: c.full_name ?? 'Customer', phone: c.phone ?? '' },
         ])
       );
     }
 
-    const engagements = (data ?? []).map(
-      (e: { customer_user_id: string } & Record<string, unknown>) => {
-        const customer = customersById[e.customer_user_id];
-        const { customer_user_id: _cust, ...rest } = e;
-        return {
-          ...rest,
-          customer_name: customer?.full_name ?? 'Customer',
-          customer_phone: customer?.phone ?? null,
-        };
-      }
-    );
+    const engagements = (data ?? []).map((e) => {
+      const customer = customersById[e.customer_user_id];
+      const { customer_user_id: _cust, ...rest } = e;
+      return {
+        ...rest,
+        customer_name: customer?.full_name ?? 'Customer',
+        customer_phone: customer?.phone ?? null,
+      };
+    });
 
     return NextResponse.json({ engagements });
   } catch (err) {

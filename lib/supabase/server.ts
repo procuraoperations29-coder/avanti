@@ -1,81 +1,60 @@
-import 'server-only';
-import { createServerClient } from '@supabase/ssr';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
-import { publicEnv, serverEnv, supabaseConfigured } from '@/config/env';
 import type { Database } from '@/types/database';
 
 /**
- * Supabase client for use in server components, route handlers, and
- * Server Actions. Reads cookies for session, uses the anon key + RLS.
+ * Supabase clients — typed against the generated Database schema.
  *
- * For operations that need to bypass RLS (money movement, verification
- * decisions, admin actions — see Phase 4 §16) use `createServiceRoleClient()`.
+ * Two flavours:
+ *   - createClient()          — authenticated as the current user.
+ *                                Enforces RLS. Use in server components
+ *                                and API routes that should respect the
+ *                                caller's permissions.
+ *
+ *   - createServiceRoleClient() — bypasses RLS. Use ONLY for privileged
+ *                                writes (audit_logs, cross-user reads,
+ *                                admin operations). Every call site
+ *                                should be able to justify why it needs
+ *                                to bypass RLS.
+ *
+ * Both are typed with <Database>, so .from('engagements').select('...')
+ * type-checks column names at compile time. If you find yourself
+ * reaching for `as any` — first check whether the column actually
+ * exists in the DB. That's the bug this typing is designed to catch.
  */
-export async function createClient() {
-  if (!supabaseConfigured()) {
-    throw new Error(
-      '[avanti] Supabase not configured on server. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.'
-    );
-  }
 
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+export async function createClient() {
   const cookieStore = await cookies();
 
-  return createServerClient<Database>(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL!,
-    publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Server Components can't set cookies; middleware handles refresh.
-          }
-        },
+  return createServerClient<Database>(url, anonKey, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
       },
-    }
-  );
+      setAll(cookiesToSet) {
+        try {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options as CookieOptions);
+          });
+        } catch {
+          // Called from a Server Component. Safe to ignore if middleware
+          // is refreshing sessions.
+        }
+      },
+    },
+  });
 }
 
-/**
- * Service-role client — bypasses RLS entirely.
- *
- * See Phase 4 §16. Rules:
- *  - Only use in server code (this file is 'server-only').
- *  - Every write must re-verify identity + permissions itself (RLS is off).
- *  - Every write must produce an audit_logs row.
- *  - Use a transaction for multi-row writes.
- *
- * Callers should compose with the authorization guards in lib/auth.
- */
 export function createServiceRoleClient() {
-  const env = serverEnv();
-  if (!env.SUPABASE_SERVICE_ROLE_KEY) {
-    throw new Error(
-      '[avanti] SUPABASE_SERVICE_ROLE_KEY not set — cannot create service-role client.'
-    );
-  }
-  if (!publicEnv.NEXT_PUBLIC_SUPABASE_URL) {
-    throw new Error('[avanti] NEXT_PUBLIC_SUPABASE_URL not set.');
-  }
-
-  return createServerClient<Database>(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL,
-    env.SUPABASE_SERVICE_ROLE_KEY,
-    {
-      cookies: {
-        getAll: () => [],
-        setAll: () => {},
-      },
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }
-  );
+  return createSupabaseClient<Database>(url, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
 }

@@ -1,163 +1,191 @@
-# Slice 7 — Driver-side engagements
+# Slice 8 — Payouts (adapted to real schema)
 
-9 files. The operational half of the booking loop — drivers see incoming
-engagements, mark themselves en-route, check in, complete.
+9 files. Adapted to sit on top of the existing Slice 2 schema:
+`payout_batches`, `payouts`, `driver_payout_methods` — all already exist
+with better designs than my original migration proposed.
 
-## Apply
+**No table changes.** This migration only adds:
+- RLS policies (idempotent)
+- Two SQL functions: `fn_build_payout_batch` and `fn_release_payout_batch`
+
+Then updates all the UI to use YOUR real column names:
+- `payout_batches.total_gross` (not `total_gross_amount`)
+- `payout_batches.total_tax_withheld` (not `total_wht_amount`)
+- `payout_batches.scheduled_for` (not `period_start`/`period_end`)
+- `payout_batches.executed_at` (not `released_at`)
+- `payouts` (not `payout_items`)
+- `payouts.gross_payout` (not `gross_amount`)
+- `payouts.tax_withheld_total` (not `wht_amount`)
+- `payouts.penalties_deducted` (new, honoured in totals)
+
+## Apply — order matters
+
+**Step 1 — Delete the failed migration file:**
+
+```bash
+cd ~/Desktop/Avanti
+rm supabase/migrations/20260813000000_payouts.sql
+```
+
+**Step 2 — Extract this delivery:**
 
 ```bash
 cd ~/Downloads
-cp -r slice7/* ~/Desktop/Avanti/
+unzip -o slice8-real.zip -d /tmp/slice8-extract
+cp -r /tmp/slice8-extract/slice8-real/* ~/Desktop/Avanti/
+rm -rf /tmp/slice8-extract ~/Desktop/Avanti/.next
+```
 
+**Step 3 — Run the migration:**
+
+```bash
 cd ~/Desktop/Avanti
-rm -rf .next
+supabase db push
+```
+
+If the migration tracker complains about `20260813000000` (my failed one), run:
+
+```bash
+supabase migration repair --status reverted 20260813000000
+supabase db push
+```
+
+**Step 4 — Regenerate types (needed for typed clients):**
+
+```bash
+supabase gen types typescript --linked > types/database.ts
+```
+
+**Step 5 — Restart:**
+
+```bash
 pnpm dev
 ```
 
-No migration, no new dependencies. Just files landing on top of what's
-there.
+Hard-refresh browser.
 
 Commit:
 
 ```bash
-git add .
-git commit -m "slice 7: driver-side engagement flow — activate, start, complete"
+git rm supabase/migrations/20260813000000_payouts.sql
+git add supabase/migrations app/api/admin/finance app/\(admin\)/admin/finance app/\(driver\)/driver
+git commit -m "slice 8: payouts adapted to real Slice 2 schema"
 git push
 ```
 
 ## Test the loop
 
-You'll need to be signed in as your **approved driver** account
-(phone `+2348105122729`, code `234567` if using Supabase test numbers,
-or whichever phone number matches the approved `driver_profiles` row).
+1. Sign in as super admin
+2. Navigate to `/admin/finance/batches`
+3. You should see the "Ready to batch" panel with your completed engagement:
+   ₦10,800 across 1 driver / 1 engagement
+4. Click **Create new batch** → confirm
+5. Batch detail loads: gross ₦10,800, WHT ₦540, net ₦10,260, 1 recipient
+6. Click **Release batch** → confirm
+7. Batch flips to `completed`; payout shows as `completed`
+8. Go to `/driver` — earnings block should now show:
+   - **Paid to date: ₦10,260** (green)
+   - **This month paid: ₦10,260**
+   - **Pending: ₦0**
+9. Click **Full history →** — payout row with WHT breakdown
 
-**Setup — if the driver account doesn't have `driver` role yet:**
+## If the migration fails on the enum
+
+If Supabase yells about `'pending'` or `'completed'` not being valid values
+for `payouts.status`, we've guessed wrong. Run:
 
 ```sql
-insert into user_roles (user_id, role)
-values ('757c87c6-06a5-4a87-b285-5764e36ae375', 'driver')
-on conflict do nothing;
-
-select fn_rebuild_user_claims('757c87c6-06a5-4a87-b285-5764e36ae375');
+select t.typname as enum_type, e.enumlabel as value
+from pg_type t
+join pg_enum e on t.oid = e.enumtypid
+where t.typname ilike '%payout%'
+order by t.typname, e.enumsortorder;
 ```
 
-Then sign out + sign back in as that driver so the JWT picks up the role.
+Paste the output. I'll swap the two references in the SQL functions
+(`'pending'` at insert, `'completed'` at release) to match your enum.
 
-**Walk-through:**
+Similarly, `payout_batches.status` is a text column with no CHECK constraint,
+so `'draft'` and `'completed'` will be accepted. But if Slice 2 assumes
+different values for downstream logic, tell me and I'll adjust.
 
-1. Sign in as the driver → land at `/driver/onboarding/pending`, which
-   sees your `approved` status and (with the Slice 7 code in place)
-   the new driver home at `/driver` takes over.
+## Files shipped
 
-   Actually — `/driver/onboarding/pending` doesn't auto-redirect to
-   `/driver` yet. You'll need to type `/driver` directly in the URL bar.
-   (Cleaning that redirect up is a polish item.)
+**Migration**
+- `supabase/migrations/20260814000000_payout_functions.sql` — RLS + two functions
 
-2. `/driver` → the new dashboard renders with:
-   - Your portrait + tier badge (T2 or whatever you approved yourself at)
-   - "Now" section if there's an active engagement
-   - "Upcoming" section listing confirmed bookings
-   - "All engagements" link
+**API routes**
+- `app/api/admin/finance/batches/route.ts` — GET list, POST create
+- `app/api/admin/finance/batches/[batchId]/release/route.ts` — POST release
 
-3. Click your existing confirmed engagement (the one from Slice 6
-   testing, or a fresh one).
+(The single-batch GET route wasn't needed — pages read directly via
+service-role client. If you want a REST endpoint later, easy to add.)
 
-4. Engagement detail shows:
-   - Customer name
-   - Contact phone (tap-to-call)
-   - Timing, pickup, instructions
-   - Your payout amount (T2 sedan hourly ≈ ₦2,880/hr driver-side)
-   - **Action panel** with the next-step button
+**Admin pages**
+- `app/(admin)/admin/finance/batches/page.tsx` — Batches list + "ready to batch" panel
+- `app/(admin)/admin/finance/batches/create-batch-button.tsx` — Client button
+- `app/(admin)/admin/finance/batches/[batchId]/page.tsx` — Batch detail with items
+- `app/(admin)/admin/finance/batches/[batchId]/release-batch-button.tsx` — Client button
 
-5. Click **"I'm on my way"** → confirms → status flips to `activated`,
-   button changes to "I've started the engagement".
+**Driver pages**
+- `app/(driver)/driver/earnings/page.tsx` — Full payout history
+- `app/(driver)/driver/page.tsx` — Updated earnings block
 
-6. Click **"I've started the engagement"** → status → `in_progress`,
-   button changes to "Complete engagement".
+## What this migration actually does
 
-7. Click **"Complete engagement"** → status → `completed`. Action panel
-   replaced with a completion notice: "Payout will process on the next
-   batch."
+`fn_build_payout_batch(actor_user_id)`:
+1. Inserts a draft `payout_batches` row with `scheduled_for = today`,
+   `provider = 'manual'`, zero totals
+2. Selects all `engagements` where `status='completed'`, `driver_payout_total > 0`,
+   and no existing non-failed/non-reversed payout row
+3. Inserts one `payouts` row per engagement with 5% WHT deducted,
+   `penalties_deducted = 0`, `status = 'pending'`
+4. Rolls up totals back onto the `payout_batches` row
+5. Writes an audit log entry
 
-## Info isolation verified
+`fn_release_payout_batch(batch_id, actor_user_id)`:
+1. Validates batch is `draft` or `approved`
+2. Flips all `pending` payouts in the batch to `completed`, sets `completed_at`
+3. Marks batch as `completed`, sets `approved_by` + `executed_at`
+4. Writes an audit log entry
 
-Every driver-side query in this slice explicitly lists safe columns:
-`driver_payout_total`, `currency`, timing, pickup, instructions,
-customer name for pickup identification. **Never** selects
-`customer_price_total` or `commission_total`.
+Both functions run `SECURITY DEFINER` (elevated privileges) but are only
+callable through API routes that gatekeep by admin_finance/super_admin.
 
-Grep to confirm:
+## Deferred (from original Slice 8 plan)
 
-```bash
-grep -r "customer_price_total\|commission_total" app/api/driver/ app/\(driver\)/
-```
+- **Real bank transfer** — actual Paystack Transfers API integration
+  would go inside `fn_release_payout_batch` or in a separate follow-up
+  function. Right now "release" just flips DB state
+- **Payout method assignment** — `payouts.payout_method_id` is left NULL
+  in the initial insert. A real production flow would ensure every
+  driver has a verified `driver_payout_methods` row before batching
+- **Approve step** — draft → released collapsed. Adding an approve step
+  is a one-line UI change + one enum value
+- **Item exclusion UI** — currently must be done via SQL
+- **CSV export** — for Ops to upload to bank portal
 
-Should return nothing. If it does, that's a leak.
+## Where we are
 
-## What's in the zip
+The whole business cycle now works end-to-end:
 
-**Library (1)**
-- `lib/engagement/driver-transitions.ts` — state graph, action metadata,
-  human-readable labels
+Customer signs up → finds driver → books → pays → engagement confirmed →
+driver marks en-route → active → complete → **admin creates payout batch
+→ releases → driver sees ₦10,260 paid.**
 
-**API routes (3)**
-- `app/api/driver/engagements/route.ts` — GET list
-- `app/api/driver/engagements/[engagementId]/route.ts` — GET single
-- `app/api/driver/engagements/[engagementId]/transition/route.ts` — POST transition
-
-**Pages (3)**
-- `app/(driver)/driver/page.tsx` — home dashboard
-- `app/(driver)/driver/engagements/page.tsx` — grouped list
-- `app/(driver)/driver/engagements/[engagementId]/page.tsx` — detail with actions
-
-**Components (2)**
-- `components/driver/engagement-card.tsx` — list row
-- `components/driver/engagement-actions.tsx` — the action buttons (client)
-
-## Architecture notes
-
-**State transitions live in the API, guarded by DB triggers.** The
-API route validates the from-status, applies the update, and lets
-Slice 2's `fn_check_engagement_status_transition` trigger enforce
-legality at the DB level. If we ever accidentally allow an illegal
-transition, the DB rejects. Belt-and-suspenders.
-
-**Timestamps.** `activated_at` and `completed_at` are dedicated
-columns; the mid-state `started_at` lives in `metadata` jsonb (no
-dedicated column in the schema). This is fine — the important
-timestamps are activation and completion.
-
-**Service-role for cross-role reads.** Drivers need customer names for
-pickup identification. RLS on `public.users` restricts cross-user
-reads, so we use the service role client with a driver_id guard on the
-engagement query. The customer name is projected into the response —
-customer's email, other engagements, etc. never surface.
-
-## Deferred to later
-
-- **Notifications** on new bookings — driver has to open the app
-- **Decline / cancel** from driver — requires refund flow (Slice 8)
-- **Substitution** when a driver can't make it
-- **Real-time location tracking** during activation → in_progress
-- **Rating flow** after completion — customer rates driver, driver
-  rates customer
-- **Dispute** raising
+That's a functional two-sided marketplace with real money mechanics,
+info isolation enforced, admin oversight, and audit trail throughout.
 
 ## What's next
 
-Now that Slice 7 works, engagements can actually complete. That
-unlocks:
+If Slice 8 applies cleanly, three directions:
 
-**Slice 8 — Payouts.** Real money out to drivers. WHT deduction,
-payout batching, invoicing, admin finance dashboard. Requires
-completed engagements (which we now have).
+1. **Paystack Transfers integration** — real money movement.
+2. **Notifications slice** — SMS/push on state changes. Biggest UX win.
+3. **Rate card + user management UIs for super admin** — currently pure SQL.
 
-**Polish slice.** Strip `as any` casts, wrap pages in `<PageShell>`,
-client-side image compression, fix booking form UX. Overdue.
+My recommendation: **notifications**. The whole system now works but
+still requires everyone to open the app. Push/SMS notifications tie it
+all together into something that feels alive.
 
-**Notifications slice.** Push + SMS on state changes. Small.
-Would tie the customer + driver + admin experiences together.
-
-Slice 8 is the biggest business unlock — makes drivers actually get
-paid. Notifications are highest-leverage UX improvement. Polish is
-technical debt cleanup.
+Report what happens on apply.

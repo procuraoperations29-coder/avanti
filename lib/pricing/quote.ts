@@ -12,11 +12,11 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  * v1 simplifications:
  *  - Only 'hourly' and 'full_day' engagement types.
  *  - Only weekday day rates (no evening/night/weekend variants).
- *  - Tax added: 7.5% VAT on the customer-facing side (simplification —
- *    strictly it's VAT on commission only, refine later).
+ *  - VAT (7.5%) collected in tax_breakdown; kept within commission_total
+ *    to satisfy the totals-consistent check constraint.
  *
  * The resulting price_quote is immutable and expires 10 minutes from
- * creation. Trying to modify one raises via the Slice 2 trigger.
+ * creation.
  */
 
 export interface QuoteInput {
@@ -24,10 +24,10 @@ export interface QuoteInput {
   driverId: string;
   engagementType: 'hourly' | 'full_day';
   vehicleClass: 'sedan' | 'suv' | 'executive' | 'van' | 'pickup';
-  startsAt: string; // ISO
+  startsAt: string;
   durationHours: number;
-  countryCode?: string; // default NG
-  currency?: string; // default NGN
+  countryCode?: string;
+  currency?: string;
 }
 
 export interface QuoteResult {
@@ -56,9 +56,8 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
   const currency = input.currency ?? 'NGN';
   const admin = createServiceRoleClient();
 
-  // 1. Look up driver's tier — pricing gates on min_verification_tier.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: driver, error: driverErr } = await (admin as any)
+  // 1. Driver's tier and vehicle experience.
+  const { data: driver, error: driverErr } = await admin
     .from('driver_profiles')
     .select('verification_tier, vehicle_class_experience, suspended, deleted_at')
     .eq('id', input.driverId)
@@ -66,16 +65,15 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
   if (driverErr || !driver) throw new Error('driver_not_found');
   if (driver.suspended || driver.deleted_at) throw new Error('driver_unavailable');
 
-  const tier = driver.verification_tier as string;
-  if (!['t2', 't3', 't4'].includes(tier)) {
+  const tier = driver.verification_tier;
+  if (!tier || !['t2', 't3', 't4'].includes(tier)) {
     throw new Error('driver_not_bookable');
   }
   const canDrive = (driver.vehicle_class_experience ?? []).includes(input.vehicleClass);
   if (!canDrive) throw new Error('driver_class_mismatch');
 
-  // 2. Find the published rate card for country + currency.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rateCard, error: cardErr } = await (admin as any)
+  // 2. Published rate card.
+  const { data: rateCard, error: cardErr } = await admin
     .from('rate_cards')
     .select('id, currency, version')
     .eq('country_code', country)
@@ -86,11 +84,8 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
     .single();
   if (cardErr || !rateCard) throw new Error('no_rate_card');
 
-  // 3. Find the matching price rule. Pick the highest tier the driver
-  //    qualifies for that also matches the vehicle class — so a T3 driver
-  //    on a T3-priced rule earns/charges at the T3 rate.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: rules, error: rulesErr } = await (admin as any)
+  // 3. Matching price rule — highest tier the driver qualifies for.
+  const { data: rules, error: rulesErr } = await admin
     .from('price_rules')
     .select('*')
     .eq('rate_card_id', rateCard.id)
@@ -108,7 +103,7 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
   // 4. Calculate base + overtime.
   const unit: 'hour' | 'day' = input.engagementType === 'hourly' ? 'hour' : 'day';
   const unitCount = input.engagementType === 'hourly' ? input.durationHours : Math.ceil(input.durationHours / 8);
-  const threshold = rule.overtime_threshold_hours ?? (unit === 'hour' ? 4 : 8);
+  const threshold = Number(rule.overtime_threshold_hours ?? (unit === 'hour' ? 4 : 8));
   const multiplier = Number(rule.overtime_multiplier ?? 1.25);
 
   let base = 0;
@@ -121,12 +116,9 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
     base = straightHours * Number(rule.base_customer_price);
     overtime = overtimeHours * Number(rule.base_customer_price) * multiplier;
   } else {
-    // Daily: no per-hour overtime for the customer-visible side in v1.
     base = unitCount * Number(rule.base_customer_price);
-    overtime = 0;
   }
 
-  // Enforce minimum charge
   const minimum = Number(rule.minimum_charge ?? 0);
   if (base + overtime < minimum) {
     base = minimum;
@@ -137,24 +129,21 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
   const vat = Math.round(subtotal * VAT_RATE);
   const customerTotal = subtotal + vat;
 
-  // Driver payout — derived, for storage in the quote.
   const driverPayoutBase =
     unit === 'hour'
       ? Math.min(unitCount, threshold) * Number(rule.base_driver_payout) +
         overtimeHours * Number(rule.base_driver_payout) * multiplier
       : unitCount * Number(rule.base_driver_payout);
-  // Commission = what Avanti keeps from the customer (post-VAT).
-  // Satisfies constraint: customer_price_total = driver_payout_total + commission_total
-  // The VAT portion is separately tracked in tax_breakdown for accounting.
+
+  // Commission includes VAT portion — satisfies the totals-consistent check.
   const commissionTotal = customerTotal - driverPayoutBase;
 
-  // 5. Write the immutable price_quote.
+  // 5. Write the price_quote.
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
   const endsAt = new Date(
     new Date(input.startsAt).getTime() + input.durationHours * 3600 * 1000
   ).toISOString();
 
-  // Bundle inputs — schema stores them in a single jsonb `inputs` column
   const inputs = {
     starts_at: input.startsAt,
     ends_at: endsAt,
@@ -171,8 +160,6 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
     minimum_applied: minimum > 0 && base + overtime <= minimum,
   };
 
-  // quote_hash — required by schema (D28 tamper detection).
-  // SHA-256 of the canonical input record.
   const quoteHash = createHash('sha256')
     .update(
       JSON.stringify({
@@ -186,8 +173,7 @@ export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
     )
     .digest('hex');
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: quote, error: quoteErr } = await (admin as any)
+  const { data: quote, error: quoteErr } = await admin
     .from('price_quotes')
     .insert({
       rate_card_id: rateCard.id,

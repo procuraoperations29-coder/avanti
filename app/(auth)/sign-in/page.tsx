@@ -12,12 +12,8 @@ import { SectionLabel } from '@/components/avanti/section-label';
 /**
  * Sign in — editorial polish.
  *
- * Two-column layout on desktop: hero copy on the left (adapts to
- * the step), form card on the right. Mobile stacks.
- *
- * Behaviour unchanged from the previous sign-in page:
- *   phone → POST /api/auth/otp/send
- *   otp   → POST /api/auth/otp/verify → redirects based on role
+ * Fixed: phone must be submitted in E.164 format ('+' prefixed).
+ * The '+' prefix is visual in the input; we prepend it back on submit.
  */
 
 function formatPhone(raw: string): string {
@@ -47,7 +43,7 @@ export default function SignInPage() {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: normalized }),
+        body: JSON.stringify({ phone: `+${normalized}` }),
       });
       const body = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
@@ -74,7 +70,7 @@ export default function SignInPage() {
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: normalized, code }),
+        body: JSON.stringify({ phone: `+${normalized}`, code }),
       });
       const body = (await res.json()) as { error?: string; message?: string; redirectTo?: string };
       if (!res.ok) {
@@ -93,7 +89,7 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      {/* ─────── Header ─────── */}
+      {/* Header */}
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
           <Link href="/" className="font-display text-2xl tracking-tight text-ink">
@@ -108,7 +104,6 @@ export default function SignInPage() {
         </div>
       </header>
 
-      {/* ─────── Two-column layout ─────── */}
       <main className="mx-auto grid max-w-6xl gap-16 px-6 py-16 md:grid-cols-5 md:py-24">
         {/* Copy column */}
         <div className="md:col-span-2">

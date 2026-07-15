@@ -3,15 +3,14 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { getTransition, type DriverAction } from '@/lib/engagement/driver-transitions';
-
-/**
- * POST /api/driver/engagements/[engagementId]/transition
- * Body: { action: 'activate' | 'start' | 'complete' }
- */
+import type { Database } from '@/types/database';
 
 const bodySchema = z.object({
-  action: z.enum(['activate', 'start', 'complete']),
+  action: z.enum(['activate', 'complete']),
 });
+
+// Only the columns we update, all optional except status
+type EngagementUpdate = Database['public']['Tables']['engagements']['Update'];
 
 export async function POST(
   req: Request,
@@ -35,8 +34,7 @@ export async function POST(
 
     const admin = createServiceRoleClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: profile } = await (admin as any)
+    const { data: profile } = await admin
       .from('driver_profiles')
       .select('id')
       .eq('user_id', user.id)
@@ -45,9 +43,7 @@ export async function POST(
       return NextResponse.json({ error: 'driver_profile_not_found' }, { status: 404 });
     }
 
-    // Read current engagement to check status
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: engagement, error: engErr } = await (admin as any)
+    const { data: engagement, error: engErr } = await admin
       .from('engagements')
       .select('id, status')
       .eq('id', engagementId)
@@ -68,16 +64,12 @@ export async function POST(
       );
     }
 
-    // Build the update patch
     const now = new Date().toISOString();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const patch: Record<string, any> = { status: transition.to };
-    if (transition.timestampCol) {
-      patch[transition.timestampCol] = now;
-    }
+    const patch: EngagementUpdate = { status: transition.to };
+    if (transition.timestampCol === 'activated_at') patch.activated_at = now;
+    if (transition.timestampCol === 'completed_at') patch.completed_at = now;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateErr } = await (admin as any)
+    const { error: updateErr } = await admin
       .from('engagements')
       .update(patch)
       .eq('id', engagementId);

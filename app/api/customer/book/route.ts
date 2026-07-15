@@ -8,15 +8,12 @@ import { publicEnv } from '@/config/env';
 /**
  * POST /api/customer/book
  *
- * Body: { quoteId, pickupAddress, specialInstructions? }
- *
  * Creates the engagement (status='draft') and payment (status='pending'),
- * then initiates a Paystack transaction. Returns the authorization URL
- * the client should redirect to.
+ * then initiates a Paystack transaction. Returns the authorization URL.
  *
- * When Paystack is unconfigured (dev), initTransaction returns a mock
- * URL that points back to the engagement detail page with search params
- * that the client-side PaymentCallbackHandler picks up.
+ * In mock mode (PAYSTACK_SECRET_KEY empty), initTransaction returns a
+ * mock URL that points back to the engagement detail page with
+ * ?reference=... which the PaymentCallbackHandler picks up.
  */
 
 const addressSchema = z.object({
@@ -33,6 +30,12 @@ const bodySchema = z.object({
   specialInstructions: z.string().max(2000).optional(),
 });
 
+// Shape of quote.inputs jsonb — narrows the Json type for the fields we read
+interface QuoteInputs {
+  starts_at?: string;
+  ends_at?: string;
+}
+
 export async function POST(req: Request) {
   try {
     const user = await requireAuthUser();
@@ -44,10 +47,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'invalid_body', details: String(err) }, { status: 400 });
     }
 
-    // Read the price quote to establish the engagement's numbers
     const supabase = await createClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: quote, error: quoteErr } = await (supabase as any)
+    const { data: quote, error: quoteErr } = await supabase
       .from('price_quotes')
       .select('*')
       .eq('id', body.quoteId)
@@ -59,25 +60,27 @@ export async function POST(req: Request) {
     if (quote.requested_by_user_id !== user.id) {
       return NextResponse.json({ error: 'quote_belongs_to_another_user' }, { status: 403 });
     }
-    if (new Date(quote.expires_at) < new Date()) {
+    if (new Date(quote.expires_at).getTime() < Date.now()) {
       return NextResponse.json({ error: 'quote_expired' }, { status: 400 });
     }
     if (quote.consumed_at) {
       return NextResponse.json({ error: 'quote_already_used' }, { status: 400 });
     }
 
-    // Create the engagement (status = 'draft').
+    // Narrow the inputs jsonb for the fields we need. Zod could validate
+    // this too, but for now a cast is enough since we control the writer.
+    const quoteInputs = (quote.inputs ?? {}) as QuoteInputs;
+
     const admin = createServiceRoleClient();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: engagement, error: engErr } = await (admin as any)
+    const { data: engagement, error: engErr } = await admin
       .from('engagements')
       .insert({
         customer_user_id: user.id,
-        driver_id: quote.driver_id,
+        driver_id: quote.driver_id!,
         engagement_type: quote.engagement_type,
         status: 'draft',
-        starts_at: quote.inputs?.starts_at,
-        ends_at: quote.inputs?.ends_at,
+        starts_at: quoteInputs.starts_at,
+        ends_at: quoteInputs.ends_at,
         expected_daily_hours: quote.engagement_type === 'full_day' ? 8 : null,
         timezone: 'Africa/Lagos',
         pickup_address: body.pickupAddress,
@@ -99,10 +102,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create the payment record
     const reference = `AVANTI-${engagement.id.slice(0, 8)}-${Date.now()}`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: payment, error: payErr } = await (admin as any)
+    const { data: payment, error: payErr } = await admin
       .from('payments')
       .insert({
         engagement_id: engagement.id,
@@ -123,12 +124,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Callback URL points at the engagement detail page directly.
-    // The page reads ?reference=... on mount and calls the verify API.
     const callbackUrl = `${publicEnv.NEXT_PUBLIC_APP_URL}/customer/engagements/${engagement.id}`;
     const init = await initTransaction({
       email: user.email || `customer-${user.id}@avanti.local`,
-      amountNaira: quote.customer_price_total,
+      amountNaira: Number(quote.customer_price_total),
       reference,
       callbackUrl,
       metadata: {

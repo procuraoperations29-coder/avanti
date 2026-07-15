@@ -4770,8 +4770,16 @@ export type Database = {
         | { Args: { table_name: string }; Returns: string }
       enablelongtransactions: { Args: never; Returns: string }
       equals: { Args: { geom1: unknown; geom2: unknown }; Returns: boolean }
+      fn_build_payout_batch: {
+        Args: { p_actor_user_id: string }
+        Returns: string
+      }
       fn_rebuild_user_claims: {
         Args: { target_user: string }
+        Returns: undefined
+      }
+      fn_release_payout_batch: {
+        Args: { p_actor_user_id: string; p_batch_id: string }
         Returns: undefined
       }
       geometry: { Args: { "": string }; Returns: unknown }
