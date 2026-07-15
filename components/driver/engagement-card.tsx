@@ -43,7 +43,6 @@ export function DriverEngagementCard({
 }: DriverEngagementCardProps) {
   const startDate = new Date(startsAt);
   const now = new Date();
-  const isFuture = startDate > now;
   const isToday = startDate.toDateString() === now.toDateString();
 
   return (

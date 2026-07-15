@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import Image from 'next/image';
 import { Upload, X, FileText, Loader2, Check } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/utils/cn';
