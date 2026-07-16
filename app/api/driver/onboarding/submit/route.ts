@@ -6,13 +6,13 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  * POST /api/driver/onboarding/submit
  *
  * Validates onboarding_state completeness, creates driver_payout_methods
- * row, writes documents table rows for each uploaded file, flips
- * verification_status to 'submitted'.
+ * row, writes documents table rows, mirrors state data into real
+ * driver_profiles columns (so search + quotes + admin see the same thing),
+ * flips verification_status to 'submitted'.
  */
 
 const BUCKET = 'driver-documents';
 
-// Maps identity.id_type (from the identity step) to the documents.document_type enum
 const ID_TYPE_TO_DOC: Record<string, string> = {
   nin: 'national_id',
   passport: 'passport',
@@ -94,7 +94,7 @@ export async function POST() {
       );
     }
 
-    // Build document rows to insert
+    // ---- Build document rows to insert ----
     const documents: DocumentInsert[] = [];
 
     const idType = typeof identity.id_type === 'string' ? identity.id_type : null;
@@ -163,20 +163,17 @@ export async function POST() {
       });
     }
 
-    // Insert all documents in one batch
     if (documents.length > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: docsErr } = await (admin as any)
         .from('documents')
         .insert(documents);
-
       if (docsErr) {
         console.error('[submit] documents insert failed:', docsErr);
-        // Don't block submission — admin can still find files in the bucket
       }
     }
 
-    // Create driver_payout_methods row (unverified)
+    // ---- driver_payout_methods (unverified) ----
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
@@ -190,21 +187,52 @@ export async function POST() {
         is_default: true,
         is_verified: false,
       });
-
     if (payoutMethodErr && !payoutMethodErr.message?.toLowerCase().includes('duplicate')) {
       console.error('[submit] driver_payout_methods insert:', payoutMethodErr);
     }
 
-    // Flip verification_status + timestamp
+    // ---- Mirror state into real driver_profiles columns ----
+    // These columns must exist for search/quote to work. We attempt the
+    // full update; if any specific column doesn't exist, we retry with
+    // just the core (vehicle_class_experience + flags + submission).
+    const fullUpdate: Record<string, unknown> = {
+      verification_status: 'submitted',
+      onboarding_submitted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      // Experience mirror
+      vehicle_class_experience: experience.vehicle_classes ?? [],
+      transmission_experience: experience.transmission_experience ?? [],
+      languages: experience.languages ?? [],
+      years_experience: experience.years_experience ?? 0,
+      service_radius_km: experience.service_radius_km ?? null,
+      // Identity mirror
+      legal_name: identity.legal_name ?? null,
+      date_of_birth: identity.date_of_birth ?? null,
+      gender: identity.gender ?? null,
+    };
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updateErr } = await (admin as any)
+    let { error: updateErr } = await (admin as any)
       .from('driver_profiles')
-      .update({
+      .update(fullUpdate)
+      .eq('user_id', user.id);
+
+    // If some columns don't exist, retry with just the essentials
+    if (updateErr && updateErr.message?.toLowerCase().includes('column')) {
+      console.warn('[submit] full mirror failed, retrying with essentials:', updateErr.message);
+      const minimalUpdate = {
         verification_status: 'submitted',
         onboarding_submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id);
+        vehicle_class_experience: experience.vehicle_classes ?? [],
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const retry = await (admin as any)
+        .from('driver_profiles')
+        .update(minimalUpdate)
+        .eq('user_id', user.id);
+      updateErr = retry.error;
+    }
 
     if (updateErr) {
       return NextResponse.json(
