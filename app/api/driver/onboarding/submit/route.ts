@@ -5,9 +5,30 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * POST /api/driver/onboarding/submit
  *
- * Validates onboarding_state completeness, creates a driver_payout_methods
- * row, flips verification_status to 'submitted'.
+ * Validates onboarding_state completeness, creates driver_payout_methods
+ * row, writes documents table rows for each uploaded file, flips
+ * verification_status to 'submitted'.
  */
+
+const BUCKET = 'driver-documents';
+
+// Maps identity.id_type (from the identity step) to the documents.document_type enum
+const ID_TYPE_TO_DOC: Record<string, string> = {
+  nin: 'national_id',
+  passport: 'passport',
+  voters_card: 'voter_card',
+  drivers_licence: 'driver_licence_front',
+};
+
+interface DocumentInsert {
+  owner_user_id: string;
+  document_type: string;
+  storage_bucket: string;
+  storage_path: string;
+  reference_number?: string | null;
+  expiry_date?: string | null;
+  metadata?: Record<string, unknown>;
+}
 
 export async function POST() {
   try {
@@ -59,7 +80,6 @@ export async function POST() {
     if (!experience.vehicle_classes || (experience.vehicle_classes as unknown[]).length === 0) {
       missing.push('experience');
     }
-    // Availability lives on two booleans, not in state
     if (!profile.available_on_demand && !profile.available_permanent) {
       missing.push('availability');
     }
@@ -74,7 +94,89 @@ export async function POST() {
       );
     }
 
-    // Create driver_payout_methods row (unverified). Ignore duplicates.
+    // Build document rows to insert
+    const documents: DocumentInsert[] = [];
+
+    const idType = typeof identity.id_type === 'string' ? identity.id_type : null;
+    const idDocType = idType ? ID_TYPE_TO_DOC[idType] : null;
+    const idFrontPath = typeof identity.id_front_path === 'string' ? identity.id_front_path : null;
+    const idBackPath = typeof identity.id_back_path === 'string' ? identity.id_back_path : null;
+    const idNumber = typeof identity.id_number === 'string' ? identity.id_number : null;
+
+    if (idDocType && idFrontPath) {
+      documents.push({
+        owner_user_id: user.id,
+        document_type: idDocType,
+        storage_bucket: BUCKET,
+        storage_path: idFrontPath,
+        reference_number: idNumber,
+        metadata: { side: 'front', source: 'onboarding' },
+      });
+    }
+    if (idDocType && idBackPath) {
+      documents.push({
+        owner_user_id: user.id,
+        document_type: idDocType,
+        storage_bucket: BUCKET,
+        storage_path: idBackPath,
+        reference_number: idNumber,
+        metadata: { side: 'back', source: 'onboarding' },
+      });
+    }
+
+    const licenceFrontPath = typeof licence.licence_front_path === 'string' ? licence.licence_front_path : null;
+    const licenceBackPath = typeof licence.licence_back_path === 'string' ? licence.licence_back_path : null;
+    const licenceNumber = typeof licence.licence_number === 'string' ? licence.licence_number : null;
+    const licenceExpiry = typeof licence.expiry_date === 'string' ? licence.expiry_date : null;
+
+    if (licenceFrontPath) {
+      documents.push({
+        owner_user_id: user.id,
+        document_type: 'driver_licence_front',
+        storage_bucket: BUCKET,
+        storage_path: licenceFrontPath,
+        reference_number: licenceNumber,
+        expiry_date: licenceExpiry,
+        metadata: { source: 'onboarding', licence_class: licence.licence_class },
+      });
+    }
+    if (licenceBackPath) {
+      documents.push({
+        owner_user_id: user.id,
+        document_type: 'driver_licence_back',
+        storage_bucket: BUCKET,
+        storage_path: licenceBackPath,
+        reference_number: licenceNumber,
+        expiry_date: licenceExpiry,
+        metadata: { source: 'onboarding', licence_class: licence.licence_class },
+      });
+    }
+
+    const utilityBillPath = typeof address.utility_bill_path === 'string' ? address.utility_bill_path : null;
+    if (utilityBillPath) {
+      documents.push({
+        owner_user_id: user.id,
+        document_type: 'utility_bill',
+        storage_bucket: BUCKET,
+        storage_path: utilityBillPath,
+        metadata: { source: 'onboarding' },
+      });
+    }
+
+    // Insert all documents in one batch
+    if (documents.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: docsErr } = await (admin as any)
+        .from('documents')
+        .insert(documents);
+
+      if (docsErr) {
+        console.error('[submit] documents insert failed:', docsErr);
+        // Don't block submission — admin can still find files in the bucket
+      }
+    }
+
+    // Create driver_payout_methods row (unverified)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
@@ -111,7 +213,10 @@ export async function POST() {
       );
     }
 
-    return NextResponse.json({ submitted: true });
+    return NextResponse.json({
+      submitted: true,
+      documentsInserted: documents.length,
+    });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.status });
