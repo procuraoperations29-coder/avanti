@@ -16,12 +16,14 @@ export default function DriverSignUpPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('details');
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneValid, setPhoneValid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const canContinue = fullName.trim().length >= 2 && phoneValid;
+  const emailValid = /.+@.+\..+/.test(email.trim());
+  const canContinue = fullName.trim().length >= 2 && emailValid && phoneValid;
 
   async function sendOtp() {
     setBusy(true);
@@ -30,7 +32,13 @@ export default function DriverSignUpPage() {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, isSignup: true, fullName, countryCode: 'NG' }),
+        body: JSON.stringify({
+          email: email.trim(),
+          isSignup: true,
+          fullName,
+          phone,
+          countryCode: 'NG',
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -51,7 +59,7 @@ export default function DriverSignUpPage() {
       const verifyRes = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ email: email.trim(), code }),
       });
       if (!verifyRes.ok) {
         const body = await verifyRes.json().catch(() => ({}));
@@ -61,7 +69,7 @@ export default function DriverSignUpPage() {
       const completeRes = await fetch('/api/auth/signup/driver', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName }),
+        body: JSON.stringify({ fullName, email: email.trim(), phone }),
       });
       if (!completeRes.ok) {
         const body = await completeRes.json().catch(() => ({}));
@@ -79,6 +87,8 @@ export default function DriverSignUpPage() {
       setBusy(false);
     }
   }
+
+  const field = 'mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink';
 
   return (
     <div className="mx-auto max-w-md px-4 pt-16 sm:px-6">
@@ -106,15 +116,32 @@ export default function DriverSignUpPage() {
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Ada Okonkwo"
               autoFocus
-              className="mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink"
+              className={field}
             />
           </div>
 
+          <div className="mb-4">
+            <SectionLabel>Your email</SectionLabel>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ada@example.com"
+              className={field}
+            />
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              We&apos;ll send your sign-in code here
+            </p>
+          </div>
+
           <div className="mb-6">
-            <SectionLabel>Phone</SectionLabel>
+            <SectionLabel>Your phone</SectionLabel>
             <div className="mt-3">
               <PhoneInput onChange={(e164, valid) => { setPhone(e164); setPhoneValid(valid); }} />
             </div>
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              For dispatch and customer contact
+            </p>
           </div>
 
           {errorMsg && <p className="mb-4 font-mono text-sm text-oxblood">{errorMsg}</p>}
@@ -134,12 +161,12 @@ export default function DriverSignUpPage() {
 
       {step === 'otp' && (
         <div className="animate-slide-up">
-          <SectionLabel>Confirm your number</SectionLabel>
+          <SectionLabel>Check your inbox</SectionLabel>
           <h1 className="mb-2 mt-3 font-display text-4xl leading-tight text-ink">
             <em className="italic">Six digits.</em>
           </h1>
           <p className="mb-8 font-body text-ink-muted">
-            Sent to <span className="font-mono">{phone}</span>.
+            Sent to <span className="font-mono">{email}</span>.
           </p>
 
           <OtpInput onComplete={verifyAndComplete} disabled={busy} autoFocus />
