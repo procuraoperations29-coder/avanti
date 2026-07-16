@@ -3,12 +3,12 @@ import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
- * /driver/onboarding root — no UI, just routes the driver to their
- * appropriate next step based on onboarding_state.
+ * /driver/onboarding root — routes the driver to their appropriate next
+ * step based on onboarding_state.last_step_completed.
  *
- * - Fresh drivers (never started) → step-start
- * - Mid-onboarding → the last step they touched, OR one after
- * - Submitted-and-pending → step-pending
+ * - Approved → /driver
+ * - Submitted (not yet approved) → step-pending
+ * - Otherwise → next incomplete step
  */
 
 export default async function OnboardingRootPage() {
@@ -46,6 +46,7 @@ export default async function OnboardingRootPage() {
     experience: '/driver/onboarding/step-availability',
     availability: '/driver/onboarding/step-payout',
     payout: '/driver/onboarding/step-review',
+    review: '/driver/onboarding/step-pending',
   };
 
   redirect(nextByLast[last] ?? '/driver/onboarding/step-start');
