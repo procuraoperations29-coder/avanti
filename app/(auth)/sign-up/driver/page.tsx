@@ -76,11 +76,13 @@ export default function DriverSignUpPage() {
         throw new Error(body.message ?? 'Could not complete signup');
       }
 
+      // Refresh session so the JWT picks up the new driver role
       const supabase = createClient();
       await supabase.auth.refreshSession();
 
       setStep('done');
-      setTimeout(() => router.push('/driver/onboarding/pending'), 1500);
+      // Redirect to onboarding root — it decides which step to send them to
+      setTimeout(() => router.push('/driver/onboarding'), 1500);
     } catch (err) {
       setErrorMsg(err instanceof Error ? err.message : String(err));
     } finally {

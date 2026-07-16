@@ -1,130 +1,97 @@
-# Email OTP switchover
+# Onboarding Wizard — Chunk 1 of 4 (Foundations)
 
-5 files. Swaps phone-based auth for email-based auth. Nigerian users
-happily accept email — no SMS dependency, no Termii sender ID chase.
+9 files. The scaffolding for driver onboarding: storage bucket, save-step
+and upload endpoints, wizard layout, start + pending pages, and a fixed
+driver signup redirect. Middle steps (identity → licence → address →
+background → experience → payout → review) come in chunks 2-4.
 
 ## Apply
 
 ```bash
 cd ~/Downloads
-unzip -o email-otp.zip -d /tmp/email-extract
-cp -r /tmp/email-extract/email-otp/* ~/Desktop/Avanti/
-```
+unzip -o onboard-chunk-1.zip -d /tmp/onboard1-extract
+cp -r /tmp/onboard1-extract/onboard1/* ~/Desktop/Avanti/
+rm -rf /tmp/onboard1-extract ~/Desktop/Avanti/.next
 
-That overwrites the four page files and two API routes. Then commit + push:
-
-```bash
 cd ~/Desktop/Avanti
-git add -A && git commit -m "switch auth from phone otp to email otp" && git push
+supabase db push
+supabase gen types typescript --linked > types/database.ts
+
+git add -A && git commit -m "onboarding chunk 1: storage, layout, start, pending, save-step, upload" && git push
 ```
 
-Vercel auto-redeploys.
+## Test after Vercel finishes
 
-## Also — patch the driver signup page
+1. Fresh driver signup at `www.avanti.com.ng/sign-up/driver` (use a new email)
+2. Enter code → land on `/driver/onboarding` root
+3. Root redirects to `/driver/onboarding/step-start` (no prior progress)
+4. See the "Welcome to Avanti" page with the checklist
+5. Click Begin → routes to `/driver/onboarding/step-identity`
+6. **Which will 404** — that's built in Chunk 2. Expected.
 
-I don't have your driver signup page. But it uses the same phone-OTP
-pattern as customer/corporate. Small patch — open:
-
-```
-app/(auth)/sign-up/driver/page.tsx
-```
-
-And find these two blocks:
-
-**1.** Where it calls `/api/auth/otp/send`, change the body to send `email` instead of `phone`:
-
-```typescript
-// OLD:
-body: JSON.stringify({ phone, isSignup: true, fullName, countryCode: 'NG' }),
-
-// NEW:
-body: JSON.stringify({
-  email: email.trim(),
-  isSignup: true,
-  fullName,
-  phone,
-  countryCode: 'NG',
-}),
-```
-
-**2.** Where it calls `/api/auth/otp/verify`:
-
-```typescript
-// OLD:
-body: JSON.stringify({ phone, code }),
-
-// NEW:
-body: JSON.stringify({ email: email.trim(), code }),
-```
-
-**3.** Add an email field to the form. Copy the same email input block
-from the customer signup page (in `app/(auth)/sign-up/customer/page.tsx`).
-Add state: `const [email, setEmail] = useState('');`
-
-**4.** Update the OTP-step heading from "Confirm your number" to
-"Check your inbox". Change `{phone}` display to `{email}`.
-
-## Admin migration — CRITICAL before you sign in
-
-Your admin account (`3c010183-6dba-4f05-916c-e13342a4ae5b`) currently
-authenticates via phone. After this switchover, phone auth stops
-working. You need to add an email to your Supabase Auth record.
-
-**Supabase Dashboard → SQL Editor:**
+To progress your test driver past step-start manually before Chunk 2 lands,
+you can insert dummy state in SQL:
 
 ```sql
-update auth.users
-set email = 'procuraoperations29@gmail.com',
-    email_confirmed_at = now()
-where id = '3c010183-6dba-4f05-916c-e13342a4ae5b';
+UPDATE driver_profiles
+SET onboarding_state = jsonb_set(onboarding_state, '{last_step_completed}', '"start"'::jsonb)
+WHERE user_id = 'YOUR_DRIVER_USER_ID';
 ```
 
-Substitute your real email. After this runs, you can sign in with that
-email at `/sign-in` and Supabase will send the code.
+## What ships in Chunk 1
 
-## Disable the SMS hook
+**Migration**
+- `20260818000000_onboarding_storage.sql` — Creates `onboarding-documents`
+  bucket with RLS (drivers can only touch their own folder, admins read all).
+  Adds `onboarding_state` jsonb + `onboarding_submitted_at` columns to
+  driver_profiles if they don't exist yet.
 
-You don't need it any more:
+**Library**
+- `lib/onboarding/state.ts` — Step definitions, TypeScript types for each
+  step's data shape, list of Nigerian banks for the payout step.
 
-1. Supabase Dashboard → Authentication → Hooks
-2. Send SMS Hook → **Disable** (or delete)
+**API endpoints**
+- `app/api/driver/onboarding/save-step/route.ts` — POST body: `{step, data}`.
+  Merges data into `driver_profiles.onboarding_state[step]`. Also updates
+  `last_step_completed` so we can route drivers back to where they were.
+- `app/api/driver/onboarding/upload/route.ts` — Multipart upload. Stores
+  files at `{user_id}/{documentType}/{timestamp}-{filename}`. Returns
+  both the storage path (for saving into state) and a 1-year signed URL
+  (for preview). documentType is allow-listed.
 
-Also clean up if you want — remove these Vercel env vars (optional):
-- `TERMII_API_KEY`
-- `TERMII_SENDER_ID`
-- `SEND_SMS_HOOK_SECRET`
+**Wizard pages**
+- `app/(driver)/driver/onboarding/layout.tsx` — Auth-gates the wizard, sends
+  approved drivers to `/driver` instead.
+- `app/(driver)/driver/onboarding/page.tsx` — Root router. Reads
+  `onboarding_state.last_step_completed` and redirects to the appropriate
+  next step. Submitted-but-not-approved → step-pending.
+- `app/(driver)/driver/onboarding/step-start/page.tsx` — Welcome page
+  with checklist of what they'll need.
+- `app/(driver)/driver/onboarding/step-pending/page.tsx` — Post-submit
+  page. Shows submit date + expected decision timeline.
 
-And you can delete `app/api/auth/sms-hook/route.ts` — it's dead code now.
+**Fix**
+- `app/(auth)/sign-up/driver/page.tsx` — Points at `/driver/onboarding`
+  (not `/pending`) after signup completes.
 
-## Optional — customize the email template
+## What's coming in later chunks
 
-Supabase's default OTP email works but says "Confirm your signup." You
-can polish it:
+**Chunk 2** — Identity + Licence steps (uses DocumentUpload component)
+**Chunk 3** — Address + Background + Experience steps
+**Chunk 4** — Payout + Review + Submit endpoint
 
-1. Supabase Dashboard → Authentication → Email Templates
-2. Select **Magic Link** (this is the one that sends OTP codes too)
-3. Customize the subject: `Your Avanti sign-in code`
-4. Customize the body to mention Avanti and include `{{ .Token }}` for the code
-5. Save
+Each chunk should be applyable independently — you'll get one 404 at the
+next unbuilt step, but the wizard shell keeps working.
 
-Do this later — not urgent.
+## Bug fixes I want to add later (post-chunk-4)
 
-## Test flow
+- The three signup endpoints (customer/corporate/driver) should call
+  `fn_rebuild_user_claims` after inserting the role so JWTs pick up new
+  claims without requiring a sign-out cycle. Currently `refreshSession()`
+  on the client is enough IF the claim exists — but stale sessions from
+  before the role was granted still need a sign-out.
 
-1. `https://www.avanti.com.ng` incognito
-2. Sign In → enter your admin email → Send my code
-3. Check inbox — 6-digit code from Supabase within seconds
-4. Enter code → signed in
-5. Redirects to `/customer` or wherever your admin lands
+## After you apply Chunk 1
 
-Should work first try.
-
-## Files shipped
-
-- `app/api/auth/otp/send/route.ts` — email version
-- `app/api/auth/otp/verify/route.ts` — email version
-- `app/(auth)/sign-in/page.tsx` — email input
-- `app/(auth)/sign-up/customer/page.tsx` — email required
-- `app/(auth)/sign-up/corporate/page.tsx` — email required
-
-Ship it.
+Report the outcome of the test flow above. Once you confirm step-start
+loads cleanly, I'll ship Chunk 2 (identity + licence).
