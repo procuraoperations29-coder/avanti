@@ -1,32 +1,35 @@
-# Onboarding Chunk 2 — Identity + Licence
+# Onboarding Chunk 3 — Address + Background + Experience
 
-5 files. Adds the first two document-uploading steps of the wizard.
+6 files. The three middle steps of the wizard. No new API endpoints or
+migrations — uses save-step from Chunk 1.
 
 ## Apply
 
 ```bash
 cd ~/Downloads
-unzip -o onboard-chunk-2.zip -d /tmp/onboard2-extract
-cp -r /tmp/onboard2-extract/onboard2/* ~/Desktop/Avanti/
-rm -rf /tmp/onboard2-extract ~/Desktop/Avanti/.next
+unzip -o onboard-chunk-3.zip -d /tmp/onboard3-extract
+cp -r /tmp/onboard3-extract/onboard3/* ~/Desktop/Avanti/
+rm -rf /tmp/onboard3-extract ~/Desktop/Avanti/.next
 
 cd ~/Desktop/Avanti
-git add -A && git commit -m "onboarding chunk 2: identity + licence" && git push
+git add -A && git commit -m "onboarding chunk 3: address, background, experience" && git push
 ```
-
-No new migration. Uses existing storage bucket + save-step endpoint from Chunk 1.
 
 ## Test after Vercel finishes
 
-1. Sign in as the driver from your last test signup
-2. Navigate to `/driver/onboarding/step-identity` (or just `/driver/onboarding` — it'll route you)
-3. Fill in legal name, DOB, gender, ID type, ID number
-4. Upload front photo of your ID (a picture of any doc for testing)
-5. Optionally upload the back
-6. Click Continue → lands on `/driver/onboarding/step-licence`
-7. Fill in licence details, upload both sides
-8. Click Continue → lands on `/driver/onboarding/step-address`
-9. **404** — expected. Address step ships in Chunk 3.
+1. Sign in as your test driver (or fresh signup — up to you)
+2. Navigate through: identity → licence → **address**
+3. Fill street, city, state, optional landmark, upload proof of address
+4. Continue → **background**
+5. Fill two references (name, phone, relationship, years known each)
+6. Answer criminal disclosure Yes/No
+7. Continue → **experience**
+8. Fill years, vehicle classes (multi), transmissions (multi), languages (multi), night driving, smartphone, service radius
+9. Continue → **step-availability**
+
+Availability already existed in your repo — you should see it load without 404.
+
+10. Fill availability → Continue → **step-payout** (404 — expected, Chunk 4)
 
 ## Verify saves worked
 
@@ -35,38 +38,44 @@ SELECT onboarding_state FROM driver_profiles
 WHERE user_id = 'YOUR_DRIVER_USER_ID';
 ```
 
-Should see `identity` and `licence` objects populated with the data you entered, plus storage paths for the uploaded images.
-
-## Verify uploads landed in storage
-
-Supabase Dashboard → Storage → `onboarding-documents` bucket. You should see:
-- `{user_id}/id_front/{timestamp}-{filename}.jpg`
-- `{user_id}/licence_front/{timestamp}-{filename}.jpg`
-- `{user_id}/licence_back/{timestamp}-{filename}.jpg`
+Should have `identity`, `licence`, `address`, `background`, `experience` all populated.
 
 ## Files shipped
 
-- `components/driver/onboarding/wizard-header.tsx` — Reusable header block used by every step (giant ordinal + label + back link)
-- `app/(driver)/driver/onboarding/step-identity/page.tsx` — Server component, loads saved data
-- `app/(driver)/driver/onboarding/step-identity/identity-form.tsx` — Client form with pill toggles, ID upload
-- `app/(driver)/driver/onboarding/step-licence/page.tsx` — Server component
-- `app/(driver)/driver/onboarding/step-licence/licence-form.tsx` — Client form with licence class picker, expiry warning, front+back upload
+- `app/(driver)/driver/onboarding/step-address/page.tsx` + `address-form.tsx`
+  — Nigerian state dropdown, utility bill upload
+- `app/(driver)/driver/onboarding/step-background/page.tsx` + `background-form.tsx`
+  — Two reference blocks with name/phone/relationship/years, criminal disclosure
+- `app/(driver)/driver/onboarding/step-experience/page.tsx` + `experience-form.tsx`
+  — Multi-select pill toggles for vehicle classes, transmissions, languages;
+  yes/no toggles for night driving and smartphone; service radius km input
 
 ## Design decisions
 
-- **Uploads happen immediately** — as soon as the driver picks a file, it's uploaded to storage. The path is stored in state, not the file itself
-- **Expiry date validation is inline** — red border + warning message if the licence expiry is in the past. Continue button disables
-- **Pill toggles for enums** — cleaner than dropdowns for 2-4 options (gender, ID type, licence class)
-- **Auto-uppercase on licence numbers** — Nigerian licence numbers are always uppercase, saves a typo
-- **Back of ID is optional; back of licence is required** — matches Nigerian document conventions
+- **References are two hard-coded blocks** — you asked for two references
+  minimum. Simpler UX than a dynamic add-more form. If they need more, we
+  can add later.
+- **Criminal disclosure** — pill Yes/No, with an explanation textbox that
+  only appears if Yes. Not a blocker, just recorded honesty.
+- **Vehicle classes are multi-select** — drivers can drive multiple types.
+  Determines their matchable jobs.
+- **Service radius** — defaults to 25km. Drivers set what they're willing
+  to travel for a booking.
+- **English pre-selected in languages** — most Nigerian drivers speak it
+  anyway; can be unchecked.
 
-## Coming in Chunk 3
+## Coming in Chunk 4
 
-Next chunk: Address, Background (with references), Experience. All non-file-heavy steps except the utility bill in Address.
+Last chunk: payout step (bank details), review step (summary of everything),
+submit endpoint (sets `verification_status='submitted'`, moves them to
+step-pending). Once shipped, the wizard is complete end-to-end.
 
-Report:
-1. Did upload work?
-2. Did identity + licence save?
-3. Did continue take you to the (404) address step?
+## Report
 
-Once confirmed, I ship Chunk 3.
+After you test:
+1. Did address save with utility bill upload?
+2. Did background save with two references and disclosure?
+3. Did experience save?
+4. Did continue take you to step-availability (which should already work)?
+
+Once confirmed, I ship Chunk 4 to close out the onboarding wizard.
