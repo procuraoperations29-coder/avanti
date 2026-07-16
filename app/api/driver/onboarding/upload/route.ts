@@ -9,7 +9,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  *   - file: the file
  *   - documentType: e.g. 'licence_front', 'utility_bill', 'id_front'
  *
- * Stores the file in the onboarding-documents bucket at path:
+ * Stores the file in the driver-documents bucket at path:
  *   {user_id}/{documentType}/{timestamp}-{safe_filename}
  *
  * Returns the storage path (not a signed URL — we generate signed URLs
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: uploadErr } = await (admin as any).storage
-      .from('onboarding-documents')
+      .from('driver-documents')
       .upload(path, buffer, {
         contentType: file.type,
         upsert: false,
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     // Generate a 1-year signed URL for immediate preview
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: signed } = await (admin as any).storage
-      .from('onboarding-documents')
+      .from('driver-documents')
       .createSignedUrl(path, 60 * 60 * 24 * 365);
 
     return NextResponse.json({
