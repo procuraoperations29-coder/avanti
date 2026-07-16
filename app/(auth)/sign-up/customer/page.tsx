@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, ArrowRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SectionLabel } from '@/components/avanti/section-label';
@@ -14,17 +14,17 @@ type Step = 'details' | 'otp' | 'done';
 
 export default function CustomerSignUpPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>('details');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState(searchParams.get('phone') ?? '');
-  const [phoneValid, setPhoneValid] = useState(Boolean(searchParams.get('phone')));
+  const [phone, setPhone] = useState('');
+  const [phoneValid, setPhoneValid] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const canContinue = fullName.trim().length >= 2 && phoneValid;
+  const emailValid = /.+@.+\..+/.test(email.trim());
+  const canContinue = fullName.trim().length >= 2 && emailValid && phoneValid;
 
   async function sendOtp() {
     setBusy(true);
@@ -33,7 +33,13 @@ export default function CustomerSignUpPage() {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, isSignup: true, fullName, countryCode: 'NG' }),
+        body: JSON.stringify({
+          email: email.trim(),
+          isSignup: true,
+          fullName,
+          phone,
+          countryCode: 'NG',
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -51,30 +57,26 @@ export default function CustomerSignUpPage() {
     setBusy(true);
     setErrorMsg(null);
     try {
-      // 1. Verify OTP — this creates the auth.users row (via signInWithOtp shouldCreateUser)
-      //    and establishes the session.
       const verifyRes = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ email: email.trim(), code }),
       });
       if (!verifyRes.ok) {
         const body = await verifyRes.json().catch(() => ({}));
         throw new Error(body.message ?? 'Wrong code');
       }
 
-      // 2. Complete signup — assigns individual_customer role.
       const completeRes = await fetch('/api/auth/signup/customer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, email: email.trim() || undefined }),
+        body: JSON.stringify({ fullName, email: email.trim(), phone }),
       });
       if (!completeRes.ok) {
         const body = await completeRes.json().catch(() => ({}));
         throw new Error(body.message ?? 'Could not complete signup');
       }
 
-      // 3. Refresh session to pick up new app_metadata (roles now populated).
       const supabase = createClient();
       await supabase.auth.refreshSession();
 
@@ -86,6 +88,8 @@ export default function CustomerSignUpPage() {
       setBusy(false);
     }
   }
+
+  const field = 'mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink';
 
   return (
     <div className="mx-auto max-w-md px-4 pt-16 sm:px-6">
@@ -113,26 +117,37 @@ export default function CustomerSignUpPage() {
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Ada Okonkwo"
               autoFocus
-              className="mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink"
+              className={field}
             />
           </div>
 
           <div className="mb-4">
-            <SectionLabel>Phone</SectionLabel>
-            <div className="mt-3">
-              <PhoneInput onChange={(e164, valid) => { setPhone(e164); setPhoneValid(valid); }} />
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <SectionLabel>Email · optional</SectionLabel>
+            <SectionLabel>Your email</SectionLabel>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ada@example.com"
-              className="mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink"
+              className={field}
             />
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              We&apos;ll send your sign-in code here
+            </p>
+          </div>
+
+          <div className="mb-6">
+            <SectionLabel>Your phone</SectionLabel>
+            <div className="mt-3">
+              <PhoneInput
+                onChange={(e164, valid) => {
+                  setPhone(e164);
+                  setPhoneValid(valid);
+                }}
+              />
+            </div>
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              For dispatch and support · not used for sign-in
+            </p>
           </div>
 
           {errorMsg && <p className="mb-4 font-mono text-sm text-oxblood">{errorMsg}</p>}
@@ -156,12 +171,12 @@ export default function CustomerSignUpPage() {
 
       {step === 'otp' && (
         <div className="animate-slide-up">
-          <SectionLabel>Confirm your number</SectionLabel>
+          <SectionLabel>Check your inbox</SectionLabel>
           <h1 className="mb-2 mt-3 font-display text-4xl leading-tight text-ink">
             <em className="italic">Six digits.</em>
           </h1>
           <p className="mb-8 font-body text-ink-muted">
-            Sent to <span className="font-mono">{phone}</span>.
+            Sent to <span className="font-mono">{email}</span>.
           </p>
 
           <OtpInput onComplete={verifyAndComplete} disabled={busy} autoFocus />

@@ -10,32 +10,26 @@ import { toast } from '@/components/ui/sonner';
 import { SectionLabel } from '@/components/avanti/section-label';
 
 /**
- * Sign in — editorial polish.
+ * Sign in — email OTP.
  *
- * Fixed: phone must be submitted in E.164 format ('+' prefixed).
- * The '+' prefix is visual in the input; we prepend it back on submit.
+ * Two-step: enter email → check inbox for 6-digit code → sign in.
  */
-
-function formatPhone(raw: string): string {
-  const digits = raw.replace(/\D/g, '');
-  return digits ? `+${digits}` : '';
-}
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') ?? undefined;
 
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('234');
+  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sending, setSending] = useState(false);
   const [verifying, setVerifying] = useState(false);
 
   const sendCode = async () => {
-    const normalized = phone.replace(/\D/g, '');
-    if (normalized.length < 10) {
-      toast.error('Enter a full phone number including country code');
+    const trimmed = email.trim();
+    if (!/.+@.+\..+/.test(trimmed)) {
+      toast.error('Enter a valid email address');
       return;
     }
     setSending(true);
@@ -43,15 +37,19 @@ export default function SignInPage() {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+${normalized}` }),
+        body: JSON.stringify({ email: trimmed }),
       });
       const body = (await res.json()) as { error?: string; message?: string };
       if (!res.ok) {
+        if (body.error === 'user_not_found') {
+          toast.error("No account with that email — sign up first");
+          return;
+        }
         toast.error(body.message ?? body.error ?? 'Could not send code');
         return;
       }
       setStep('otp');
-      toast.success('Code sent');
+      toast.success('Code sent — check your inbox');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not send code');
     } finally {
@@ -60,17 +58,16 @@ export default function SignInPage() {
   };
 
   const verifyCode = async () => {
-    if (code.length < 4) {
+    if (code.length < 6) {
       toast.error('Enter the 6-digit code');
       return;
     }
     setVerifying(true);
     try {
-      const normalized = phone.replace(/\D/g, '');
       const res = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: `+${normalized}`, code }),
+        body: JSON.stringify({ email: email.trim(), code }),
       });
       const body = (await res.json()) as { error?: string; message?: string; redirectTo?: string };
       if (!res.ok) {
@@ -89,7 +86,6 @@ export default function SignInPage() {
 
   return (
     <div className="min-h-screen bg-paper">
-      {/* Header */}
       <header className="border-b border-line">
         <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
           <Link href="/" className="font-display text-2xl tracking-tight text-ink">
@@ -105,24 +101,19 @@ export default function SignInPage() {
       </header>
 
       <main className="mx-auto grid max-w-6xl gap-16 px-6 py-16 md:grid-cols-5 md:py-24">
-        {/* Copy column */}
         <div className="md:col-span-2">
           <SectionLabel>Sign in</SectionLabel>
           <h1 className="mt-4 font-display text-5xl leading-[1.05] text-ink md:text-6xl">
-            {step === 'phone' ? (
-              <>
-                Welcome <em className="italic">back.</em>
-              </>
+            {step === 'email' ? (
+              <>Welcome <em className="italic">back.</em></>
             ) : (
-              <>
-                Check your <em className="italic">messages.</em>
-              </>
+              <>Check your <em className="italic">inbox.</em></>
             )}
           </h1>
           <p className="mt-6 max-w-md font-body leading-relaxed text-ink">
-            {step === 'phone'
-              ? "Enter your phone. We'll send you a one-time code — no passwords to remember."
-              : `We sent a six-digit code to ${formatPhone(phone)}. Enter it below to sign in.`}
+            {step === 'email'
+              ? "Enter your email. We'll send you a one-time code — no passwords to remember."
+              : `We sent a six-digit code to ${email}. Enter it below to sign in.`}
           </p>
 
           <div className="mt-12 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
@@ -130,38 +121,28 @@ export default function SignInPage() {
           </div>
         </div>
 
-        {/* Form column */}
         <div className="md:col-span-3">
           <div className="border border-line bg-paper-2 p-8 md:p-10">
-            {step === 'phone' ? (
+            {step === 'email' ? (
               <div className="space-y-6">
                 <div>
                   <label
-                    htmlFor="phone"
+                    htmlFor="email"
                     className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted"
                   >
-                    Your phone
+                    Your email
                   </label>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-ink-muted">
-                      +
-                    </span>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      autoFocus
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                      onKeyDown={(e) => e.key === 'Enter' && sendCode()}
-                      placeholder="2348012345678"
-                      className="pl-7 font-mono text-base"
-                    />
-                  </div>
-                  <p className="mt-2 font-mono text-[10px] text-ink-muted">
-                    Include your country code
-                  </p>
+                  <Input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    autoFocus
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && sendCode()}
+                    placeholder="you@example.com"
+                    className="font-mono text-base"
+                  />
                 </div>
 
                 <Button
@@ -228,12 +209,12 @@ export default function SignInPage() {
 
                 <button
                   onClick={() => {
-                    setStep('phone');
+                    setStep('email');
                     setCode('');
                   }}
                   className="w-full font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
                 >
-                  Use a different phone
+                  Use a different email
                 </button>
               </div>
             )}

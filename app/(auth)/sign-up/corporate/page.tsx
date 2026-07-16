@@ -17,6 +17,7 @@ export default function CorporateSignUpPage() {
   const [step, setStep] = useState<Step>('details');
 
   const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneValid, setPhoneValid] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -28,11 +29,14 @@ export default function CorporateSignUpPage() {
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const emailValid = /.+@.+\..+/.test(email.trim());
+  const billingEmailValid = /.+@.+\..+/.test(billingEmail);
   const canContinue =
     fullName.trim().length >= 2 &&
+    emailValid &&
     phoneValid &&
     companyName.trim().length >= 2 &&
-    /.+@.+\..+/.test(billingEmail);
+    billingEmailValid;
 
   async function sendOtp() {
     setBusy(true);
@@ -41,7 +45,13 @@ export default function CorporateSignUpPage() {
       const res = await fetch('/api/auth/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, isSignup: true, fullName, countryCode: 'NG' }),
+        body: JSON.stringify({
+          email: email.trim(),
+          isSignup: true,
+          fullName,
+          phone,
+          countryCode: 'NG',
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
@@ -62,7 +72,7 @@ export default function CorporateSignUpPage() {
       const verifyRes = await fetch('/api/auth/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code }),
+        body: JSON.stringify({ email: email.trim(), code }),
       });
       if (!verifyRes.ok) {
         const body = await verifyRes.json().catch(() => ({}));
@@ -74,6 +84,8 @@ export default function CorporateSignUpPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName,
+          email: email.trim(),
+          phone,
           companyName,
           legalName: legalName.trim() || undefined,
           registrationNumber: registrationNumber.trim() || undefined,
@@ -127,6 +139,14 @@ export default function CorporateSignUpPage() {
           </div>
 
           <div className="mb-4">
+            <SectionLabel>Your email</SectionLabel>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="ada@company.com" className={field} />
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              We&apos;ll send your sign-in code here
+            </p>
+          </div>
+
+          <div className="mb-4">
             <SectionLabel>Your phone</SectionLabel>
             <div className="mt-3">
               <PhoneInput onChange={(e164, valid) => { setPhone(e164); setPhoneValid(valid); }} />
@@ -175,12 +195,12 @@ export default function CorporateSignUpPage() {
 
       {step === 'otp' && (
         <div className="animate-slide-up">
-          <SectionLabel>Confirm your number</SectionLabel>
+          <SectionLabel>Check your inbox</SectionLabel>
           <h1 className="mb-2 mt-3 font-display text-4xl leading-tight text-ink">
             <em className="italic">Six digits.</em>
           </h1>
           <p className="mb-8 font-body text-ink-muted">
-            Sent to <span className="font-mono">{phone}</span>.
+            Sent to <span className="font-mono">{email}</span>.
           </p>
 
           <OtpInput onComplete={verifyAndComplete} disabled={busy} autoFocus />

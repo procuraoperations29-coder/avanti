@@ -5,21 +5,24 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * POST /api/auth/otp/send
  *
- * Body: { phone: E.164, isSignup: bool, fullName?, countryCode? }
+ * Body: { email, isSignup?, fullName?, phone?, countryCode?, preferredLanguage? }
  *
- * Uses Supabase's built-in phone provider. Configure Twilio (or another
- * SMS provider) in Supabase dashboard → Authentication → Providers → Phone
- * for real delivery. Without it, this route will error with a provider
- * message — that's Supabase telling you to configure the provider.
+ * Uses Supabase's built-in email OTP. No SMS provider needed — Supabase
+ * sends the code via its default email service.
  *
- * For pure local dev without an SMS provider, use Supabase's test phone
- * numbers (Authentication → Providers → Phone → Test OTP).
+ * Users receive both a magic link AND a 6-digit code. Our UI uses the
+ * code path.
+ *
+ * For signup, we stash the optional phone number in user_metadata so
+ * downstream signup routes can pick it up as a contact number (it's
+ * no longer the auth identity).
  */
 
 const bodySchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/, 'Phone must be E.164 format'),
+  email: z.string().email(),
   isSignup: z.boolean().default(false),
   fullName: z.string().min(1).max(200).optional(),
+  phone: z.string().optional(),
   countryCode: z.string().length(2).default('NG'),
   preferredLanguage: z.string().length(2).default('en'),
 });
@@ -38,12 +41,13 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signInWithOtp({
-    phone: body.phone,
+    email: body.email,
     options: {
       shouldCreateUser: body.isSignup,
       data: body.isSignup
         ? {
             full_name: body.fullName,
+            phone: body.phone,
             country_code: body.countryCode,
             preferred_language: body.preferredLanguage,
           }
@@ -52,8 +56,6 @@ export async function POST(req: Request) {
   });
 
   if (error) {
-    // Supabase returns a specific error when shouldCreateUser is false
-    // and the user doesn't exist — surface it as 404 for cleaner UI.
     const msg = error.message.toLowerCase();
     if (msg.includes('signups not allowed') || msg.includes('user not found')) {
       return NextResponse.json({ error: 'user_not_found' }, { status: 404 });

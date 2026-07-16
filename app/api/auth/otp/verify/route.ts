@@ -5,15 +5,12 @@ import { createClient } from '@/lib/supabase/server';
 /**
  * POST /api/auth/otp/verify
  *
- * Body: { phone, code }
- * Verifies the OTP with Supabase and establishes a session. On success,
- * cookies are set by the SSR client and subsequent requests are authenticated.
- *
- * Returns { user, activeRole, needsCompletion } — client decides where to route.
+ * Body: { email, code }
+ * Verifies the email OTP and establishes a session via SSR cookies.
  */
 
 const bodySchema = z.object({
-  phone: z.string().regex(/^\+[1-9]\d{1,14}$/),
+  email: z.string().email(),
   code: z.string().length(6).regex(/^\d{6}$/, 'Code must be 6 digits'),
 });
 
@@ -31,9 +28,9 @@ export async function POST(req: Request) {
   const supabase = await createClient();
 
   const { data, error } = await supabase.auth.verifyOtp({
-    phone: body.phone,
+    email: body.email,
     token: body.code,
-    type: 'sms',
+    type: 'email',
   });
 
   if (error || !data.user) {
@@ -50,7 +47,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     userId: data.user.id,
     activeRole,
-    // If they have no roles, they haven't completed signup yet.
     needsCompletion: roles.length === 0,
   });
 }

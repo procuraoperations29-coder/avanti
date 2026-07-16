@@ -1,112 +1,130 @@
-# Onboarding step 06 — Availability
+# Email OTP switchover
 
-3 new files. Adds a dedicated availability step between Experience and
-Payout in the driver onboarding wizard. Driver picks whether they take
-on-demand jobs, permanent placements, or both. Persists directly to
-`driver_profiles.available_on_demand` and `available_permanent`.
+5 files. Swaps phone-based auth for email-based auth. Nigerian users
+happily accept email — no SMS dependency, no Termii sender ID chase.
 
 ## Apply
 
-**Step 1 — Extract:**
-
 ```bash
 cd ~/Downloads
-unzip -o availability-step.zip -d /tmp/avail-extract
-cp -r /tmp/avail-extract/avail-step/* ~/Desktop/Avanti/
-rm -rf /tmp/avail-extract ~/Desktop/Avanti/.next
+unzip -o email-otp.zip -d /tmp/email-extract
+cp -r /tmp/email-extract/email-otp/* ~/Desktop/Avanti/
 ```
 
-**Step 2 — Update the Experience step's "Continue" link.**
-
-Open the file:
-
-```
-app/(driver)/driver/onboarding/step-experience/page.tsx
-```
-
-or wherever the "Continue" button lives (may be in a child form component).
-Find the link/button that navigates forward. It currently goes to:
-
-```
-/driver/onboarding/step-payout
-```
-
-Change to:
-
-```
-/driver/onboarding/step-availability
-```
-
-**Step 3 (optional) — Renumber the Payout step display.**
-
-If the payout step page has its ordinal display as `06`, bump it to `07`
-so the numbering stays sequential. Look for something like:
-
-```tsx
-<div className="mb-2 font-display text-8xl leading-none text-brass md:text-9xl">
-  06
-</div>
-```
-
-Change `06` → `07`. Also update its "Step 06 of X" caption if present.
-
-**Step 4 — Restart:**
+That overwrites the four page files and two API routes. Then commit + push:
 
 ```bash
 cd ~/Desktop/Avanti
-pnpm dev
+git add -A && git commit -m "switch auth from phone otp to email otp" && git push
 ```
 
-Commit:
+Vercel auto-redeploys.
 
-```bash
-git add app/\(driver\)/driver/onboarding/step-availability \
-        app/api/driver/onboarding/availability \
-        app/\(driver\)/driver/onboarding/step-experience
-git commit -m "onboarding: add availability step between experience and payout"
-git push
+## Also — patch the driver signup page
+
+I don't have your driver signup page. But it uses the same phone-OTP
+pattern as customer/corporate. Small patch — open:
+
+```
+app/(auth)/sign-up/driver/page.tsx
 ```
 
-## Test
+And find these two blocks:
 
-1. Start a fresh driver onboarding (or use existing driver in-progress)
-2. Complete steps up to Experience
-3. Click "Continue" from Experience → should land at
-   `/driver/onboarding/step-availability`
-4. Two option cards: **On-demand** (ink border) and **Permanent placement**
-   (brass border)
-5. Try clicking both off → error banner appears, Continue disabled
-6. Pick one or both → Continue enabled
-7. Click Continue → saves to `driver_profiles`, redirects to
-   `/driver/onboarding/step-payout`
-8. Verify in SQL:
+**1.** Where it calls `/api/auth/otp/send`, change the body to send `email` instead of `phone`:
+
+```typescript
+// OLD:
+body: JSON.stringify({ phone, isSignup: true, fullName, countryCode: 'NG' }),
+
+// NEW:
+body: JSON.stringify({
+  email: email.trim(),
+  isSignup: true,
+  fullName,
+  phone,
+  countryCode: 'NG',
+}),
+```
+
+**2.** Where it calls `/api/auth/otp/verify`:
+
+```typescript
+// OLD:
+body: JSON.stringify({ phone, code }),
+
+// NEW:
+body: JSON.stringify({ email: email.trim(), code }),
+```
+
+**3.** Add an email field to the form. Copy the same email input block
+from the customer signup page (in `app/(auth)/sign-up/customer/page.tsx`).
+Add state: `const [email, setEmail] = useState('');`
+
+**4.** Update the OTP-step heading from "Confirm your number" to
+"Check your inbox". Change `{phone}` display to `{email}`.
+
+## Admin migration — CRITICAL before you sign in
+
+Your admin account (`3c010183-6dba-4f05-916c-e13342a4ae5b`) currently
+authenticates via phone. After this switchover, phone auth stops
+working. You need to add an email to your Supabase Auth record.
+
+**Supabase Dashboard → SQL Editor:**
 
 ```sql
-select available_on_demand, available_permanent
-from driver_profiles
-where user_id = auth.uid();
+update auth.users
+set email = 'procuraoperations29@gmail.com',
+    email_confirmed_at = now()
+where id = '3c010183-6dba-4f05-916c-e13342a4ae5b';
 ```
+
+Substitute your real email. After this runs, you can sign in with that
+email at `/sign-in` and Supabase will send the code.
+
+## Disable the SMS hook
+
+You don't need it any more:
+
+1. Supabase Dashboard → Authentication → Hooks
+2. Send SMS Hook → **Disable** (or delete)
+
+Also clean up if you want — remove these Vercel env vars (optional):
+- `TERMII_API_KEY`
+- `TERMII_SENDER_ID`
+- `SEND_SMS_HOOK_SECRET`
+
+And you can delete `app/api/auth/sms-hook/route.ts` — it's dead code now.
+
+## Optional — customize the email template
+
+Supabase's default OTP email works but says "Confirm your signup." You
+can polish it:
+
+1. Supabase Dashboard → Authentication → Email Templates
+2. Select **Magic Link** (this is the one that sends OTP codes too)
+3. Customize the subject: `Your Avanti sign-in code`
+4. Customize the body to mention Avanti and include `{{ .Token }}` for the code
+5. Save
+
+Do this later — not urgent.
+
+## Test flow
+
+1. `https://www.avanti.com.ng` incognito
+2. Sign In → enter your admin email → Send my code
+3. Check inbox — 6-digit code from Supabase within seconds
+4. Enter code → signed in
+5. Redirects to `/customer` or wherever your admin lands
+
+Should work first try.
 
 ## Files shipped
 
-- `app/(driver)/driver/onboarding/step-availability/page.tsx` — server
-  component, editorial voice with ordinal 06, brass info banner explaining
-  the pay model
-- `app/(driver)/driver/onboarding/step-availability/availability-form.tsx`
-  — client component with two option cards, save + continue button
-- `app/api/driver/onboarding/availability/route.ts` — POST endpoint,
-  writes both boolean columns
+- `app/api/auth/otp/send/route.ts` — email version
+- `app/api/auth/otp/verify/route.ts` — email version
+- `app/(auth)/sign-in/page.tsx` — email input
+- `app/(auth)/sign-up/customer/page.tsx` — email required
+- `app/(auth)/sign-up/corporate/page.tsx` — email required
 
-## What's not in this delivery (optional follow-ups)
-
-- **Update the review step** to display the availability choice in the
-  summary. If your `step-review/page.tsx` reads onboarding state and
-  displays it, add a line for availability. Small edit.
-- **Update wizard shell** if you have a step-count in the URL or a
-  progress bar that reads a step list constant. Add 'availability' to
-  the list between 'experience' and 'payout'.
-- **Backfill existing drivers** — anyone who onboarded before this step
-  existed has whatever the column defaults are (on_demand=true,
-  permanent=false). They can change via the toggle on `/driver` home.
-
-Fine to defer all three. The core step works standalone.
+Ship it.
