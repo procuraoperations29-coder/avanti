@@ -82,20 +82,20 @@ export async function POST(req: Request) {
 
   try {
     const res = await fetch('https://api.ng.termii.com/api/sms/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        to: phone,
-        from: senderId,
-        sms: message,
-        type: 'plain',
-        channel: 'generic',
-        api_key: termiiKey,
-      }),
-    });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
+  body: JSON.stringify({
+    to: phone,
+    from: senderId,
+    sms: message,
+    type: 'plain',
+    channel: 'dnd',
+    api_key: termiiKey,
+  }),
+});
 
     const body = (await res.json()) as TermiiResponse;
 
