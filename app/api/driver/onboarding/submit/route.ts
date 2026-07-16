@@ -5,16 +5,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * POST /api/driver/onboarding/submit
  *
- * Called from step-review after the driver clicks "Submit for review".
- *
- * Actions:
- *   1. Validates that all required steps in onboarding_state are populated.
- *   2. Sets driver_profiles.verification_status to 'submitted'.
- *   3. Sets onboarding_submitted_at to now().
- *   4. Creates a driver_payout_methods row (unverified) from the payout data
- *      so admins have a record they can verify during review.
- *
- * After success, the client redirects to /driver/onboarding/step-pending.
+ * Validates onboarding_state completeness, creates a driver_payout_methods
+ * row, flips verification_status to 'submitted'.
  */
 
 export async function POST() {
@@ -26,11 +18,10 @@ export async function POST() {
 
     const admin = createServiceRoleClient();
 
-    // Load current profile + state
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: profile, error: readErr } = await (admin as any)
       .from('driver_profiles')
-      .select('id, onboarding_state, onboarding_submitted_at, availability_preference, verification_status')
+      .select('id, onboarding_state, onboarding_submitted_at, available_on_demand, available_permanent, verification_status')
       .eq('user_id', user.id)
       .single();
 
@@ -38,14 +29,12 @@ export async function POST() {
       return NextResponse.json({ error: 'profile_not_found' }, { status: 404 });
     }
 
-    // Idempotency: if already submitted, return success without changes
     if (profile.onboarding_submitted_at) {
       return NextResponse.json({ submitted: true, alreadySubmitted: true });
     }
 
     const state = (profile.onboarding_state ?? {}) as Record<string, Record<string, unknown>>;
 
-    // Validate required data present
     const missing: string[] = [];
     const identity = state.identity ?? {};
     const licence = state.licence ?? {};
@@ -70,7 +59,8 @@ export async function POST() {
     if (!experience.vehicle_classes || (experience.vehicle_classes as unknown[]).length === 0) {
       missing.push('experience');
     }
-    if (!profile.availability_preference) {
+    // Availability lives on two booleans, not in state
+    if (!profile.available_on_demand && !profile.available_permanent) {
       missing.push('availability');
     }
     if (!payout.bank_code || !payout.account_number || !payout.account_holder_name) {
@@ -84,8 +74,7 @@ export async function POST() {
       );
     }
 
-    // Create driver_payout_methods row (unverified)
-    // Uses upsert semantics — if a row already exists, don't duplicate
+    // Create driver_payout_methods row (unverified). Ignore duplicates.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
@@ -100,11 +89,8 @@ export async function POST() {
         is_verified: false,
       });
 
-    // If insert fails due to duplicate, that's fine — the driver may be
-    // re-submitting after edits. Log any other errors but don't block.
     if (payoutMethodErr && !payoutMethodErr.message?.toLowerCase().includes('duplicate')) {
       console.error('[submit] driver_payout_methods insert:', payoutMethodErr);
-      // Don't fail submission — payout method can be added manually by admin
     }
 
     // Flip verification_status + timestamp

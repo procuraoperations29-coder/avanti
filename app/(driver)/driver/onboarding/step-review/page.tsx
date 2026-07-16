@@ -21,7 +21,7 @@ export default async function ReviewStepPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (admin as any)
     .from('driver_profiles')
-    .select('onboarding_state, onboarding_submitted_at, availability_preference')
+    .select('onboarding_state, onboarding_submitted_at, available_on_demand, available_permanent')
     .eq('user_id', user.id)
     .single();
 
@@ -36,7 +36,19 @@ export default async function ReviewStepPage() {
   const background = (state.background ?? {}) as BackgroundData;
   const experience = (state.experience ?? {}) as ExperienceData;
   const payout = (state.payout ?? {}) as PayoutData;
-  const availability = profile?.availability_preference ?? null;
+
+  // Availability lives on two booleans, not a string
+  const onDemand = Boolean(profile?.available_on_demand);
+  const permanent = Boolean(profile?.available_permanent);
+  const availabilitySummary =
+    onDemand && permanent
+      ? 'Both — on-demand and permanent'
+      : onDemand
+        ? 'On-demand (hourly / daily bookings)'
+        : permanent
+          ? 'Permanent placement (monthly salary)'
+          : null;
+  const availabilitySet = onDemand || permanent;
 
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6 pb-20">
@@ -63,7 +75,8 @@ export default async function ReviewStepPage() {
         address={address}
         background={background}
         experience={experience}
-        availability={typeof availability === 'string' ? availability : null}
+        availabilitySummary={availabilitySummary}
+        availabilitySet={availabilitySet}
         payout={payout}
       />
     </div>

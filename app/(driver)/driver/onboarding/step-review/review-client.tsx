@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ArrowRight, Loader2, Pencil, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
@@ -21,12 +20,12 @@ interface ReviewProps {
   address: AddressData;
   background: BackgroundData;
   experience: ExperienceData;
-  availability: string | null;
+  availabilitySummary: string | null;
+  availabilitySet: boolean;
   payout: PayoutData;
 }
 
 export function ReviewClient(props: ReviewProps) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
 
   const {
@@ -35,18 +34,19 @@ export function ReviewClient(props: ReviewProps) {
     address,
     background,
     experience,
-    availability,
+    availabilitySummary,
+    availabilitySet,
     payout,
   } = props;
 
-  // Quick sanity check: every step has at least SOMETHING
+  // Missing-step check: only flag if the CORE data for that step is empty
   const missingSteps: string[] = [];
   if (!identity.legal_name || !identity.id_number) missingSteps.push('Identity');
   if (!licence.licence_number || !licence.expiry_date) missingSteps.push('Licence');
   if (!address.street_address || !address.city) missingSteps.push('Address');
   if (!background.references || background.references.length < 2) missingSteps.push('Background');
   if (!experience.vehicle_classes || experience.vehicle_classes.length === 0) missingSteps.push('Experience');
-  if (!availability) missingSteps.push('Availability');
+  if (!availabilitySet) missingSteps.push('Availability');
   if (!payout.account_number || !payout.bank_code) missingSteps.push('Payout');
 
   const submit = async () => {
@@ -65,7 +65,6 @@ export function ReviewClient(props: ReviewProps) {
         return;
       }
       toast.success('Submitted. Verification pending.');
-      // Full page reload so middleware picks up updated verification_status
       window.location.href = '/driver/onboarding/step-pending';
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Submit failed');
@@ -90,7 +89,6 @@ export function ReviewClient(props: ReviewProps) {
         </div>
       )}
 
-      {/* Identity */}
       <ReviewSection
         title="Identity"
         editHref="/driver/onboarding/step-identity"
@@ -103,7 +101,6 @@ export function ReviewClient(props: ReviewProps) {
         ]}
       />
 
-      {/* Licence */}
       <ReviewSection
         title="Licence"
         editHref="/driver/onboarding/step-licence"
@@ -115,7 +112,6 @@ export function ReviewClient(props: ReviewProps) {
         ]}
       />
 
-      {/* Address */}
       <ReviewSection
         title="Address"
         editHref="/driver/onboarding/step-address"
@@ -127,7 +123,6 @@ export function ReviewClient(props: ReviewProps) {
         ]}
       />
 
-      {/* Background */}
       <ReviewSection
         title="Background"
         editHref="/driver/onboarding/step-background"
@@ -136,11 +131,15 @@ export function ReviewClient(props: ReviewProps) {
           ['Reference 1 phone', background.references?.[0]?.phone],
           ['Reference 2', background.references?.[1]?.name],
           ['Reference 2 phone', background.references?.[1]?.phone],
-          ['Criminal disclosure', background.criminal_record_disclosure ? 'Yes (see notes)' : 'No'],
+          [
+            'Criminal disclosure',
+            background.criminal_record_disclosure === undefined
+              ? undefined
+              : background.criminal_record_disclosure ? 'Yes (see notes)' : 'No',
+          ],
         ]}
       />
 
-      {/* Experience */}
       <ReviewSection
         title="Experience"
         editHref="/driver/onboarding/step-experience"
@@ -149,22 +148,30 @@ export function ReviewClient(props: ReviewProps) {
           ['Vehicle classes', experience.vehicle_classes?.join(', ')],
           ['Transmissions', experience.transmission_experience?.join(', ')],
           ['Languages', experience.languages?.join(', ')],
-          ['Night driving', experience.can_drive_at_night ? 'Yes' : 'No'],
-          ['Smartphone', experience.has_smartphone ? 'Yes' : 'No'],
+          [
+            'Night driving',
+            experience.can_drive_at_night === undefined
+              ? undefined
+              : experience.can_drive_at_night ? 'Yes' : 'No',
+          ],
+          [
+            'Smartphone',
+            experience.has_smartphone === undefined
+              ? undefined
+              : experience.has_smartphone ? 'Yes' : 'No',
+          ],
           ['Service radius', experience.service_radius_km ? `${experience.service_radius_km} km` : undefined],
         ]}
       />
 
-      {/* Availability */}
       <ReviewSection
         title="Availability"
         editHref="/driver/onboarding/step-availability"
         rows={[
-          ['Preference', availability && humaniseAvailability(availability)],
+          ['Preference', availabilitySummary ?? undefined],
         ]}
       />
 
-      {/* Payout */}
       <ReviewSection
         title="Payout"
         editHref="/driver/onboarding/step-payout"
@@ -223,6 +230,7 @@ function ReviewSection({
   editHref: string;
   rows: Array<[string, string | undefined | null]>;
 }) {
+  const populated = rows.filter(([, v]) => v !== null && v !== undefined && v !== '');
   return (
     <div className="mb-6 border border-line bg-paper-2 p-6">
       <div className="mb-4 flex items-center justify-between">
@@ -238,15 +246,13 @@ function ReviewSection({
         </Link>
       </div>
       <dl className="space-y-2">
-        {rows
-          .filter(([, v]) => v !== null && v !== undefined && v !== '')
-          .map(([label, value]) => (
-            <div key={label} className="grid grid-cols-3 gap-4">
-              <dt className="col-span-1 font-mono text-xs text-ink-muted">{label}</dt>
-              <dd className="col-span-2 font-body text-sm text-ink">{value}</dd>
-            </div>
-          ))}
-        {rows.every(([, v]) => v === null || v === undefined || v === '') && (
+        {populated.map(([label, value]) => (
+          <div key={label} className="grid grid-cols-3 gap-4">
+            <dt className="col-span-1 font-mono text-xs text-ink-muted">{label}</dt>
+            <dd className="col-span-2 font-body text-sm text-ink">{value}</dd>
+          </div>
+        ))}
+        {populated.length === 0 && (
           <p className="font-mono text-xs italic text-ink-faint">Nothing entered yet</p>
         )}
       </dl>
@@ -271,13 +277,4 @@ function humaniseIdType(t: string): string {
     voters_card: "Voter's card",
   };
   return map[t] ?? t;
-}
-
-function humaniseAvailability(a: string): string {
-  const map: Record<string, string> = {
-    on_demand: 'On-demand (hourly / daily bookings)',
-    permanent: 'Permanent placement (monthly salary)',
-    both: 'Both — open to on-demand and permanent',
-  };
-  return map[a] ?? a;
 }
