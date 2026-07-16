@@ -63,15 +63,19 @@ export async function POST(req: Request) {
       user_id: user.id,
       role: 'driver',
     });
-    if (roleErr) {
-      console.error('[signup/driver] user_roles insert failed', roleErr);
-      return NextResponse.json(
-        { error: 'role_assign_failed', message: roleErr.message },
-        { status: 500 }
-      );
-    }
+if (roleErr) {
+  console.error('[signup/driver] user_roles insert failed', roleErr);
+  return NextResponse.json(
+    { error: 'role_assign_failed', message: roleErr.message },
+    { status: 500 }
+  );
+}
 
-    return NextResponse.json({ success: true });
+// Rebuild JWT claims so the new role appears in the session on refresh
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+await (admin as any).rpc('fn_rebuild_user_claims', { target_user: user.id });
+
+return NextResponse.json({ success: true });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code, message: err.message }, { status: err.status });
