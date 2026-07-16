@@ -1,97 +1,72 @@
-# Onboarding Wizard — Chunk 1 of 4 (Foundations)
+# Onboarding Chunk 2 — Identity + Licence
 
-9 files. The scaffolding for driver onboarding: storage bucket, save-step
-and upload endpoints, wizard layout, start + pending pages, and a fixed
-driver signup redirect. Middle steps (identity → licence → address →
-background → experience → payout → review) come in chunks 2-4.
+5 files. Adds the first two document-uploading steps of the wizard.
 
 ## Apply
 
 ```bash
 cd ~/Downloads
-unzip -o onboard-chunk-1.zip -d /tmp/onboard1-extract
-cp -r /tmp/onboard1-extract/onboard1/* ~/Desktop/Avanti/
-rm -rf /tmp/onboard1-extract ~/Desktop/Avanti/.next
+unzip -o onboard-chunk-2.zip -d /tmp/onboard2-extract
+cp -r /tmp/onboard2-extract/onboard2/* ~/Desktop/Avanti/
+rm -rf /tmp/onboard2-extract ~/Desktop/Avanti/.next
 
 cd ~/Desktop/Avanti
-supabase db push
-supabase gen types typescript --linked > types/database.ts
-
-git add -A && git commit -m "onboarding chunk 1: storage, layout, start, pending, save-step, upload" && git push
+git add -A && git commit -m "onboarding chunk 2: identity + licence" && git push
 ```
+
+No new migration. Uses existing storage bucket + save-step endpoint from Chunk 1.
 
 ## Test after Vercel finishes
 
-1. Fresh driver signup at `www.avanti.com.ng/sign-up/driver` (use a new email)
-2. Enter code → land on `/driver/onboarding` root
-3. Root redirects to `/driver/onboarding/step-start` (no prior progress)
-4. See the "Welcome to Avanti" page with the checklist
-5. Click Begin → routes to `/driver/onboarding/step-identity`
-6. **Which will 404** — that's built in Chunk 2. Expected.
+1. Sign in as the driver from your last test signup
+2. Navigate to `/driver/onboarding/step-identity` (or just `/driver/onboarding` — it'll route you)
+3. Fill in legal name, DOB, gender, ID type, ID number
+4. Upload front photo of your ID (a picture of any doc for testing)
+5. Optionally upload the back
+6. Click Continue → lands on `/driver/onboarding/step-licence`
+7. Fill in licence details, upload both sides
+8. Click Continue → lands on `/driver/onboarding/step-address`
+9. **404** — expected. Address step ships in Chunk 3.
 
-To progress your test driver past step-start manually before Chunk 2 lands,
-you can insert dummy state in SQL:
+## Verify saves worked
 
 ```sql
-UPDATE driver_profiles
-SET onboarding_state = jsonb_set(onboarding_state, '{last_step_completed}', '"start"'::jsonb)
+SELECT onboarding_state FROM driver_profiles
 WHERE user_id = 'YOUR_DRIVER_USER_ID';
 ```
 
-## What ships in Chunk 1
+Should see `identity` and `licence` objects populated with the data you entered, plus storage paths for the uploaded images.
 
-**Migration**
-- `20260818000000_onboarding_storage.sql` — Creates `onboarding-documents`
-  bucket with RLS (drivers can only touch their own folder, admins read all).
-  Adds `onboarding_state` jsonb + `onboarding_submitted_at` columns to
-  driver_profiles if they don't exist yet.
+## Verify uploads landed in storage
 
-**Library**
-- `lib/onboarding/state.ts` — Step definitions, TypeScript types for each
-  step's data shape, list of Nigerian banks for the payout step.
+Supabase Dashboard → Storage → `onboarding-documents` bucket. You should see:
+- `{user_id}/id_front/{timestamp}-{filename}.jpg`
+- `{user_id}/licence_front/{timestamp}-{filename}.jpg`
+- `{user_id}/licence_back/{timestamp}-{filename}.jpg`
 
-**API endpoints**
-- `app/api/driver/onboarding/save-step/route.ts` — POST body: `{step, data}`.
-  Merges data into `driver_profiles.onboarding_state[step]`. Also updates
-  `last_step_completed` so we can route drivers back to where they were.
-- `app/api/driver/onboarding/upload/route.ts` — Multipart upload. Stores
-  files at `{user_id}/{documentType}/{timestamp}-{filename}`. Returns
-  both the storage path (for saving into state) and a 1-year signed URL
-  (for preview). documentType is allow-listed.
+## Files shipped
 
-**Wizard pages**
-- `app/(driver)/driver/onboarding/layout.tsx` — Auth-gates the wizard, sends
-  approved drivers to `/driver` instead.
-- `app/(driver)/driver/onboarding/page.tsx` — Root router. Reads
-  `onboarding_state.last_step_completed` and redirects to the appropriate
-  next step. Submitted-but-not-approved → step-pending.
-- `app/(driver)/driver/onboarding/step-start/page.tsx` — Welcome page
-  with checklist of what they'll need.
-- `app/(driver)/driver/onboarding/step-pending/page.tsx` — Post-submit
-  page. Shows submit date + expected decision timeline.
+- `components/driver/onboarding/wizard-header.tsx` — Reusable header block used by every step (giant ordinal + label + back link)
+- `app/(driver)/driver/onboarding/step-identity/page.tsx` — Server component, loads saved data
+- `app/(driver)/driver/onboarding/step-identity/identity-form.tsx` — Client form with pill toggles, ID upload
+- `app/(driver)/driver/onboarding/step-licence/page.tsx` — Server component
+- `app/(driver)/driver/onboarding/step-licence/licence-form.tsx` — Client form with licence class picker, expiry warning, front+back upload
 
-**Fix**
-- `app/(auth)/sign-up/driver/page.tsx` — Points at `/driver/onboarding`
-  (not `/pending`) after signup completes.
+## Design decisions
 
-## What's coming in later chunks
+- **Uploads happen immediately** — as soon as the driver picks a file, it's uploaded to storage. The path is stored in state, not the file itself
+- **Expiry date validation is inline** — red border + warning message if the licence expiry is in the past. Continue button disables
+- **Pill toggles for enums** — cleaner than dropdowns for 2-4 options (gender, ID type, licence class)
+- **Auto-uppercase on licence numbers** — Nigerian licence numbers are always uppercase, saves a typo
+- **Back of ID is optional; back of licence is required** — matches Nigerian document conventions
 
-**Chunk 2** — Identity + Licence steps (uses DocumentUpload component)
-**Chunk 3** — Address + Background + Experience steps
-**Chunk 4** — Payout + Review + Submit endpoint
+## Coming in Chunk 3
 
-Each chunk should be applyable independently — you'll get one 404 at the
-next unbuilt step, but the wizard shell keeps working.
+Next chunk: Address, Background (with references), Experience. All non-file-heavy steps except the utility bill in Address.
 
-## Bug fixes I want to add later (post-chunk-4)
+Report:
+1. Did upload work?
+2. Did identity + licence save?
+3. Did continue take you to the (404) address step?
 
-- The three signup endpoints (customer/corporate/driver) should call
-  `fn_rebuild_user_claims` after inserting the role so JWTs pick up new
-  claims without requiring a sign-out cycle. Currently `refreshSession()`
-  on the client is enough IF the claim exists — but stale sessions from
-  before the role was granted still need a sign-out.
-
-## After you apply Chunk 1
-
-Report the outcome of the test flow above. Once you confirm step-start
-loads cleanly, I'll ship Chunk 2 (identity + licence).
+Once confirmed, I ship Chunk 3.
