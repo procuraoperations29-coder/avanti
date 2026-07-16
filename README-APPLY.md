@@ -1,61 +1,80 @@
-# Chunk 4 Fixes — availability columns + booleans-not-shown
+# Admin Verification Detail Fix
 
-3 files. Fixes:
+2 files. Fixes the "0 documents" + missing applicant info on the admin
+verification detail page.
 
-1. **Review page** was querying non-existent `availability_preference` column.
-   Now uses `available_on_demand` + `available_permanent` booleans that
-   actually exist on driver_profiles.
-2. **Submit endpoint** had the same bug — fixed to check both booleans
-   (at least one must be true).
-3. **Review client** was showing booleans as "No" when they were `undefined`
-   (never answered). Now hides those rows entirely.
+## What was wrong
+
+**`fetchDriverForReview`** queried the `documents` table with column names
+that don't exist on your schema:
+- `kind` → should be `document_type`
+- `filename` → doesn't exist (I synthesize from storage_path)
+- `size_bytes` → should be `file_size_bytes`
+- `uploaded_at` → should be `created_at`
+
+The query failed silently, returned empty, admin saw 0 documents.
+
+**Detail page** read from columns that don't exist on driver_profiles
+(`years_experience`, `languages`, `vehicle_class_experience`,
+`transmission_experience`, `service_radius_km`) — those live inside
+`onboarding_state.experience` jsonb. Also used camelCase keys
+(`state.licence.licenceNumber`) instead of snake_case (`licence_number`)
+that the wizard writes.
+
+## What ships
+
+- `app/api/admin/verification/queue/route.ts` — Fixed `fetchDriverForReview`
+  with correct column names, generates signed URLs directly from the
+  bucket stored on each document row (respects `driver-documents` vs any
+  future bucket).
+- `app/(admin)/admin/verification/[driverId]/page.tsx` — Reads everything
+  from `onboarding_state` jsonb. Adds sections for Identity, Address,
+  Background (with all references listed), Experience, Payout. Documents
+  render with reference number and expiry date visible.
 
 ## Apply
 
 ```bash
 cd ~/Downloads
-unzip -o onboard-chunk-4-fix.zip -d /tmp/onboard4fix-extract
-cp -r /tmp/onboard4fix-extract/onboard4-fix/* ~/Desktop/Avanti/
-rm -rf /tmp/onboard4fix-extract ~/Desktop/Avanti/.next
+unzip -o admin-review.zip -d /tmp/admin-review-extract
+cp -r /tmp/admin-review-extract/admin-review/* ~/Desktop/Avanti/
+rm -rf /tmp/admin-review-extract ~/Desktop/Avanti/.next
 
 cd ~/Desktop/Avanti
-git add -A && git commit -m "fix: availability columns + hide unset booleans in review" && git push
+git add -A && git commit -m "fix admin verification detail: correct columns + read state jsonb" && git push
 ```
 
-## About your "nothing entered yet" issue
+## Test
 
-**Two possibilities:**
+1. Wait for Vercel deploy
+2. Sign in as admin, go to `/admin/verification`
+3. Click into your submitted driver
+4. Should now show:
+   - **Applicant details** — name, phone, email, submitted date, availability
+   - **Identity** — legal name, DOB, gender, ID type, ID number
+   - **Licence** — number, class, issued, expires
+   - **Address** — street, city, state, landmark
+   - **Experience** — years, vehicle classes, transmissions, languages, night driving, smartphone, service radius
+   - **Background** — criminal disclosure + two references with contact details
+   - **Payout** — bank, account number, account holder
+   - **Documents · 5** — grid of uploaded images with labels, reference numbers, expiry dates
 
-**A. Your onboarding_state actually IS empty.** Run this in Supabase:
+Click any document — should open signed URL in new tab (image or PDF).
 
-```sql
-SELECT onboarding_state, jsonb_object_keys(onboarding_state)
-FROM driver_profiles 
-WHERE user_id = (SELECT id FROM auth.users WHERE email = 'YOUR_TEST_DRIVER_EMAIL');
-```
+## After verifying it works
 
-If it returns nothing or `{}`, the save-step endpoint is failing silently.
-The data was never actually saved even though you filled the forms.
+Approve the driver via the DecisionPanel component (bottom of page). Assign
+a tier (t2/t3/t4). Should:
+- Set verification_status to 'approved'
+- Set verification_tier
+- Record a verification_event
+- Redirect / show success
 
-Test save-step directly by watching Vercel Runtime Logs while filling
-step-identity and clicking Continue. Look for `/api/driver/onboarding/save-step`
-requests. If they return 400/500, the trigger error is there.
-
-**B. State has data but review isn't reading it.** After applying this fix,
-review should read state correctly. Try the flow again.
-
-## What to test
-
-1. Fresh incognito, sign in as your test driver
-2. Go to `/driver/onboarding`
-3. Complete every step
-4. **Watch Vercel Runtime Logs while doing this** — see if save-step calls
-   return 200 or error
-5. Land on review page
-6. Should show all your data
-7. Submit → step-pending
+The driver visits `/driver` — should now see their approved dashboard
+(instead of onboarding).
 
 ## Report
 
-Paste the SQL result of the onboarding_state query. That tells us
-whether A or B is happening. Then I can fix whichever it is.
+1. Does the detail page now show all the sections with data?
+2. Do the 5 document tiles render with previews?
+3. Can you click through to approve?
