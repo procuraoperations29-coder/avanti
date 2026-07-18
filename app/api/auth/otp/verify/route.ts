@@ -8,11 +8,34 @@ import { createClient } from '@/lib/supabase/server';
  * Body: { email, code }
  * Verifies the email OTP and establishes a session via SSR cookies.
  */
-
 const bodySchema = z.object({
   email: z.string().email(),
   code: z.string().length(6).regex(/^\d{6}$/, 'Code must be 6 digits'),
 });
+
+// Where each role lands after sign-in. `active_role` (set in app_metadata)
+// takes priority when present, since a user can hold more than one role
+// (e.g. corporate_admin who is also individual_customer) — falls back to
+// the first matching role in `roles` otherwise.
+const ROLE_HOME: Record<string, string> = {
+  driver: '/driver',
+  individual_customer: '/customer',
+  corporate_admin: '/corporate',
+  corporate_member: '/corporate',
+  admin_verifier: '/admin',
+  admin_support: '/admin',
+  admin_finance: '/admin',
+  admin_compliance: '/admin',
+  super_admin: '/admin',
+};
+
+function resolveRedirect(roles: string[], activeRole: string | null): string {
+  if (activeRole && ROLE_HOME[activeRole]) return ROLE_HOME[activeRole];
+  for (const r of roles) {
+    if (ROLE_HOME[r]) return ROLE_HOME[r];
+  }
+  return '/customer';
+}
 
 export async function POST(req: Request) {
   let body: z.infer<typeof bodySchema>;
@@ -26,7 +49,6 @@ export async function POST(req: Request) {
   }
 
   const supabase = await createClient();
-
   const { data, error } = await supabase.auth.verifyOtp({
     email: body.email,
     token: body.code,
@@ -48,5 +70,6 @@ export async function POST(req: Request) {
     userId: data.user.id,
     activeRole,
     needsCompletion: roles.length === 0,
+    redirectTo: resolveRedirect(roles, activeRole),
   });
 }
