@@ -1,309 +1,282 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Search } from 'lucide-react';
+import { Search, ChevronRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/avanti/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
-import { cn } from '@/lib/utils/cn';
 
-/**
- * Support console — operations view for admin_support / super_admin.
- *
- * Recent engagements across the platform (any status) plus a quick
- * user lookup section. Search functionality is placeholder-ish for
- * now; a real search endpoint comes later.
- */
+function formatNaira(n: number): string {
+  return `₦${n.toLocaleString('en-NG')}`;
+}
 
-const STATUS_STYLE: Record<string, string> = {
-  draft: 'text-ink-muted',
-  requested: 'text-ink',
-  confirmed: 'text-brass',
-  active: 'text-green',
-  completed: 'text-ink-muted',
-  cancelled: 'text-oxblood',
-  disputed: 'text-oxblood',
-  refunded: 'text-oxblood',
+const ROLE_LABEL: Record<string, string> = {
+  individual_customer: 'Customer',
+  driver: 'Driver',
+  corporate_admin: 'Corporate admin',
+  corporate_member: 'Corporate member',
+  admin_verifier: 'Admin · Verifier',
+  admin_support: 'Admin · Support',
+  admin_finance: 'Admin · Finance',
+  admin_compliance: 'Admin · Compliance',
+  super_admin: 'Super admin',
 };
 
-export default async function AdminSupportPage() {
-  const user = await getAuthUser();
-  if (!user) redirect('/sign-in');
-  if (!user.roles.includes('admin_support') && !user.roles.includes('super_admin')) {
+const ROLE_STYLE: Record<string, string> = {
+  individual_customer: 'border-line-strong text-ink-muted',
+  corporate_member: 'border-line-strong text-ink-muted',
+  corporate_admin: 'border-line-strong text-ink-muted',
+  driver: 'border-brass text-brass',
+  admin_verifier: 'border-green text-green',
+  admin_support: 'border-green text-green',
+  admin_finance: 'border-green text-green',
+  admin_compliance: 'border-green text-green',
+  super_admin: 'border-oxblood text-oxblood',
+};
+
+export default async function AdminUsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>;
+}) {
+  const authUser = await getAuthUser();
+  if (!authUser) redirect('/sign-in');
+  if (!authUser.roles.includes('admin_support') && !authUser.roles.includes('super_admin')) {
     redirect('/admin');
   }
 
+  const { q } = await searchParams;
   const admin = createServiceRoleClient();
 
-  // Recent engagements across statuses
-  const { data: engagements } = await admin
-    .from('engagements')
-    .select('id, status, engagement_type, starts_at, driver_id, customer_user_id, currency, customer_price_total, requested_at, confirmed_at, activated_at, completed_at, cancelled_at')
-    .order('requested_at', { ascending: false })
-    .limit(50);
-
-  const recent = engagements ?? [];
-
-  // Recent users
-  const { data: usersData } = await admin
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query = (admin as any)
     .from('users')
-    .select('id, full_name, phone, email, created_at')
+    .select('id, full_name, email, phone, status, created_at')
     .order('created_at', { ascending: false })
-    .limit(20);
+    .limit(200);
 
+  if (q && q.trim()) {
+    const term = q.trim().replace(/[%,]/g, '');
+    query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
+  }
+
+  const { data: usersData } = await query;
   const users = usersData ?? [];
+  const userIds = users.map((u: { id: string }) => u.id);
 
-  // Names for engagements
-  const driverIds = Array.from(new Set(recent.map((e) => e.driver_id).filter(Boolean)));
-  const customerIds = Array.from(new Set(recent.map((e) => e.customer_user_id).filter(Boolean)));
+  // Roles — this is what the old page was missing entirely: users and
+  // user_roles are separate tables, so without this join every row looked
+  // the same regardless of driver/customer/admin.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: rolesData } =
+    userIds.length > 0
+      ? await (admin as any)
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', userIds)
+          .is('revoked_at', null)
+      : { data: [] };
 
-  let driverNames: Record<string, string> = {};
-  if (driverIds.length > 0) {
-    const { data: drivers } = await admin
+  const rolesByUser: Record<string, string[]> = {};
+  for (const r of rolesData ?? []) {
+    (rolesByUser[r.user_id] ??= []).push(r.role);
+  }
+
+  const driverUserIds = userIds.filter((id: string) => (rolesByUser[id] ?? []).includes('driver'));
+  const customerUserIds = userIds.filter((id: string) =>
+    (rolesByUser[id] ?? []).some((r) =>
+      ['individual_customer', 'corporate_admin', 'corporate_member'].includes(r)
+    )
+  );
+
+  // Driver stats: profile id + completed jobs (precomputed) + lifetime net earnings
+  const driverProfileByUser: Record<string, string> = {};
+  const jobsByDriverId: Record<string, number> = {};
+  const earningsByDriverId: Record<string, number> = {};
+
+  if (driverUserIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profiles } = await (admin as any)
       .from('driver_profiles')
-      .select('id, user_id')
-      .in('id', driverIds as string[]);
-    if (drivers) {
-      const userIds = drivers.map((d) => d.user_id).filter(Boolean);
-      const { data: driverUsers } = await admin
-        .from('users')
-        .select('id, full_name')
-        .in('id', userIds as string[]);
-      const um = Object.fromEntries((driverUsers ?? []).map((u) => [u.id, u.full_name ?? '—']));
-      driverNames = Object.fromEntries(drivers.map((d) => [d.id, um[d.user_id ?? ''] ?? '—']));
+      .select('id, user_id, completed_jobs')
+      .in('user_id', driverUserIds);
+
+    for (const p of profiles ?? []) {
+      driverProfileByUser[p.user_id] = p.id;
+      jobsByDriverId[p.id] = p.completed_jobs ?? 0;
+    }
+
+    const driverProfileIds = (profiles ?? []).map((p: { id: string }) => p.id);
+    if (driverProfileIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: earnings } = await (admin as any)
+        .from('v_driver_earnings_monthly')
+        .select('driver_id, net_total')
+        .in('driver_id', driverProfileIds);
+
+      for (const e of earnings ?? []) {
+        earningsByDriverId[e.driver_id] =
+          (earningsByDriverId[e.driver_id] ?? 0) + Number(e.net_total ?? 0);
+      }
     }
   }
 
-  let customerNames: Record<string, string> = {};
-  if (customerIds.length > 0) {
-    const { data: customers } = await admin
-      .from('users')
-      .select('id, full_name')
-      .in('id', customerIds as string[]);
-    customerNames = Object.fromEntries(
-      (customers ?? []).map((c) => [c.id, c.full_name ?? 'Customer'])
-    );
-  }
+  // Customer stats
+  const statsByCustomer: Record<string, { count: number; total: number }> = {};
+  if (customerUserIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: custEngagements } = await (admin as any)
+      .from('v_engagements_customer')
+      .select('customer_user_id, customer_price_total, status')
+      .in('customer_user_id', customerUserIds);
 
-  const byStatus = {
-    active: recent.filter((e) => ['active', 'confirmed'].includes(e.status ?? '')).length,
-    total: recent.length,
-    disputed: recent.filter((e) => ['disputed', 'partially_resolved'].includes(e.status ?? '')).length,
-  };
+    for (const e of custEngagements ?? []) {
+      const bucket = (statsByCustomer[e.customer_user_id] ??= { count: 0, total: 0 });
+      bucket.count += 1;
+      if (e.status === 'completed') bucket.total += Number(e.customer_price_total ?? 0);
+    }
+  }
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
-        <Link
-          href="/admin"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Admin
-        </Link>
-
-        <SectionLabel>Support</SectionLabel>
-        <h1 className="mb-10 mt-2 font-display text-4xl leading-tight text-ink md:text-5xl">
-          <em className="italic">Operations desk.</em>
+      <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
+        <SectionLabel>Admin · Support</SectionLabel>
+        <h1 className="mb-8 mt-2 font-display text-4xl leading-tight text-ink md:text-5xl">
+          <em className="italic">Users.</em>
         </h1>
 
-        {/* Stats */}
-        <div className="mb-10 grid gap-6 md:grid-cols-3">
-          <div className="border border-line bg-paper-2 p-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              In flight
-            </div>
-            <div className="mt-3 font-display text-4xl leading-none text-ink">
-              {byStatus.active}
-            </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              Active or confirmed engagements
-            </div>
+        <form className="mb-8">
+          <div className="relative max-w-md">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-faint"
+              strokeWidth={1.5}
+            />
+            <input
+              type="text"
+              name="q"
+              defaultValue={q ?? ''}
+              placeholder="Search name, email, or phone…"
+              className="w-full border border-line-strong bg-paper py-2 pl-10 pr-3 font-body text-sm text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+            />
           </div>
-          <div className="border border-line bg-paper-2 p-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              Recent
-            </div>
-            <div className="mt-3 font-display text-4xl leading-none text-ink">
-              {byStatus.total}
-            </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              Last 50 engagements
-            </div>
-          </div>
-          <div
-            className={cn(
-              'border p-6',
-              byStatus.disputed > 0
-                ? 'border-2 border-oxblood bg-paper-2'
-                : 'border-line bg-paper-2'
-            )}
-          >
-            <div
-              className={cn(
-                'font-mono text-[10px] uppercase tracking-[0.2em]',
-                byStatus.disputed > 0 ? 'text-oxblood' : 'text-ink-muted'
-              )}
-            >
-              Needs attention
-            </div>
-            <div className="mt-3 font-display text-4xl leading-none text-ink">
-              {byStatus.disputed}
-            </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              Disputes or partial resolutions
-            </div>
-          </div>
-        </div>
+        </form>
 
-        {/* Search placeholder */}
-        <div className="mb-10 border border-line bg-paper-2 p-6">
-          <div className="flex items-center gap-3">
-            <Search className="h-5 w-5 text-ink-muted" strokeWidth={1.5} />
-            <div>
-              <div className="font-body text-sm text-ink">
-                Look up an engagement or user
-              </div>
-              <div className="mt-1 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-                Search coming in next round — use tables below for now
-              </div>
-            </div>
-          </div>
-        </div>
+        <div className="overflow-x-auto border border-line">
+          <table className="w-full">
+            <thead className="border-b border-line bg-paper-2">
+              <tr>
+                <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  Name
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  Role
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  As customer
+                </th>
+                <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  As driver
+                </th>
+                <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  Joined
+                </th>
+                <th className="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              {users.map(
+                (u: {
+                  id: string;
+                  full_name: string;
+                  email: string | null;
+                  phone: string | null;
+                  created_at: string;
+                }) => {
+                  const roles = rolesByUser[u.id] ?? [];
+                  const custStats = statsByCustomer[u.id];
+                  const driverProfileId = driverProfileByUser[u.id];
 
-        {/* Engagements table */}
-        <div className="mb-10">
-          <SectionLabel>Recent engagements</SectionLabel>
-          {recent.length === 0 ? (
-            <div className="mt-4 border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
-              No engagements yet.
-            </div>
-          ) : (
-            <div className="mt-4 overflow-x-auto border border-line">
-              <table className="w-full">
-                <thead className="border-b border-line bg-paper-2">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Requested
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Customer
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Driver
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Amount
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recent.slice(0, 25).map((e) => (
-                    <tr key={e.id} className="border-b border-line last:border-0 hover:bg-paper-2">
-                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                        {e.requested_at
-                          ? new Date(e.requested_at).toLocaleDateString('en-GB', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: '2-digit',
-                            })
-                          : '—'}
+                  return (
+                    <tr key={u.id} className="border-b border-line last:border-0 hover:bg-paper-2">
+                      <td className="px-4 py-3">
+                        <div className="font-body text-sm text-ink">{u.full_name}</div>
+                        <div className="font-mono text-xs text-ink-muted">
+                          {u.email ?? u.phone ?? '—'}
+                        </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={cn(
-                            'font-mono text-[10px] uppercase tracking-wider',
-                            STATUS_STYLE[e.status ?? ''] ?? 'text-ink-muted'
+                        <div className="flex flex-wrap gap-1">
+                          {roles.length === 0 ? (
+                            <span className="font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+                              No role
+                            </span>
+                          ) : (
+                            roles.map((r) => (
+                              <span
+                                key={r}
+                                className={
+                                  'border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ' +
+                                  (ROLE_STYLE[r] ?? 'border-line-strong text-ink-muted')
+                                }
+                              >
+                                {ROLE_LABEL[r] ?? r}
+                              </span>
+                            ))
                           )}
-                        >
-                          {e.status}
-                        </span>
+                        </div>
                       </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink">
-                        {customerNames[e.customer_user_id ?? ''] ?? '—'}
+                      <td className="px-4 py-3 text-right font-mono text-xs text-ink">
+                        {custStats ? (
+                          <>
+                            {custStats.count} eng. · {formatNaira(custStats.total)}
+                          </>
+                        ) : (
+                          <span className="text-ink-faint">—</span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink">
-                        {driverNames[e.driver_id ?? ''] ?? '—'}
+                      <td className="px-4 py-3 text-right font-mono text-xs text-ink">
+                        {driverProfileId ? (
+                          <>
+                            {jobsByDriverId[driverProfileId] ?? 0} jobs ·{' '}
+                            {formatNaira(earningsByDriverId[driverProfileId] ?? 0)}
+                          </>
+                        ) : (
+                          <span className="text-ink-faint">—</span>
+                        )}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
-                        ₦{Number(e.customer_price_total ?? 0).toLocaleString('en-NG')}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Users table */}
-        <div>
-          <SectionLabel>Recent users · {users.length}</SectionLabel>
-          {users.length === 0 ? (
-            <div className="mt-4 border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
-              No users yet.
-            </div>
-          ) : (
-            <div className="mt-4 overflow-x-auto border border-line">
-              <table className="w-full">
-                <thead className="border-b border-line bg-paper-2">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Joined
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Name
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Phone
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Email
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) => (
-                    <tr key={u.id} className="border-b border-line last:border-0 hover:bg-paper-2">
                       <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                        {u.created_at
-                          ? new Date(u.created_at).toLocaleDateString('en-GB', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: '2-digit',
-                            })
-                          : '—'}
+                        {new Date(u.created_at).toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: '2-digit',
+                        })}
                       </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink">
-                        {u.full_name ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 font-mono text-sm text-ink">
-                        {u.phone ? `+${u.phone}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink-muted">
-                        {u.email ?? '—'}
+                      <td className="px-4 py-3">
+                        <Link
+                          href={`/admin/support/${u.id}`}
+                          className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
+                        >
+                          View
+                          <ChevronRight className="h-3 w-3" strokeWidth={2} />
+                        </Link>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  );
+                }
+              )}
+            </tbody>
+          </table>
         </div>
 
-        <div className="mt-10 border-l-2 border-brass bg-brass-soft px-6 py-5">
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
-            Coming
+        {users.length === 0 && (
+          <div className="mt-4 border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
+            No users found{q ? ` matching "${q}"` : ''}.
           </div>
-          <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
-            Search endpoint (find users by phone, name, or engagement ID). Ticket system
-            for tracked cases. Direct-messaging drivers or customers. Manual override for
-            engagement state.
-          </p>
-        </div>
+        )}
+
+        <p className="mt-6 font-mono text-[10px] uppercase tracking-wider text-ink-faint">
+          Showing {users.length} most recent{users.length === 200 ? ' (200 max — search to narrow)' : ''}
+        </p>
       </div>
     </PageShell>
   );

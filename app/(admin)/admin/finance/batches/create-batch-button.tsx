@@ -16,12 +16,34 @@ export function CreateBatchButton({ disabled }: { disabled?: boolean }) {
     setBusy(true);
     try {
       const res = await fetch('/api/admin/finance/batches', { method: 'POST' });
-      const body = (await res.json()) as { batchId?: string; error?: string; message?: string };
+      const body = (await res.json()) as {
+        batchId?: string;
+        payoutCount?: number;
+        totalGross?: number;
+        skippedCount?: number;
+        skippedReason?: string | null;
+        error?: string;
+        message?: string;
+      };
       if (!res.ok || !body.batchId) {
         toast.error(body.message ?? body.error ?? 'Could not create batch');
         return;
       }
-      toast.success('Batch created');
+
+      if (body.payoutCount === 0) {
+        toast.error(
+          body.skippedCount
+            ? `Batch created but empty — ${body.skippedCount} engagement(s) skipped because the driver has no payout method on file.`
+            : 'Batch created but empty — no eligible engagements found.'
+        );
+      } else if (body.skippedCount) {
+        toast.success(
+          `Batch created with ${body.payoutCount} payout(s). ${body.skippedCount} engagement(s) skipped — driver has no payout method on file.`
+        );
+      } else {
+        toast.success('Batch created');
+      }
+
       router.push(`/admin/finance/batches/${body.batchId}`);
       router.refresh();
     } catch (err) {

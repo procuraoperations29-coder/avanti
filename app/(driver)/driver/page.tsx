@@ -117,11 +117,27 @@ export default async function DriverHomePage() {
     .order('starts_at', { ascending: true })
     .limit(10);
 
+  // Permanent placement(s). These live in a separate `placements` table,
+  // not `engagements` — a permanent placement is monthly-salaried work,
+  // not a dated booking, so it has its own shape and its own section here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: placementsData } = await (admin as any)
+    .from('placements')
+    .select('id, monthly_salary, status, start_date, customer_user_id, currency')
+    .eq('driver_id', profile.id)
+    .eq('status', 'active')
+    .order('start_date', { ascending: false });
+
+  const placements = placementsData ?? [];
+
   const allIds = [
     ...(activeRows ?? []),
     ...(upcomingRows ?? []),
   ].map((e: { customer_user_id: string }) => e.customer_user_id);
-  const uniqueIds = Array.from(new Set(allIds));
+  const placementCustomerIds = placements.map(
+    (p: { customer_user_id: string }) => p.customer_user_id
+  );
+  const uniqueIds = Array.from(new Set([...allIds, ...placementCustomerIds]));
 
   let namesById: Record<string, string> = {};
   if (uniqueIds.length > 0) {
@@ -173,6 +189,50 @@ export default async function DriverHomePage() {
             monthlySalary={monthlySalary}
           />
         </div>
+
+        {/* Permanent placement */}
+        {placements.length > 0 && (
+          <div className="mb-10">
+            <SectionLabel>Permanent placement</SectionLabel>
+            <div className="mt-3 space-y-3">
+              {placements.map((p: {
+                id: string;
+                monthly_salary: number;
+                status: string;
+                start_date: string;
+                customer_user_id: string;
+                currency: string;
+              }) => (
+                <div key={p.id} className="border-2 border-ink bg-paper-2 p-6">
+                  <div className="flex items-baseline justify-between">
+                    <div className="font-mono text-xs uppercase tracking-wider text-green">
+                      Active
+                    </div>
+                    <div className="font-mono text-xs text-ink-muted">
+                      Since{' '}
+                      {new Date(p.start_date).toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                  <div className="mt-2 font-display text-2xl leading-tight text-ink">
+                    {namesById[p.customer_user_id] ?? 'Customer'}
+                  </div>
+                  <div className="mt-4 flex items-center justify-between border-t border-line pt-3">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                      Monthly salary
+                    </div>
+                    <div className="font-display text-xl text-ink">
+                      {formatNaira(p.monthly_salary)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Earnings */}
         <div className="mb-10 border border-line bg-paper-2 p-6">

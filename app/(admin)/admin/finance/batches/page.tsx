@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/avanti/page-shell';
@@ -57,14 +57,49 @@ export default async function PayoutBatchesPage() {
   const unbatched = (unpaid ?? []).filter(
     (e: { id: string }) => !activeBatchedIds.has(e.id)
   );
-  const unbatchedTotal = unbatched.reduce(
+
+  // Not every "unbatched" engagement will actually make it into the next
+  // batch — fn_build_payout_batch requires the driver to have a verified
+  // payout method on file (payouts.payout_method_id is NOT NULL) and
+  // silently skips anyone who doesn't. Check here so the number shown
+  // never disagrees with what actually gets built.
+  const driverIdsInUnbatched = Array.from(
+    new Set(unbatched.map((e: { driver_id: string }) => e.driver_id))
+  );
+
+  let driversWithPayoutMethod = new Set<string>();
+  if (driverIdsInUnbatched.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: methods } = await (admin as any)
+      .from('driver_payout_methods')
+      .select('driver_id')
+      .in('driver_id', driverIdsInUnbatched)
+      .is('deleted_at', null);
+    driversWithPayoutMethod = new Set(
+      (methods ?? []).map((m: { driver_id: string }) => m.driver_id)
+    );
+  }
+
+  const ready = unbatched.filter((e: { driver_id: string }) =>
+    driversWithPayoutMethod.has(e.driver_id)
+  );
+  const blocked = unbatched.filter(
+    (e: { driver_id: string }) => !driversWithPayoutMethod.has(e.driver_id)
+  );
+
+  const readyTotal = ready.reduce(
     (sum: number, e: { driver_payout_total: number | null }) =>
       sum + Number(e.driver_payout_total ?? 0),
     0
   );
-  const unbatchedDrivers = new Set(
-    unbatched.map((e: { driver_id: string }) => e.driver_id)
-  ).size;
+  const readyDrivers = new Set(ready.map((e: { driver_id: string }) => e.driver_id)).size;
+
+  const blockedTotal = blocked.reduce(
+    (sum: number, e: { driver_payout_total: number | null }) =>
+      sum + Number(e.driver_payout_total ?? 0),
+    0
+  );
+  const blockedDrivers = new Set(blocked.map((e: { driver_id: string }) => e.driver_id)).size;
 
   const list = batches ?? [];
 
@@ -85,29 +120,48 @@ export default async function PayoutBatchesPage() {
         </h1>
 
         {/* Ready to batch */}
-        <div className="mb-10 border-2 border-ink bg-paper-2 p-6">
+        <div className="mb-4 border-2 border-ink bg-paper-2 p-6">
           <div className="flex items-baseline justify-between gap-6">
             <div className="flex-1">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
                 Ready to batch
               </div>
               <div className="mt-3 font-display text-4xl leading-none text-ink">
-                {formatNaira(unbatchedTotal)}
+                {formatNaira(readyTotal)}
               </div>
               <div className="mt-3 font-mono text-xs text-ink-muted">
-                {unbatched.length} engagement{unbatched.length === 1 ? '' : 's'} across{' '}
-                {unbatchedDrivers} driver{unbatchedDrivers === 1 ? '' : 's'}
+                {ready.length} engagement{ready.length === 1 ? '' : 's'} across{' '}
+                {readyDrivers} driver{readyDrivers === 1 ? '' : 's'}
                 {' · '}Gross, before 5% WHT
               </div>
             </div>
-            <CreateBatchButton disabled={unbatched.length === 0} />
+            <CreateBatchButton disabled={ready.length === 0} />
           </div>
-          {unbatched.length === 0 && (
+          {ready.length === 0 && blocked.length === 0 && (
             <p className="mt-4 font-body text-sm text-ink-muted">
               No unpaid completed engagements. Come back after drivers complete more work.
             </p>
           )}
         </div>
+
+        {/* Blocked — missing payout method */}
+        {blocked.length > 0 && (
+          <div className="mb-10 flex items-start gap-3 border-l-2 border-oxblood bg-paper-2 px-6 py-4">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-oxblood" strokeWidth={1.5} />
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-oxblood">
+                Blocked — missing payout method
+              </div>
+              <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
+                {formatNaira(blockedTotal)} across {blocked.length} engagement
+                {blocked.length === 1 ? '' : 's'} ({blockedDrivers} driver
+                {blockedDrivers === 1 ? '' : 's'}) won&apos;t be included in the next
+                batch — the driver hasn&apos;t added a verified payout method yet. Ask
+                them to complete that step in onboarding, then re-run the batch.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Batches list */}
         <SectionLabel>All batches · {list.length}</SectionLabel>
@@ -174,6 +228,9 @@ export default async function PayoutBatchesPage() {
                         }
                       >
                         {b.status}
+                        {b.payout_count === 0 && (
+                          <span className="ml-2 text-oxblood">· empty</span>
+                        )}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right font-mono text-sm text-ink">
