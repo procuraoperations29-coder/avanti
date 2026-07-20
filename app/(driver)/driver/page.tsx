@@ -36,7 +36,7 @@ export default async function DriverHomePage() {
     .single();
 
   if (!profile || profile.verification_status !== 'approved') {
-    redirect('/driver/onboarding/step-pending');
+    redirect('/driver/onboarding/pending');
   }
 
   const tier = profile.verification_tier as TierLevel;
@@ -121,12 +121,16 @@ export default async function DriverHomePage() {
   // not `engagements` — a permanent placement is monthly-salaried work,
   // not a dated booking, so it has its own shape and its own section here.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: placementsData } = await (admin as any)
+  const { data: placementsData, error: placementsError } = await (admin as any)
     .from('placements')
     .select('id, monthly_salary, status, start_date, customer_user_id, currency')
     .eq('driver_id', profile.id)
     .eq('status', 'active')
     .order('start_date', { ascending: false });
+
+  if (placementsError) {
+    console.error('[driver/page] failed to load placements', placementsError);
+  }
 
   const placements = placementsData ?? [];
 
