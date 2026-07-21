@@ -1,10 +1,11 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ArrowRight, Wallet } from 'lucide-react';
+import { ArrowRight, Wallet } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/avanti/page-shell';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
+import { StatCard } from '@/components/avanti/admin/stat-card';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -16,6 +17,11 @@ export default async function AdminFinancePage() {
   if (!user.roles.includes('admin_finance') && !user.roles.includes('super_admin')) {
     redirect('/admin');
   }
+
+  const isSuper = user.roles.includes('super_admin');
+  const canVerify = user.roles.includes('admin_verifier') || isSuper;
+  const canSupport = user.roles.includes('admin_support') || isSuper;
+  const canCompliance = user.roles.includes('admin_compliance') || isSuper;
 
   const admin = createServiceRoleClient();
 
@@ -39,7 +45,6 @@ export default async function AdminFinancePage() {
 
   const captured = paymentsData ?? [];
 
-  // Payouts state — check both released batches and unbatched engagements
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: batchesData } = await (admin as any)
     .from('payout_batches')
@@ -71,13 +76,36 @@ export default async function AdminFinancePage() {
   const unbatched = completed.filter(
     (e: { id: string }) => !activeBatchedIds.has(e.id)
   );
-  const unbatchedGross = unbatched.reduce(
+
+  // Same driver_payout_methods filter as the batches page and dashboard KPI
+  // — without it, this number can disagree with what actually gets batched
+  // (that mismatch was the original "Ready to batch shows ₦86,400, batch
+  // comes back with 0" bug).
+  const unbatchedDriverIds = Array.from(
+    new Set(unbatched.map((e: { driver_id: string | null }) => e.driver_id).filter(Boolean))
+  );
+  let driversWithPayoutMethod = new Set<string>();
+  if (unbatchedDriverIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: methods } = await (admin as any)
+      .from('driver_payout_methods')
+      .select('driver_id')
+      .in('driver_id', unbatchedDriverIds)
+      .is('deleted_at', null);
+    driversWithPayoutMethod = new Set(
+      (methods ?? []).map((m: { driver_id: string }) => m.driver_id)
+    );
+  }
+  const readyToBatchRows = unbatched.filter(
+    (e: { driver_id: string | null }) => e.driver_id && driversWithPayoutMethod.has(e.driver_id)
+  );
+  const unbatchedGross = readyToBatchRows.reduce(
     (sum: number, e: { driver_payout_total: number | null }) =>
       sum + Number(e.driver_payout_total ?? 0),
     0
   );
+  const blockedCount = unbatched.length - readyToBatchRows.length;
 
-  // Aggregations for the summary stats
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -102,20 +130,11 @@ export default async function AdminFinancePage() {
     0
   );
 
-  // Driver + customer name lookup for the table
   const driverIds = Array.from(
-    new Set(
-      completed
-        .map((e: { driver_id: string | null }) => e.driver_id)
-        .filter(Boolean)
-    )
+    new Set(completed.map((e: { driver_id: string | null }) => e.driver_id).filter(Boolean))
   ) as string[];
   const customerIds = Array.from(
-    new Set(
-      completed
-        .map((e: { customer_user_id: string | null }) => e.customer_user_id)
-        .filter(Boolean)
-    )
+    new Set(completed.map((e: { customer_user_id: string | null }) => e.customer_user_id).filter(Boolean))
   ) as string[];
 
   let driverNames: Record<string, string> = {};
@@ -167,184 +186,150 @@ export default async function AdminFinancePage() {
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
-        <Link
-          href="/admin"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Admin
-        </Link>
+      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
+        <AdminSidebar
+          active="finance"
+          canVerify={canVerify}
+          canPlacements={canSupport || canVerify}
+          canSupport={canSupport}
+          canFinance={true}
+          canCompliance={canCompliance}
+          isSuper={isSuper}
+        />
 
-        <SectionLabel>Finance</SectionLabel>
-        <h1 className="mb-10 mt-2 font-display text-4xl leading-tight text-ink md:text-5xl">
-          <em className="italic">Money in, money out.</em>
-        </h1>
-
-        {/* ─── PAYOUT BATCHES ─── */}
-        <div className="mb-10 border-2 border-ink bg-paper-2 p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-ink" strokeWidth={1.5} />
-            <SectionLabel>Payout batches</SectionLabel>
-          </div>
-
-          <div className="mb-6 grid gap-6 md:grid-cols-3">
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
-                Ready to batch
-              </div>
-              <div className="mt-2 font-display text-3xl leading-none text-ink">
-                {formatNaira(unbatchedGross)}
-              </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">
-                {unbatched.length} engagement{unbatched.length === 1 ? '' : 's'} unpaid
-              </div>
-            </div>
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Batches created
-              </div>
-              <div className="mt-2 font-display text-3xl leading-none text-ink">
-                {batches.length}
-              </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">
-                {completedBatches.length} completed
-              </div>
-            </div>
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-green">
-                Released to date
-              </div>
-              <div className="mt-2 font-display text-3xl leading-none text-ink">
-                {formatNaira(totalReleased)}
-              </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">
-                Net paid, after WHT
-              </div>
-            </div>
-          </div>
-
+        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
           <Link
-            href="/admin/finance/batches"
-            className="inline-flex items-center gap-2 border border-ink bg-ink px-5 py-2.5 font-body text-sm text-paper transition-colors hover:bg-ink-2"
+            href="/admin"
+            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
           >
-            {unbatched.length > 0 ? 'Manage batches' : 'View batches'}
-            <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            ← Admin
           </Link>
-        </div>
+          <p className="mb-6 font-body text-lg font-medium text-admin-text">
+            Money in, money out
+          </p>
 
-        {/* ─── REVENUE STATS ─── */}
-        <div className="mb-10 grid gap-6 md:grid-cols-2">
-          <div className="border border-line bg-paper-2 p-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              Gross this month
+          <div className="mb-6 rounded-xl border border-admin-border bg-admin-card p-6">
+            <div className="mb-4 flex items-center gap-2">
+              <Wallet className="h-4 w-4 text-admin-navy" strokeWidth={1.75} />
+              <span className="font-body text-[13px] font-medium text-admin-text">Payout batches</span>
             </div>
-            <div className="mt-3 font-display text-4xl leading-none text-ink">
-              {formatNaira(grossThisMonth)}
+
+            <div className="mb-5 grid gap-5 md:grid-cols-3">
+              <div>
+                <div className="font-body text-[11px] uppercase tracking-wide text-admin-amber-text">
+                  Ready to batch
+                </div>
+                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                  {formatNaira(unbatchedGross)}
+                </div>
+                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
+                  {readyToBatchRows.length} engagement{readyToBatchRows.length === 1 ? '' : 's'} unpaid
+                  {blockedCount > 0 && (
+                    <> · {blockedCount} blocked (no payout method)</>
+                  )}
+                </div>
+              </div>
+              <div>
+                <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  Batches created
+                </div>
+                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">{batches.length}</div>
+                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
+                  {completedBatches.length} completed
+                </div>
+              </div>
+              <div>
+                <div className="font-body text-[11px] uppercase tracking-wide text-admin-green-text">
+                  Released to date
+                </div>
+                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                  {formatNaira(totalReleased)}
+                </div>
+                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">Net paid, after WHT</div>
+              </div>
             </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              Customer payments captured
-            </div>
+
+            <Link
+              href="/admin/finance/batches"
+              className="inline-flex items-center gap-2 rounded-lg bg-admin-navy px-5 py-2.5 font-body text-sm text-white transition-colors hover:bg-admin-navy-2"
+            >
+              {unbatched.length > 0 ? 'Manage batches' : 'View batches'}
+              <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
+            </Link>
           </div>
-          <div className="border border-line bg-paper-2 p-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              Commission this month
-            </div>
-            <div className="mt-3 font-display text-4xl leading-none text-ink">
-              {formatNaira(commissionThisMonth)}
-            </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              Avanti&apos;s revenue
-            </div>
+
+          <div className="mb-8 grid gap-3 md:grid-cols-2">
+            <StatCard label="Gross this month" value={formatNaira(grossThisMonth)} subtext="Customer payments captured" />
+            <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's revenue" />
           </div>
-        </div>
 
-        {/* ─── COMPLETED ENGAGEMENTS TABLE ─── */}
-        <div>
-          <SectionLabel>Completed engagements · {completed.length}</SectionLabel>
+          <div>
+            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
+              Completed engagements · {completed.length}
+            </p>
 
-          {completed.length === 0 ? (
-            <div className="mt-4 border border-line bg-paper-2 px-6 py-10 text-center">
-              <p className="font-body text-sm text-ink-muted">
+            {completed.length === 0 ? (
+              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
                 No completed engagements yet.
-              </p>
-            </div>
-          ) : (
-            <div className="mt-4 overflow-x-auto border border-line">
-              <table className="w-full">
-                <thead className="border-b border-line bg-paper-2">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Driver
-                    </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Customer
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Gross
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Payout
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Commission
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {completed.slice(0, 25).map((e: {
-                    id: string;
-                    completed_at: string | null;
-                    engagement_type: string | null;
-                    driver_id: string | null;
-                    customer_user_id: string | null;
-                    customer_price_total: number | null;
-                    driver_payout_total: number | null;
-                    commission_total: number | null;
-                  }) => (
-                    <tr
-                      key={e.id}
-                      className="border-b border-line last:border-0 hover:bg-paper-2"
-                    >
-                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                        {e.completed_at
-                          ? new Date(e.completed_at).toLocaleDateString('en-GB', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: '2-digit',
-                            })
-                          : '—'}
-                      </td>
-                      <td className="px-4 py-3 font-body text-sm capitalize text-ink">
-                        {e.engagement_type?.replace(/_/g, ' ') ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink">
-                        {driverNames[e.driver_id ?? ''] ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 font-body text-sm text-ink">
-                        {customerNames[e.customer_user_id ?? ''] ?? '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
-                        {formatNaira(Number(e.customer_price_total ?? 0))}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
-                        {formatNaira(Number(e.driver_payout_total ?? 0))}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
-                        {formatNaira(Number(e.commission_total ?? 0))}
-                      </td>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-admin-border">
+                <table className="w-full bg-admin-card">
+                  <thead className="border-b border-admin-border bg-admin-bg">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Date</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Type</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Driver</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Customer</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Gross</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Payout</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Commission</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {completed.slice(0, 25).map((e: {
+                      id: string;
+                      completed_at: string | null;
+                      engagement_type: string | null;
+                      driver_id: string | null;
+                      customer_user_id: string | null;
+                      customer_price_total: number | null;
+                      driver_payout_total: number | null;
+                      commission_total: number | null;
+                    }) => (
+                      <tr key={e.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
+                        <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                          {e.completed_at
+                            ? new Date(e.completed_at).toLocaleDateString('en-GB', {
+                                day: 'numeric', month: 'short', year: '2-digit',
+                              })
+                            : '—'}
+                        </td>
+                        <td className="px-4 py-3 font-body text-sm capitalize text-admin-text">
+                          {e.engagement_type?.replace(/_/g, ' ') ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 font-body text-sm text-admin-text">
+                          {driverNames[e.driver_id ?? ''] ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 font-body text-sm text-admin-text">
+                          {customerNames[e.customer_user_id ?? ''] ?? '—'}
+                        </td>
+                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                          {formatNaira(Number(e.customer_price_total ?? 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                          {formatNaira(Number(e.driver_payout_total ?? 0))}
+                        </td>
+                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                          {formatNaira(Number(e.commission_total ?? 0))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </PageShell>
