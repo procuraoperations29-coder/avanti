@@ -6,6 +6,11 @@ import tailwindcssAnimate from 'tailwindcss-animate';
  *
  * Colours resolve from CSS variables in globals.css so light/dark modes
  * can swap by changing variables — not rewriting classes.
+ *
+ * The `admin` namespace below is a second, additive palette for the
+ * fintech-style admin dashboard redesign (see globals.css). It doesn't
+ * replace or touch paper/ink/brass — those keep serving the rest of the
+ * app exactly as before.
  */
 const config: Config = {
   darkMode: ['class'],
@@ -49,6 +54,23 @@ const config: Config = {
         line: {
           DEFAULT: 'var(--line)',
           strong: 'var(--line-strong)',
+        },
+        admin: {
+          navy: 'var(--admin-navy)',
+          'navy-2': 'var(--admin-navy-2)',
+          'navy-soft': 'var(--admin-navy-soft)',
+          'nav-text': 'var(--admin-nav-text)',
+          bg: 'var(--admin-bg)',
+          card: 'var(--admin-card)',
+          border: 'var(--admin-border)',
+          text: 'var(--admin-text)',
+          'text-muted': 'var(--admin-text-muted)',
+          green: 'var(--admin-green)',
+          'green-soft': 'var(--admin-green-soft)',
+          'green-text': 'var(--admin-green-text)',
+          amber: 'var(--admin-amber)',
+          'amber-soft': 'var(--admin-amber-soft)',
+          'amber-text': 'var(--admin-amber-text)',
         },
       },
       fontFamily: {

@@ -39,6 +39,28 @@
     --line: #D6D4CB;         /* subtle border */
     --line-strong: #BDBBB1;  /* stronger border */
 
+    /*
+     * Admin dashboard palette — modern fintech redesign, scoped to /admin.
+     * Pulled from the Avanti logo (navy wordmark, green wheel accent).
+     * Layered alongside the editorial palette above; driver/customer/
+     * sign-in pages are untouched and keep using --paper/--ink/--brass.
+     */
+    --admin-navy: #1A2238;
+    --admin-navy-2: #141B2C;      /* darker — sidebar active/hover */
+    --admin-navy-soft: #2A3350;   /* lighter navy — sidebar hover */
+    --admin-nav-text: #B7BDCC;    /* muted nav item text on navy */
+    --admin-bg: #F6F7F9;          /* dashboard content background */
+    --admin-card: #FFFFFF;
+    --admin-border: #E7E9EE;
+    --admin-text: #1A2238;
+    --admin-text-muted: #6B7280;
+    --admin-green: #5FA828;
+    --admin-green-soft: #EAF3DE;
+    --admin-green-text: #3B6D11;  /* WCAG-safe text on --admin-green-soft */
+    --admin-amber: #EDA100;
+    --admin-amber-soft: #FBEEDD;
+    --admin-amber-text: #854F0B;  /* WCAG-safe text on --admin-amber-soft */
+
     /* Fonts */
     --font-display: 'Instrument Serif', serif;
     --font-body: 'Inter', sans-serif;
