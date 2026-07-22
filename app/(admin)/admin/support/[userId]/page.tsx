@@ -4,7 +4,8 @@ import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/avanti/page-shell';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
+import { StatCard } from '@/components/avanti/admin/stat-card';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 
 function formatNaira(n: number): string {
@@ -37,6 +38,11 @@ export default async function AdminUserDetailPage({
   if (!authUser.roles.includes('admin_support') && !authUser.roles.includes('super_admin')) {
     redirect('/admin');
   }
+
+  const isSuper = authUser.roles.includes('super_admin');
+  const canVerify = authUser.roles.includes('admin_verifier') || isSuper;
+  const canFinance = authUser.roles.includes('admin_finance') || isSuper;
+  const canCompliance = authUser.roles.includes('admin_compliance') || isSuper;
 
   const { userId } = await params;
   const admin = createServiceRoleClient();
@@ -158,176 +164,158 @@ export default async function AdminUserDetailPage({
 
   return (
     <PageShell>
-      <div className="mx-auto max-w-4xl px-4 pt-8 sm:px-6 pb-20">
-        <Link
-          href="/admin/support"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Users
-        </Link>
+      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
+        <AdminSidebar
+          active="support"
+          canVerify={canVerify}
+          canPlacements={true}
+          canSupport={true}
+          canFinance={canFinance}
+          canCompliance={canCompliance}
+          isSuper={isSuper}
+        />
 
-        <SectionLabel>{roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') || 'User'}</SectionLabel>
-        <h1 className="mt-2 font-display text-4xl leading-tight text-ink md:text-5xl">
-          {profileUser.full_name}
-        </h1>
-        <div className="mt-3 flex flex-wrap gap-4 font-mono text-xs text-ink-muted">
-          {profileUser.email && <span>{profileUser.email}</span>}
-          {profileUser.phone && <span>{profileUser.phone}</span>}
-          <span>Joined {fmtDate(profileUser.created_at)}</span>
-          <span className="uppercase">{profileUser.status}</span>
+        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
+          <Link
+            href="/admin/support"
+            className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-admin-text-muted hover:text-admin-text"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
+            Users
+          </Link>
+
+          <p className="font-body text-[12px] uppercase tracking-wide text-admin-text-muted">
+            {roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') || 'User'}
+          </p>
+          <p className="mt-1 font-body text-2xl font-medium text-admin-text">
+            {profileUser.full_name}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-admin-text-muted">
+            {profileUser.email && <span>{profileUser.email}</span>}
+            {profileUser.phone && <span>{profileUser.phone}</span>}
+            <span>Joined {fmtDate(profileUser.created_at)}</span>
+            <span className="uppercase">{profileUser.status}</span>
+          </div>
+
+          {isDriver && driverProfile && (
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+              <div className="flex items-center justify-between">
+                <p className="font-body text-[13px] font-medium text-admin-text">Driver</p>
+                <TierBadge tier={(driverProfile.verification_tier as TierLevel) ?? 't1'} label="long" />
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                <StatCard label="Completed jobs" value={driverSummary?.completed_jobs ?? 0} />
+                <StatCard label="Total earned (net)" value={formatNaira(driverTotalNet)} tone="success" />
+                <StatCard
+                  label="Rating"
+                  value={driverSummary?.average_rating ? driverSummary.average_rating.toFixed(1) : '—'}
+                />
+              </div>
+
+              {driverPlacements.length > 0 && (
+                <div className="mt-6 border-t border-admin-border pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                    Permanent placements
+                  </div>
+                  {driverPlacements.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
+                      <span className="capitalize">
+                        {p.status} · since {fmtDate(p.start_date)}
+                      </span>
+                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 border-t border-admin-border pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  Recent engagements
+                </div>
+                {driverEngagements.length === 0 ? (
+                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
+                ) : (
+                  <div className="divide-y divide-admin-border">
+                    {driverEngagements.map((e) => (
+                      <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
+                        <div>
+                          <span className="text-admin-text">{e.customer_name ?? 'Customer'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                            {e.engagement_type?.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 font-body text-[12px]">
+                          <span className="uppercase text-admin-text-muted">{e.status}</span>
+                          <span className="text-admin-text">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
+                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isCustomer && (
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+              <p className="font-body text-[13px] font-medium text-admin-text">Customer</p>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                <StatCard label="Engagements" value={customerEngagements.length} />
+                <StatCard label="Total paid" value={formatNaira(customerTotal)} tone="success" />
+              </div>
+
+              {customerPlacements.length > 0 && (
+                <div className="mt-6 border-t border-admin-border pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                    Permanent placements
+                  </div>
+                  {customerPlacements.map((p) => (
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
+                      <span className="capitalize">
+                        {p.status} · since {fmtDate(p.start_date)}
+                      </span>
+                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 border-t border-admin-border pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  Recent engagements
+                </div>
+                {customerEngagements.length === 0 ? (
+                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
+                ) : (
+                  <div className="divide-y divide-admin-border">
+                    {customerEngagements.map((e) => (
+                      <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
+                        <div>
+                          <span className="text-admin-text">{e.driver_name ?? 'Driver'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                            {e.engagement_type?.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3 font-body text-[12px]">
+                          <span className="uppercase text-admin-text-muted">{e.status}</span>
+                          <span className="text-admin-text">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
+                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isDriver && !isCustomer && (
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              This user has no driver or customer role — likely staff/admin only.
+            </div>
+          )}
         </div>
-
-        {isDriver && driverProfile && (
-          <div className="mt-10 border border-line bg-paper-2 p-6">
-            <div className="flex items-center justify-between">
-              <SectionLabel>Driver</SectionLabel>
-              <TierBadge tier={(driverProfile.verification_tier as TierLevel) ?? 't1'} label="long" />
-            </div>
-            <div className="mt-6 grid gap-8 sm:grid-cols-3">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  Completed jobs
-                </div>
-                <div className="mt-2 font-display text-3xl leading-none text-ink">
-                  {driverSummary?.completed_jobs ?? 0}
-                </div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-green">
-                  Total earned (net)
-                </div>
-                <div className="mt-2 font-display text-3xl leading-none text-ink">
-                  {formatNaira(driverTotalNet)}
-                </div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  Rating
-                </div>
-                <div className="mt-2 font-display text-3xl leading-none text-ink">
-                  {driverSummary?.average_rating ? driverSummary.average_rating.toFixed(1) : '—'}
-                </div>
-              </div>
-            </div>
-
-            {driverPlacements.length > 0 && (
-              <div className="mt-6 border-t border-line pt-4">
-                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  Permanent placements
-                </div>
-                {driverPlacements.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between py-1 font-body text-sm text-ink">
-                    <span className="capitalize">
-                      {p.status} · since {fmtDate(p.start_date)}
-                    </span>
-                    <span className="font-mono text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 border-t border-line pt-4">
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Recent engagements
-              </div>
-              {driverEngagements.length === 0 ? (
-                <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
-              ) : (
-                <div className="divide-y divide-line">
-                  {driverEngagements.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between py-2 font-body text-sm">
-                      <div>
-                        <span className="text-ink">{e.customer_name ?? 'Customer'}</span>
-                        <span className="ml-2 font-mono text-xs uppercase text-ink-muted">
-                          {e.engagement_type?.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 font-mono text-xs">
-                        <span className="uppercase text-ink-muted">{e.status}</span>
-                        <span className="text-ink">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
-                        <span className="text-ink-faint">{fmtDate(e.starts_at)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {isCustomer && (
-          <div className="mt-10 border border-line bg-paper-2 p-6">
-            <SectionLabel>Customer</SectionLabel>
-            <div className="mt-6 grid gap-8 sm:grid-cols-2">
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  Engagements
-                </div>
-                <div className="mt-2 font-display text-3xl leading-none text-ink">
-                  {customerEngagements.length}
-                </div>
-              </div>
-              <div>
-                <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-green">
-                  Total paid
-                </div>
-                <div className="mt-2 font-display text-3xl leading-none text-ink">
-                  {formatNaira(customerTotal)}
-                </div>
-              </div>
-            </div>
-
-            {customerPlacements.length > 0 && (
-              <div className="mt-6 border-t border-line pt-4">
-                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                  Permanent placements
-                </div>
-                {customerPlacements.map((p) => (
-                  <div key={p.id} className="flex items-center justify-between py-1 font-body text-sm text-ink">
-                    <span className="capitalize">
-                      {p.status} · since {fmtDate(p.start_date)}
-                    </span>
-                    <span className="font-mono text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="mt-6 border-t border-line pt-4">
-              <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Recent engagements
-              </div>
-              {customerEngagements.length === 0 ? (
-                <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
-              ) : (
-                <div className="divide-y divide-line">
-                  {customerEngagements.map((e) => (
-                    <div key={e.id} className="flex items-center justify-between py-2 font-body text-sm">
-                      <div>
-                        <span className="text-ink">{e.driver_name ?? 'Driver'}</span>
-                        <span className="ml-2 font-mono text-xs uppercase text-ink-muted">
-                          {e.engagement_type?.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3 font-mono text-xs">
-                        <span className="uppercase text-ink-muted">{e.status}</span>
-                        <span className="text-ink">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
-                        <span className="text-ink-faint">{fmtDate(e.starts_at)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {!isDriver && !isCustomer && (
-          <div className="mt-10 border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
-            This user has no driver or customer role — likely staff/admin only.
-          </div>
-        )}
       </div>
     </PageShell>
   );
