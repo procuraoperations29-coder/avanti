@@ -1,318 +1,382 @@
-'use client'
-import { useState, useEffect } from 'react'
-import { getVisibleSettingsTabs, can, type SettingsTab } from '@/lib/permissions'
+import Link from 'next/link';
+import { getAuthUser } from '@/lib/auth';
+import { ArrowRight, Check } from 'lucide-react';
+import { SectionLabel } from '@/components/avanti/section-label';
+import { StampBadge } from '@/components/avanti/stamp-badge';
+import { TierBadge } from '@/components/avanti/tier-badge';
 
-export default function SettingsPage() {
-  const [me, setMe] = useState<any>(null)
-  const [org, setOrg] = useState<any>(null)
-  const [tab, setTab] = useState<SettingsTab>('profile')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [msg, setMsg] = useState('')
+/**
+ * Public landing page.
+ *
+ * Editorial voice — confident, unhurried. No pushy CTAs, no growth-hacky
+ * social proof shim. What Avanti actually is: a curated, verified
+ * marketplace for professional drivers, priced transparently.
+ *
+ * Signed-in users get a "continue" link back to their home instead of
+ * the generic sign-in CTA.
+ */
 
-  // Profile state
-  const [fullName, setFullName] = useState('')
-  const [title, setTitle] = useState('')
-  const [phone, setPhone] = useState('')
-
-  // Organisation state (owners only)
-  const [orgName, setOrgName] = useState('')
-  const [industry, setIndustry] = useState('')
-
-  // Notification prefs
-  const [notifEmail, setNotifEmail] = useState(true)
-  const [notifBlocker, setNotifBlocker] = useState(true)
-  const [notifWeekly, setNotifWeekly] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/me').then(r => r.ok ? r.json() : null).then(data => {
-      if (data) {
-        setMe(data)
-        setOrg(data.tenant)
-        setFullName(data.full_name || '')
-        setTitle(data.title || '')
-        setPhone(data.phone || '')
-        setOrgName(data.tenant?.name || '')
-        setIndustry(data.tenant?.industry || '')
-      }
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [])
-
-  if (loading) {
-    return (
-      <div style={{ padding:24, color:'var(--muted)', fontSize:13 }}>
-        Loading settings...
-      </div>
-    )
-  }
-
-  if (!me) {
-    return (
-      <div style={{ padding:24, color:'var(--red)', fontSize:13 }}>
-        Could not load your account.
-      </div>
-    )
-  }
-
-  const role = me.role
-  const visibleTabs = getVisibleSettingsTabs(role)
-
-  // Tab labels
-  const tabLabels: Record<SettingsTab, string> = {
-    profile:       'Profile',
-    notifications: 'Notifications',
-    organisation:  'Organisation',
-    billing:       'Billing',
-    limits:        'Plan & Limits',
-  }
-
-  async function saveProfile() {
-    setSaving(true); setMsg('')
-    try {
-      const res = await fetch('/api/me', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ full_name: fullName, title, phone }),
-      })
-      if (res.ok) setMsg('✅ Profile saved')
-      else setMsg('❌ Save failed')
-    } catch { setMsg('❌ Save failed') }
-    finally { setSaving(false); setTimeout(() => setMsg(''), 3000) }
-  }
-
-  async function saveOrg() {
-    setSaving(true); setMsg('')
-    try {
-      const res = await fetch('/api/organization', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: orgName, industry }),
-      })
-      if (res.ok) setMsg('✅ Organisation saved')
-      else setMsg('❌ Save failed')
-    } catch { setMsg('❌ Save failed') }
-    finally { setSaving(false); setTimeout(() => setMsg(''), 3000) }
-  }
-
-  const card: React.CSSProperties = {
-    background:'var(--card)', border:'1px solid var(--b)',
-    borderRadius:12, padding:20, marginBottom:16,
-  }
-
-  const labelStyle: React.CSSProperties = {
-    fontSize:11, fontWeight:600, textTransform:'uppercase' as const,
-    letterSpacing:'0.05em', color:'var(--muted)', marginBottom:6,
-  }
-
-  const inputStyle: React.CSSProperties = {
-    width:'100%', padding:'9px 12px', borderRadius:7,
-    border:'1px solid var(--b)', background:'var(--bg)',
-    color:'var(--text)', fontSize:13, outline:'none',
-  }
+export default async function LandingPage() {
+  const user = await getAuthUser();
+  const isSignedIn = Boolean(user);
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
-      <header style={{ height:54, flexShrink:0, display:'flex', alignItems:'center',
-                        padding:'0 24px', borderBottom:'1px solid var(--b)',
-                        background:'var(--bg2)' }}>
-        <span style={{ fontWeight:700, fontSize:14.5, color:'var(--text)' }}>Settings</span>
+    <div className="min-h-screen bg-paper text-ink">
+      {/* ─────────────────── SITE HEADER ─────────────────── */}
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
+          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
+            Avanti
+          </Link>
+          <nav className="flex items-center gap-8">
+            <Link
+              href="#how-it-works"
+              className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink sm:inline"
+            >
+              How it works
+            </Link>
+            <Link
+              href="#standards"
+              className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink sm:inline"
+            >
+              Standards
+            </Link>
+            {isSignedIn ? (
+              <Link
+                href={
+                  user!.roles.includes('super_admin')
+                    ? '/admin'
+                    : user!.roles.includes('driver')
+                    ? '/driver'
+                    : '/customer'
+                }
+                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
+              >
+                Continue →
+              </Link>
+            ) : (
+              <Link
+                href="/sign-in"
+                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
+              >
+                Sign in
+              </Link>
+            )}
+          </nav>
+        </div>
       </header>
 
-      <div style={{ flex:1, overflowY:'auto', padding:24, maxWidth:800 }}>
-        {/* Tab navigation */}
-        <div style={{ display:'flex', gap:4, marginBottom:24, background:'var(--card)',
-                       borderRadius:10, padding:4, width:'fit-content', flexWrap:'wrap' }}>
-          {visibleTabs.map(t => (
-            <button key={t} onClick={() => setTab(t)}
-                    style={{ padding:'7px 16px', borderRadius:7, border:'none',
-                              cursor:'pointer', fontSize:12.5, fontWeight:500,
-                              background: tab===t ? 'var(--bg2)' : 'transparent',
-                              color: tab===t ? 'var(--text)' : 'var(--muted)' }}>
-              {tabLabels[t]}
-            </button>
-          ))}
+      {/* ─────────────────── HERO ─────────────────── */}
+      <section className="border-b border-line">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 py-24 md:grid-cols-5 md:py-32">
+          <div className="md:col-span-3">
+            <div className="mb-6 font-mono text-xs uppercase tracking-[0.2em] text-ink-muted">
+              Est. 2026 · Lagos
+            </div>
+            <h1 className="font-display text-5xl leading-[1.05] text-ink md:text-7xl">
+              Every driver, <em className="italic">personally verified.</em>
+            </h1>
+            <p className="mt-8 max-w-xl font-body text-lg leading-relaxed text-ink">
+              Nigeria&apos;s first properly curated marketplace for professional drivers.
+              Book by the hour, day, or year — with drivers we&apos;ve vetted across identity,
+              licence, background, and experience.
+            </p>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Link
+                href={isSignedIn ? '/customer/search' : '/sign-up?role=individual'}
+                className="group inline-flex items-center gap-2 border border-ink bg-ink px-6 py-3 font-body text-sm text-paper transition-colors hover:bg-ink-2"
+              >
+                Find a driver
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={1.5} />
+              </Link>
+              <Link
+                href={isSignedIn ? '/corporate' : '/sign-up?role=corporate'}
+                className="inline-flex items-center gap-2 border border-line-strong bg-paper px-6 py-3 font-body text-sm text-ink transition-colors hover:bg-paper-3"
+              >
+                For business
+              </Link>
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            {/* Editorial pull-quote block — replaces stock hero photography */}
+            <div className="relative border-l-2 border-brass bg-paper-2 p-8">
+              <div className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+                From our founder
+              </div>
+              <blockquote className="font-display text-2xl italic leading-snug text-ink">
+                &ldquo;A verified driver isn&apos;t a luxury. It&apos;s the baseline.
+                We&apos;re just the first to insist on it.&rdquo;
+              </blockquote>
+              <div className="mt-6 font-mono text-xs uppercase tracking-wider text-ink-muted">
+                — Temitayo Gbenro
+              </div>
+            </div>
+          </div>
         </div>
+      </section>
 
-        {/* Message */}
-        {msg && (
-          <div style={{ padding:'10px 14px', borderRadius:8, marginBottom:16,
-                         background: msg.startsWith('✅') ? 'rgba(31,202,122,0.08)' : 'rgba(239,79,79,0.08)',
-                         color: msg.startsWith('✅') ? 'var(--green)' : 'var(--red)',
-                         fontSize:13, fontWeight:500 }}>
-            {msg}
-          </div>
-        )}
+      {/* ─────────────────── HOW IT WORKS ─────────────────── */}
+      <section id="how-it-works" className="border-b border-line">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <SectionLabel>How it works</SectionLabel>
+          <h2 className="mt-4 max-w-3xl font-display text-4xl leading-tight text-ink md:text-5xl">
+            Three steps between you and a driver worth trusting.
+          </h2>
 
-        {/* PROFILE TAB - everyone */}
-        {tab === 'profile' && (
-          <div style={card}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text)', marginBottom:16 }}>
-              Your profile
-            </h3>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Full name</div>
-              <input value={fullName} onChange={e => setFullName(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Email</div>
-              <input value={me.email} disabled style={{ ...inputStyle, opacity:0.6 }} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Title / Job role</div>
-              <input value={title} onChange={e => setTitle(e.target.value)}
-                     placeholder="e.g. Head of Operations" style={inputStyle} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Phone (optional)</div>
-              <input value={phone} onChange={e => setPhone(e.target.value)}
-                     placeholder="+234..." style={inputStyle} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Your role in the organisation</div>
-              <input value={role.charAt(0).toUpperCase() + role.slice(1)} disabled
-                     style={{ ...inputStyle, opacity:0.6 }} />
-              <div style={{ fontSize:11, color:'var(--muted)', marginTop:6 }}>
-                Your role is set by your organisation owner.
-              </div>
-            </div>
-            <button onClick={saveProfile} disabled={saving}
-                    style={{ padding:'10px 20px', borderRadius:8, border:'none',
-                              background:'var(--gold)', color:'#07080f', fontWeight:700,
-                              fontSize:13, cursor:'pointer' }}>
-              {saving ? 'Saving...' : 'Save profile'}
-            </button>
-          </div>
-        )}
-
-        {/* NOTIFICATIONS TAB - everyone */}
-        {tab === 'notifications' && (
-          <div style={card}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text)', marginBottom:16 }}>
-              Notification preferences
-            </h3>
+          <div className="mt-16 grid gap-16 md:grid-cols-3">
             {[
-              { v: notifEmail,   set: setNotifEmail,   label: 'Daily email reminders for check-ins' },
-              { v: notifBlocker, set: setNotifBlocker, label: 'Email alerts when team members report blockers' },
-              { v: notifWeekly,  set: setNotifWeekly,  label: 'Weekly summary email (Mondays)' },
-            ].map((opt, i) => (
-              <label key={i} style={{ display:'flex', alignItems:'center', gap:10,
-                                       padding:'12px 0', borderBottom:'1px solid var(--b)',
-                                       cursor:'pointer' }}>
-                <input type="checkbox" checked={opt.v} onChange={e => opt.set(e.target.checked)}
-                       style={{ width:18, height:18 }} />
-                <span style={{ fontSize:13, color:'var(--text)' }}>{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        )}
-
-        {/* ORGANISATION TAB - owners only */}
-        {tab === 'organisation' && can.editOrgSettings(role) && (
-          <div style={card}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text)', marginBottom:16 }}>
-              Organisation details
-            </h3>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Company name</div>
-              <input value={orgName} onChange={e => setOrgName(e.target.value)} style={inputStyle} />
-            </div>
-            <div style={{ marginBottom:14 }}>
-              <div style={labelStyle}>Industry</div>
-              <select value={industry} onChange={e => setIndustry(e.target.value)} style={inputStyle}>
-                <option value="">Select industry</option>
-                <option value="fintech">Financial services / Fintech</option>
-                <option value="tech">Technology / SaaS</option>
-                <option value="consulting">Consulting</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="retail">Retail / E-commerce</option>
-                <option value="manufacturing">Manufacturing</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <button onClick={saveOrg} disabled={saving}
-                    style={{ padding:'10px 20px', borderRadius:8, border:'none',
-                              background:'var(--gold)', color:'#07080f', fontWeight:700,
-                              fontSize:13, cursor:'pointer' }}>
-              {saving ? 'Saving...' : 'Save organisation'}
-            </button>
-          </div>
-        )}
-
-        {/* BILLING TAB - owners/admins only */}
-        {tab === 'billing' && can.manageBilling(role) && (
-          <div style={card}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text)', marginBottom:16 }}>
-              Billing & Subscription
-            </h3>
-            <div style={{ padding:16, background:'var(--bg2)', borderRadius:10, marginBottom:16 }}>
-              <div style={{ fontSize:11, color:'var(--muted)', marginBottom:4 }}>Current plan</div>
-              <div style={{ fontSize:22, fontWeight:700, color:'var(--text)', textTransform:'capitalize' as const }}>
-                {org?.plan_tier || 'Free'}
-              </div>
-              <div style={{ fontSize:11, color:'var(--muted)', marginTop:6 }}>
-                {org?.plan_tier === 'business'
-                  ? `${org?.seats_total || 0} seats · ${org?.billing_cycle || 'monthly'} billing`
-                  : '3 free seats · Upgrade to Business for unlimited'}
-              </div>
-            </div>
-            {org?.plan_tier !== 'business' && (
-              <button
-                onClick={async () => {
-                  setSaving(true); setMsg('')
-                  try {
-                    const res = await fetch('/api/payments/initialize', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ seats: (org?.seats_total || 3) + 1, cycle: 'monthly' }),
-                    })
-                    const data = await res.json()
-                    if (data.authorization_url) {
-                      window.location.href = data.authorization_url
-                    } else {
-                      setMsg('❌ ' + (data.error || 'Payment initialization failed'))
-                    }
-                  } catch {
-                    setMsg('❌ Something went wrong. Please try again.')
-                  } finally {
-                    setSaving(false)
-                  }
-                }}
-                disabled={saving}
-                style={{ display:'inline-block', padding:'10px 20px', borderRadius:8,
-                         background:'var(--gold)', color:'#07080f', fontWeight:700,
-                         fontSize:13, border:'none', cursor: saving ? 'not-allowed' : 'pointer',
-                         opacity: saving ? 0.7 : 1 }}>
-                {saving ? 'Initializing…' : 'Upgrade to Business →'}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* LIMITS TAB - owners/admins only */}
-        {tab === 'limits' && can.viewLimits(role) && (
-          <div style={card}>
-            <h3 style={{ fontSize:15, fontWeight:600, color:'var(--text)', marginBottom:16 }}>
-              Plan limits
-            </h3>
-            {[
-              ['Users (seats)', org?.plan_tier === 'business' ? `${org?.seats_total || 0}` : '3 max'],
-              ['Projects', org?.plan_tier === 'business' ? 'Unlimited' : '3 max'],
-              ['Objectives', org?.plan_tier === 'business' ? 'Unlimited' : '5 max'],
-              ['KPIs', org?.plan_tier === 'business' ? 'Unlimited' : '5 max'],
-              ['Tasks', org?.plan_tier === 'business' ? 'Unlimited' : '20 max'],
-              ['Departments', org?.plan_tier === 'business' ? 'Unlimited' : '2 max'],
-            ].map(([l, v]) => (
-              <div key={l as string} style={{ display:'flex', justifyContent:'space-between',
-                                                 padding:'10px 0', borderBottom:'1px solid var(--b)' }}>
-                <span style={{ fontSize:13, color:'var(--text)' }}>{l}</span>
-                <span style={{ fontSize:13, fontWeight:600,
-                                color: v === 'Unlimited' ? 'var(--green)' : 'var(--muted)' }}>{v}</span>
+              {
+                num: '01',
+                title: 'We verify',
+                body:
+                  "Every driver submits identity, licence, address, and background check consent. Our verification team reviews every submission personally — no self-service approvals.",
+              },
+              {
+                num: '02',
+                title: 'You book',
+                body:
+                  "Search by tier, vehicle class, or availability. Prices come from a published rate card, not a black-box algorithm. What you see is what you pay.",
+              },
+              {
+                num: '03',
+                title: 'They arrive',
+                body:
+                  "Your driver marks themselves en route, checks in on arrival, and completes the engagement. You know where things stand at every step. Rating and receipt follow.",
+              },
+            ].map((step) => (
+              <div key={step.num} className="border-t border-line-strong pt-6">
+                <div className="font-display text-6xl text-brass">{step.num}</div>
+                <h3 className="mt-4 font-display text-2xl leading-tight text-ink">{step.title}</h3>
+                <p className="mt-3 font-body leading-relaxed text-ink">{step.body}</p>
               </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      </section>
+
+      {/* ─────────────────── FOR WHOM ─────────────────── */}
+      <section className="border-b border-line bg-paper-2">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <SectionLabel>Who we serve</SectionLabel>
+          <h2 className="mt-4 max-w-3xl font-display text-4xl leading-tight text-ink md:text-5xl">
+            Three kinds of relationships,{' '}
+            <em className="italic">one standard of driver.</em>
+          </h2>
+
+          <div className="mt-16 grid gap-6 md:grid-cols-3">
+            {[
+              {
+                label: 'For individuals',
+                title: 'A driver, when you need one.',
+                body: 'Airport runs, family errands, evening events, long-distance trips. Book by the hour or day, from ₦4,500 an hour.',
+                href: isSignedIn ? '/customer/search' : '/sign-up?role=individual',
+                cta: 'Book a driver',
+              },
+              {
+                label: 'For business',
+                title: 'Executive fleets, without the fleet.',
+                body: 'Assign vetted drivers to your executives. Monthly retainers, corporate billing, single point of contact.',
+                href: isSignedIn ? '/corporate' : '/sign-up?role=corporate',
+                cta: 'For your team',
+              },
+              {
+                label: 'For drivers',
+                title: 'Fair rates, dignified work.',
+                body: 'Fifteen to twenty percent commission. No opaque incentive schemes. Get paid weekly. Set your own service radius.',
+                href: '/sign-up?role=driver',
+                cta: 'Drive with us',
+              },
+            ].map((card) => (
+              <Link
+                key={card.label}
+                href={card.href}
+                className="group flex flex-col border border-line bg-paper p-8 transition-colors hover:bg-paper-3"
+              >
+                <div className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  {card.label}
+                </div>
+                <h3 className="font-display text-2xl leading-tight text-ink">{card.title}</h3>
+                <p className="mt-4 flex-1 font-body text-sm leading-relaxed text-ink">{card.body}</p>
+                <div className="mt-8 inline-flex items-center gap-2 font-mono text-xs uppercase tracking-wider text-ink transition-transform group-hover:translate-x-1">
+                  {card.cta}
+                  <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────── STANDARDS ─────────────────── */}
+      <section id="standards" className="border-b border-line">
+        <div className="mx-auto grid max-w-6xl gap-16 px-6 py-24 md:grid-cols-2 md:py-32">
+          <div>
+            <SectionLabel>Our standards</SectionLabel>
+            <h2 className="mt-4 font-display text-4xl leading-tight text-ink md:text-5xl">
+              Four tiers.{' '}
+              <em className="italic">
+                Each earned, not claimed.
+              </em>
+            </h2>
+            <p className="mt-6 max-w-md font-body leading-relaxed text-ink">
+              Every driver is placed into one of four tiers based on what we&apos;ve been
+              able to verify. Higher tiers unlock executive assignments, longer engagements,
+              and premium rates.
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <StampBadge label="Identity verified" />
+              <StampBadge label="Licence confirmed" />
+              <StampBadge label="Background checked" />
+              <StampBadge label="Executive certified" variant="filled" />
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            {[
+              {
+                tier: 't1' as const,
+                title: 'Standard',
+                body: 'Identity + licence verified. Suitable for hourly city trips and short errands.',
+              },
+              {
+                tier: 't2' as const,
+                title: 'Verified',
+                body: 'Adds address proof and background check. The default for most bookings.',
+              },
+              {
+                tier: 't3' as const,
+                title: 'Professional',
+                body: 'Three years documented experience minimum. Executive tier eligible.',
+              },
+              {
+                tier: 't4' as const,
+                title: 'Executive',
+                body: 'Defensive driving certified, executive protection trained. For principals who require it.',
+              },
+            ].map((row) => (
+              <div key={row.tier} className="flex items-start gap-6 border-b border-line pb-6">
+                <div className="pt-1">
+                  <TierBadge tier={row.tier} />
+                </div>
+                <div className="flex-1">
+                  <div className="font-display text-lg text-ink">{row.title}</div>
+                  <p className="mt-1 font-body text-sm leading-relaxed text-ink-muted">{row.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────── CTA ─────────────────── */}
+      <section className="border-b border-line bg-ink">
+        <div className="mx-auto max-w-4xl px-6 py-24 text-center">
+          <div className="mb-6 font-mono text-[10px] uppercase tracking-[0.2em] text-paper/60">
+            Ready?
+          </div>
+          <h2 className="font-display text-4xl leading-tight text-paper md:text-6xl">
+            Book a driver worth having on your side.
+          </h2>
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
+            <Link
+              href={isSignedIn ? '/customer/search' : '/sign-up?role=individual'}
+              className="inline-flex items-center gap-2 border border-paper bg-paper px-6 py-3 font-body text-sm text-ink transition-colors hover:bg-paper-3"
+            >
+              Find a driver
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            </Link>
+            <Link
+              href="#how-it-works"
+              className="inline-flex items-center gap-2 border border-paper/40 bg-transparent px-6 py-3 font-body text-sm text-paper transition-colors hover:border-paper hover:bg-paper/5"
+            >
+              Learn how it works
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ─────────────────── FOOTER ─────────────────── */}
+      <footer className="bg-paper">
+        <div className="mx-auto max-w-6xl px-6 py-16">
+          <div className="grid gap-12 md:grid-cols-4">
+            <div>
+              <div className="font-display text-2xl text-ink">Avanti</div>
+              <p className="mt-3 font-body text-sm leading-relaxed text-ink-muted">
+                Verified professional drivers, on your terms.
+              </p>
+            </div>
+
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                Company
+              </div>
+              <ul className="space-y-2 font-body text-sm text-ink">
+                <li>
+                  <Link href="#" className="hover:text-ink-2">About</Link>
+                </li>
+                <li>
+                  <Link href="#standards" className="hover:text-ink-2">Our standards</Link>
+                </li>
+                <li>
+                  <Link href="#" className="hover:text-ink-2">Careers</Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                Product
+              </div>
+              <ul className="space-y-2 font-body text-sm text-ink">
+                <li>
+                  <Link
+                    href={isSignedIn ? '/customer/search' : '/sign-up?role=individual'}
+                    className="hover:text-ink-2"
+                  >
+                    Find a driver
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href={isSignedIn ? '/corporate' : '/sign-up?role=corporate'}
+                    className="hover:text-ink-2"
+                  >
+                    For business
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/sign-up?role=driver" className="hover:text-ink-2">
+                    Drive with us
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                Contact
+              </div>
+              <ul className="space-y-2 font-body text-sm text-ink">
+                <li>hello@avanti.ng</li>
+                <li>Lagos, Nigeria</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="mt-16 flex flex-col items-baseline justify-between gap-4 border-t border-line pt-6 sm:flex-row">
+            <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+              © 2026 Avanti · All rights reserved
+            </div>
+            <div className="flex gap-6 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+              <Link href="#" className="hover:text-ink">Terms</Link>
+              <Link href="#" className="hover:text-ink">Privacy</Link>
+              <Link href="#" className="hover:text-ink">Cookies</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
-  )
+  );
 }
