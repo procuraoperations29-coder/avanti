@@ -5,8 +5,8 @@
  * and state key), a short label (shown in the progress bar), and a longer
  * label (used in headings and menus).
  *
- * Adding a new step requires touching only this file and adding the
- * matching step component in `components/driver/onboarding/steps/`.
+ * Adding a new step requires touching this file and adding the matching
+ * route under `app/(driver)/driver/onboarding/step-<id>/`.
  */
 
 export const ONBOARDING_STEPS = [

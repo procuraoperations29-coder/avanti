@@ -22,7 +22,7 @@ export default async function DriverEngagementsListPage() {
     .eq('user_id', user.id)
     .single();
 
-  if (!profile) redirect('/driver/onboarding/pending');
+  if (!profile) redirect('/driver/onboarding/step-pending');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: rows } = await (admin as any)

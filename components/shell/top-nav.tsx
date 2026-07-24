@@ -42,7 +42,7 @@ const ROLE_LABEL: Record<string, string> = {
 
 const ROLE_LANDING: Record<string, string> = {
   individual_customer: '/customer',
-  driver: '/driver/onboarding/pending',
+  driver: '/driver/onboarding/step-pending',
   corporate_admin: '/corporate',
   corporate_member: '/corporate',
   admin_verifier: '/admin',

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { Logo } from '@/components/brand/logo';
 
 /**
  * Wizard shell — provides consistent header (Avanti wordmark + sign-out)
@@ -35,9 +36,9 @@ export default async function OnboardingLayout({
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
-          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
-            Avanti
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+          <Link href="/">
+            <Logo size="sm" />
           </Link>
           <span className="font-mono text-xs uppercase tracking-wider text-ink-muted">
             Driver onboarding

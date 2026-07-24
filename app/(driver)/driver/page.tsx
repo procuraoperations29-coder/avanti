@@ -36,7 +36,7 @@ export default async function DriverHomePage() {
     .single();
 
   if (!profile || profile.verification_status !== 'approved') {
-    redirect('/driver/onboarding/pending');
+    redirect('/driver/onboarding/step-pending');
   }
 
   const tier = profile.verification_tier as TierLevel;

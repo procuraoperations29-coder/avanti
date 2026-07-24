@@ -31,7 +31,7 @@ export default async function DriverEngagementDetailPage({
     .select('id')
     .eq('user_id', user.id)
     .single();
-  if (!profile) redirect('/driver/onboarding/pending');
+  if (!profile) redirect('/driver/onboarding/step-pending');
 
   // Fetch engagement (guarded by driver_id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

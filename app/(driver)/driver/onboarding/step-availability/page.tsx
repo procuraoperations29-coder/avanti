@@ -1,9 +1,7 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
+import { WizardHeader } from '@/components/driver/onboarding/wizard-header';
 import { AvailabilityStepForm } from './availability-form';
 
 /**
@@ -33,23 +31,13 @@ export default async function AvailabilityStepPage() {
   if (!profile) redirect('/driver/onboarding/step-start');
 
   return (
-    <PageShell>
       <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6 pb-20">
-        <Link
-          href="/driver/onboarding/step-experience"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Experience
-        </Link>
-
-        {/* Ordinal number — brass, giant */}
-        <div className="mb-2 font-display text-8xl leading-none text-brass md:text-9xl">
-          06
-        </div>
-        <div className="mb-8 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-          Availability
-        </div>
+        <WizardHeader
+          ordinal="06"
+          label="Availability"
+          backHref="/driver/onboarding/step-experience"
+          backLabel="Experience"
+        />
 
         <h1 className="mb-6 font-display text-4xl leading-[1.05] text-ink md:text-5xl">
           How do you want <em className="italic">to work</em>?
@@ -78,6 +66,5 @@ export default async function AvailabilityStepPage() {
           initialPermanent={profile.available_permanent ?? false}
         />
       </div>
-    </PageShell>
   );
 }
