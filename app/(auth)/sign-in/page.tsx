@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/sonner';
 import { SectionLabel } from '@/components/avanti/section-label';
+import { Logo } from '@/components/brand/logo';
 
 /**
  * Sign in — email OTP.
@@ -87,9 +88,9 @@ export default function SignInPage() {
   return (
     <div className="min-h-screen bg-paper">
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
-          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
-            Avanti
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+          <Link href="/">
+            <Logo />
           </Link>
           <Link
             href="/sign-up"

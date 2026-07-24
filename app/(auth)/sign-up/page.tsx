@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { SectionLabel } from '@/components/avanti/section-label';
+import { Logo } from '@/components/brand/logo';
 
 /**
  * Sign-up router / role picker.
@@ -72,9 +73,9 @@ export default async function SignUpPage({
     <div className="min-h-screen bg-paper">
       {/* Header */}
       <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
-          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
-            Avanti
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
+          <Link href="/">
+            <Logo />
           </Link>
           <Link
             href="/sign-in"

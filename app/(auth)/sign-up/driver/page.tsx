@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { PhoneInput } from '@/components/avanti/phone-input';
 import { OtpInput } from '@/components/avanti/otp-input';
+import { Logo } from '@/components/brand/logo';
 import { createClient } from '@/lib/supabase/client';
 
 type Step = 'details' | 'otp' | 'done';
@@ -93,13 +94,18 @@ export default function DriverSignUpPage() {
   const field = 'mt-3 w-full border border-line-strong bg-paper-2 p-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink';
 
   return (
-    <div className="mx-auto max-w-md px-4 pt-16 sm:px-6">
-      <Link
-        href="/"
-        className="mb-8 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-      >
-        <ChevronLeft className="h-3.5 w-3.5" /> Back
-      </Link>
+    <div className="mx-auto max-w-md px-4 pt-10 sm:px-6">
+      <div className="mb-8 flex items-center justify-between">
+        <Link href="/">
+          <Logo size="sm" />
+        </Link>
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+        >
+          <ChevronLeft className="h-3.5 w-3.5" /> Back
+        </Link>
+      </div>
 
       {step === 'details' && (
         <div className="animate-fade-in">
