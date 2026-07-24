@@ -37,7 +37,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         'fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%]',
-        'border border-line-strong bg-paper p-6 shadow-2xl',
+        'rounded-lg border border-line-strong bg-paper p-6 shadow-2xl',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
         'data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95',
@@ -48,7 +48,7 @@ const DialogContent = React.forwardRef<
       {children}
       <DialogPrimitive.Close
         className={cn(
-          'absolute right-4 top-4 opacity-70 transition-opacity hover:opacity-100',
+          'absolute right-4 top-4 rounded-full p-1 opacity-70 transition-opacity hover:bg-paper-3 hover:opacity-100',
           'focus:outline-none disabled:pointer-events-none'
         )}
       >

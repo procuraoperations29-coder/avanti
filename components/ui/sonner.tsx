@@ -19,7 +19,7 @@ export function Toaster() {
           background: 'var(--paper-2)',
           color: 'var(--ink)',
           border: '1px solid var(--line-strong)',
-          borderRadius: '0',
+          borderRadius: 'var(--radius)',
           fontFamily: 'var(--font-body)',
         },
         classNames: {

@@ -4,13 +4,11 @@ import tailwindcssAnimate from 'tailwindcss-animate';
 /**
  * Avanti Tailwind config.
  *
- * Colours resolve from CSS variables in globals.css so light/dark modes
- * can swap by changing variables — not rewriting classes.
- *
- * The `admin` namespace below is a second, additive palette for the
- * fintech-style admin dashboard redesign (see globals.css). It doesn't
- * replace or touch paper/ink/brass — those keep serving the rest of the
- * app exactly as before.
+ * Colours resolve from CSS variables in globals.css so the whole app can
+ * be re-themed by changing variable values, not rewriting classes. One
+ * palette (navy/green, from the Avanti logo) serves the entire app —
+ * there used to be a second `admin` namespace scoped to the dashboard,
+ * but it's been folded into the base tokens below.
  */
 const config: Config = {
   darkMode: ['class'],
@@ -55,26 +53,20 @@ const config: Config = {
           DEFAULT: 'var(--line)',
           strong: 'var(--line-strong)',
         },
-        admin: {
-          navy: 'var(--admin-navy)',
-          'navy-2': 'var(--admin-navy-2)',
-          'navy-soft': 'var(--admin-navy-soft)',
-          'nav-text': 'var(--admin-nav-text)',
-          bg: 'var(--admin-bg)',
-          card: 'var(--admin-card)',
-          border: 'var(--admin-border)',
-          text: 'var(--admin-text)',
-          'text-muted': 'var(--admin-text-muted)',
-          green: 'var(--admin-green)',
-          'green-soft': 'var(--admin-green-soft)',
-          'green-text': 'var(--admin-green-text)',
-          amber: 'var(--admin-amber)',
-          'amber-soft': 'var(--admin-amber-soft)',
-          'amber-text': 'var(--admin-amber-text)',
+        tier: {
+          1: 'var(--tier-1)',
+          2: 'var(--tier-2)',
+          3: 'var(--tier-3)',
+          4: 'var(--tier-4)',
         },
       },
+      borderRadius: {
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 4px)',
+        sm: 'calc(var(--radius) - 6px)',
+      },
       fontFamily: {
-        display: ['var(--font-display)', 'ui-serif', 'Georgia', 'serif'],
+        display: ['var(--font-display)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         body: ['var(--font-body)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },

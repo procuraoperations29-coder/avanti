@@ -28,7 +28,7 @@ export function StampBadge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 border font-mono uppercase tracking-wider',
+        'inline-flex items-center gap-1.5 rounded-full border font-mono uppercase tracking-wider',
         variant === 'outline' && 'border-green bg-green-soft text-green',
         variant === 'filled' && 'border-green bg-green text-paper',
         size === 'sm' && 'h-5 px-1.5 text-[10px]',

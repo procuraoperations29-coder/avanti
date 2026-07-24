@@ -46,7 +46,7 @@ export function TierBadge({ tier, size = 'md', label = 'short', className }: Tie
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 border font-mono uppercase tracking-wider',
+        'inline-flex items-center gap-1 rounded-full border font-mono uppercase tracking-wider',
         TIER_STYLES[tier],
         SIZE_STYLES[size],
         className

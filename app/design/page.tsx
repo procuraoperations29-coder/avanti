@@ -81,7 +81,7 @@ export default function DesignPage() {
       {/* Type */}
       <Section title="Type">
         <div className="space-y-3">
-          <div className="font-display text-5xl leading-tight text-ink">Display, <em className="italic">serif italic</em>.</div>
+          <div className="font-display text-5xl leading-tight text-ink">Display, <em className="italic">modern grotesk</em>.</div>
           <div className="font-display text-3xl leading-tight text-ink">Section head.</div>
           <div className="font-body text-base text-ink">Body — the driver is the hire. Not the ride.</div>
           <div className="font-body text-sm text-ink-muted">Body muted — supplementary detail.</div>
@@ -285,7 +285,7 @@ export default function DesignPage() {
 
       {/* Skeleton */}
       <Section title="Skeleton">
-        <div className="border border-line bg-paper-2 p-5">
+        <div className="rounded-lg border border-line bg-paper-2 p-5">
           <div className="flex items-center gap-3">
             <Skeleton className="h-14 w-14 rounded-full" />
             <div className="flex-1 space-y-2">
@@ -315,7 +315,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 function Swatch({ name, cls, fg }: { name: string; cls: string; fg: string }) {
   return (
-    <div className={`flex h-24 items-end p-3 border border-line ${cls} ${fg}`}>
+    <div className={`flex h-24 items-end rounded-lg p-3 border border-line ${cls} ${fg}`}>
       <div className="font-mono text-[10px] uppercase tracking-wider">{name}</div>
     </div>
   );
