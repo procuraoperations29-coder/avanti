@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { ReleaseBatchButton } from './release-batch-button';
 
@@ -101,8 +100,7 @@ export default async function PayoutBatchDetailPage({
   const canRelease = batch.status === 'draft' || batch.status === 'approved';
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
+    <div className="mx-auto max-w-6xl pb-20">
         <Link
           href="/admin/finance/batches"
           className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
@@ -282,7 +280,6 @@ export default async function PayoutBatchDetailPage({
             </div>
           )}
         </div>
-      </div>
-    </PageShell>
+    </div>
   );
 }

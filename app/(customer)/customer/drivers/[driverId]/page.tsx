@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, Star, ArrowRight, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
+import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
+import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { Portrait } from '@/components/avanti/portrait';

@@ -10,17 +10,17 @@ export function StatCard({
   tone?: 'default' | 'accent' | 'success' | 'warning';
 }) {
   const toneClass = {
-    default: 'border-admin-border bg-admin-card',
-    accent: 'border-admin-green bg-admin-green-soft',
-    success: 'border-admin-green bg-admin-green-soft',
-    warning: 'border-admin-amber bg-admin-amber-soft',
+    default: 'border-line bg-paper-2',
+    accent: 'border-green bg-green-soft',
+    success: 'border-green bg-green-soft',
+    warning: 'border-brass bg-brass-soft',
   }[tone];
 
   const labelToneClass = {
-    default: 'text-admin-text-muted',
-    accent: 'text-admin-green-text',
-    success: 'text-admin-green-text',
-    warning: 'text-admin-amber-text',
+    default: 'text-ink-muted',
+    accent: 'text-green-text',
+    success: 'text-green-text',
+    warning: 'text-brass-text',
   }[tone];
 
   return (
@@ -28,11 +28,11 @@ export function StatCard({
       <div className={`font-body text-[12px] font-medium uppercase tracking-wide ${labelToneClass}`}>
         {label}
       </div>
-      <div className="mt-2 font-body text-[28px] font-medium leading-none text-admin-text">
+      <div className="mt-2 font-body text-[28px] font-medium leading-none text-ink">
         {value}
       </div>
       {subtext && (
-        <div className="mt-2 font-body text-[12px] text-admin-text-muted">{subtext}</div>
+        <div className="mt-2 font-body text-[12px] text-ink-muted">{subtext}</div>
       )}
     </div>
   );

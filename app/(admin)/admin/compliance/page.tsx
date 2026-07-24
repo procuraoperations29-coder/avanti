@@ -3,8 +3,6 @@ import Link from 'next/link';
 import { ShieldAlert } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
-import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 
 /**
@@ -22,11 +20,6 @@ export default async function AdminCompliancePage() {
   if (!user.roles.includes('admin_compliance') && !user.roles.includes('super_admin')) {
     redirect('/admin');
   }
-
-  const isSuper = user.roles.includes('super_admin');
-  const canVerify = user.roles.includes('admin_verifier') || isSuper;
-  const canSupport = user.roles.includes('admin_support') || isSuper;
-  const canFinance = user.roles.includes('admin_finance') || isSuper;
 
   const admin = createServiceRoleClient();
 
@@ -72,26 +65,14 @@ export default async function AdminCompliancePage() {
   const disputeCount = disputes?.length ?? 0;
 
   return (
-    <PageShell>
-      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <AdminSidebar
-          active="compliance"
-          canVerify={canVerify}
-          canPlacements={canSupport || canVerify}
-          canSupport={canSupport}
-          canFinance={canFinance}
-          canCompliance={true}
-          isSuper={isSuper}
-        />
-
-        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
-          <Link
+    <>
+      <Link
             href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
+            className="mb-4 inline-block font-body text-[13px] text-ink-muted hover:text-ink"
           >
             ← Admin
           </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
+          <p className="mb-6 font-body text-lg font-medium text-ink">
             Compliance
           </p>
 
@@ -107,23 +88,23 @@ export default async function AdminCompliancePage() {
           </div>
 
           <div className="mb-10">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
+            <p className="mb-3 font-body text-[13px] font-medium text-ink">
               Recent verification decisions
             </p>
             {decisionRows.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
                 No verification decisions recorded yet.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-admin-border">
-                <table className="w-full bg-admin-card">
-                  <thead className="border-b border-admin-border bg-admin-bg">
+              <div className="overflow-hidden rounded-xl border border-line">
+                <table className="w-full bg-paper-2">
+                  <thead className="border-b border-line bg-paper">
                     <tr>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">When</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Decision</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Tier</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Reviewer</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Rationale</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">When</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Decision</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Tier</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Reviewer</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Rationale</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -137,24 +118,24 @@ export default async function AdminCompliancePage() {
                         rationale?: string;
                       };
                       return (
-                        <tr key={row.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
-                          <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                        <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper">
+                          <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
                             {row.decided_at
                               ? new Date(row.decided_at).toLocaleString('en-GB', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                                 })
                               : '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-[11px] uppercase tracking-wide text-admin-text">
+                          <td className="px-4 py-3 font-body text-[11px] uppercase tracking-wide text-ink">
                             {row.decision ?? '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-sm uppercase text-admin-text">
+                          <td className="px-4 py-3 font-body text-sm uppercase text-ink">
                             {row.granted_tier ?? '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-sm text-admin-text">
+                          <td className="px-4 py-3 font-body text-sm text-ink">
                             {actorNames[row.reviewer_user_id ?? ''] ?? '—'}
                           </td>
-                          <td className="max-w-md truncate px-4 py-3 font-body text-sm text-admin-text-muted">
+                          <td className="max-w-md truncate px-4 py-3 font-body text-sm text-ink-muted">
                             {row.rationale ?? '—'}
                           </td>
                         </tr>
@@ -167,20 +148,20 @@ export default async function AdminCompliancePage() {
           </div>
 
           <div>
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Audit log</p>
+            <p className="mb-3 font-body text-[13px] font-medium text-ink">Audit log</p>
             {auditRows.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
                 Audit log is empty. Any admin action or state change should appear here.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-admin-border">
-                <table className="w-full bg-admin-card">
-                  <thead className="border-b border-admin-border bg-admin-bg">
+              <div className="overflow-hidden rounded-xl border border-line">
+                <table className="w-full bg-paper-2">
+                  <thead className="border-b border-line bg-paper">
                     <tr>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">When</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Actor</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Action</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Target</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">When</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Actor</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Action</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Target</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -194,21 +175,21 @@ export default async function AdminCompliancePage() {
                         entity_id?: string;
                       };
                       return (
-                        <tr key={row.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
-                          <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                        <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper">
+                          <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
                             {row.created_at
                               ? new Date(row.created_at).toLocaleString('en-GB', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                                 })
                               : '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-sm text-admin-text">
+                          <td className="px-4 py-3 font-body text-sm text-ink">
                             {actorNames[row.actor_user_id ?? ''] ?? '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-[11px] uppercase tracking-wide text-admin-text">
+                          <td className="px-4 py-3 font-body text-[11px] uppercase tracking-wide text-ink">
                             {row.action ?? '—'}
                           </td>
-                          <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                          <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
                             {row.entity_type ? `${row.entity_type} · ${(row.entity_id ?? '').slice(0, 8)}` : '—'}
                           </td>
                         </tr>
@@ -220,21 +201,19 @@ export default async function AdminCompliancePage() {
             )}
           </div>
 
-          <div className="mt-8 flex items-start gap-3 rounded-xl border border-admin-border bg-admin-card px-6 py-5">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
+          <div className="mt-8 flex items-start gap-3 rounded-xl border border-line bg-paper-2 px-6 py-5">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" strokeWidth={1.75} />
             <div>
-              <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
+              <div className="font-body text-[11px] font-medium uppercase tracking-wide text-ink-muted">
                 Coming
               </div>
-              <p className="mt-1.5 max-w-2xl font-body text-sm leading-relaxed text-admin-text">
+              <p className="mt-1.5 max-w-2xl font-body text-sm leading-relaxed text-ink">
                 Full audit search and filtering. Dispute resolution workflow. Data-request
                 handling (GDPR/NDPR). Automated compliance reports. Sanctions re-check
                 scheduling.
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </PageShell>
+    </>
   );
 }

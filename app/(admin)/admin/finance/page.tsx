@@ -3,8 +3,6 @@ import Link from 'next/link';
 import { ArrowRight, Wallet } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
-import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 
 function formatNaira(n: number): string {
@@ -17,11 +15,6 @@ export default async function AdminFinancePage() {
   if (!user.roles.includes('admin_finance') && !user.roles.includes('super_admin')) {
     redirect('/admin');
   }
-
-  const isSuper = user.roles.includes('super_admin');
-  const canVerify = user.roles.includes('admin_verifier') || isSuper;
-  const canSupport = user.roles.includes('admin_support') || isSuper;
-  const canCompliance = user.roles.includes('admin_compliance') || isSuper;
 
   const admin = createServiceRoleClient();
 
@@ -185,44 +178,32 @@ export default async function AdminFinancePage() {
   }
 
   return (
-    <PageShell>
-      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <AdminSidebar
-          active="finance"
-          canVerify={canVerify}
-          canPlacements={canSupport || canVerify}
-          canSupport={canSupport}
-          canFinance={true}
-          canCompliance={canCompliance}
-          isSuper={isSuper}
-        />
-
-        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
-          <Link
+    <>
+      <Link
             href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
+            className="mb-4 inline-block font-body text-[13px] text-ink-muted hover:text-ink"
           >
             ← Admin
           </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
+          <p className="mb-6 font-body text-lg font-medium text-ink">
             Money in, money out
           </p>
 
-          <div className="mb-6 rounded-xl border border-admin-border bg-admin-card p-6">
+          <div className="mb-6 rounded-xl border border-line bg-paper-2 p-6">
             <div className="mb-4 flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-admin-navy" strokeWidth={1.75} />
-              <span className="font-body text-[13px] font-medium text-admin-text">Payout batches</span>
+              <Wallet className="h-4 w-4 text-ink" strokeWidth={1.75} />
+              <span className="font-body text-[13px] font-medium text-ink">Payout batches</span>
             </div>
 
             <div className="mb-5 grid gap-5 md:grid-cols-3">
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-amber-text">
+                <div className="font-body text-[11px] uppercase tracking-wide text-brass-text">
                   Ready to batch
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                <div className="mt-1.5 font-body text-2xl font-medium text-ink">
                   {formatNaira(unbatchedGross)}
                 </div>
-                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
+                <div className="mt-1.5 font-body text-[12px] text-ink-muted">
                   {readyToBatchRows.length} engagement{readyToBatchRows.length === 1 ? '' : 's'} unpaid
                   {blockedCount > 0 && (
                     <> · {blockedCount} blocked (no payout method)</>
@@ -230,28 +211,28 @@ export default async function AdminFinancePage() {
                 </div>
               </div>
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                <div className="font-body text-[11px] uppercase tracking-wide text-ink-muted">
                   Batches created
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">{batches.length}</div>
-                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
+                <div className="mt-1.5 font-body text-2xl font-medium text-ink">{batches.length}</div>
+                <div className="mt-1.5 font-body text-[12px] text-ink-muted">
                   {completedBatches.length} completed
                 </div>
               </div>
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-green-text">
+                <div className="font-body text-[11px] uppercase tracking-wide text-green-text">
                   Released to date
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                <div className="mt-1.5 font-body text-2xl font-medium text-ink">
                   {formatNaira(totalReleased)}
                 </div>
-                <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">Net paid, after WHT</div>
+                <div className="mt-1.5 font-body text-[12px] text-ink-muted">Net paid, after WHT</div>
               </div>
             </div>
 
             <Link
               href="/admin/finance/batches"
-              className="inline-flex items-center gap-2 rounded-lg bg-admin-navy px-5 py-2.5 font-body text-sm text-white transition-colors hover:bg-admin-navy-2"
+              className="inline-flex items-center gap-2 rounded-lg bg-ink px-5 py-2.5 font-body text-sm text-white transition-colors hover:bg-ink-2"
             >
               {unbatched.length > 0 ? 'Manage batches' : 'View batches'}
               <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
@@ -264,26 +245,26 @@ export default async function AdminFinancePage() {
           </div>
 
           <div>
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
+            <p className="mb-3 font-body text-[13px] font-medium text-ink">
               Completed engagements · {completed.length}
             </p>
 
             {completed.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
                 No completed engagements yet.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-admin-border">
-                <table className="w-full bg-admin-card">
-                  <thead className="border-b border-admin-border bg-admin-bg">
+              <div className="overflow-x-auto rounded-xl border border-line">
+                <table className="w-full bg-paper-2">
+                  <thead className="border-b border-line bg-paper">
                     <tr>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Date</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Type</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Driver</th>
-                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Customer</th>
-                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Gross</th>
-                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Payout</th>
-                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Commission</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Date</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Type</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Driver</th>
+                      <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">Customer</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-ink-muted">Gross</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-ink-muted">Payout</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-ink-muted">Commission</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -297,30 +278,30 @@ export default async function AdminFinancePage() {
                       driver_payout_total: number | null;
                       commission_total: number | null;
                     }) => (
-                      <tr key={e.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
-                        <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                      <tr key={e.id} className="border-b border-line last:border-0 hover:bg-paper">
+                        <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
                           {e.completed_at
                             ? new Date(e.completed_at).toLocaleDateString('en-GB', {
                                 day: 'numeric', month: 'short', year: '2-digit',
                               })
                             : '—'}
                         </td>
-                        <td className="px-4 py-3 font-body text-sm capitalize text-admin-text">
+                        <td className="px-4 py-3 font-body text-sm capitalize text-ink">
                           {e.engagement_type?.replace(/_/g, ' ') ?? '—'}
                         </td>
-                        <td className="px-4 py-3 font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 font-body text-sm text-ink">
                           {driverNames[e.driver_id ?? ''] ?? '—'}
                         </td>
-                        <td className="px-4 py-3 font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 font-body text-sm text-ink">
                           {customerNames[e.customer_user_id ?? ''] ?? '—'}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm text-ink">
                           {formatNaira(Number(e.customer_price_total ?? 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm text-ink">
                           {formatNaira(Number(e.driver_payout_total ?? 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm text-ink">
                           {formatNaira(Number(e.commission_total ?? 0))}
                         </td>
                       </tr>
@@ -330,8 +311,6 @@ export default async function AdminFinancePage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
-    </PageShell>
+    </>
   );
 }

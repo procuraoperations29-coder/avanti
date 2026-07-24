@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ChevronDown, LogOut, RefreshCw, Settings } from 'lucide-react';
 import { Portrait } from '@/components/avanti/portrait';
+import { Logo } from '@/components/brand/logo';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -87,8 +88,8 @@ export function TopNav({ user, className }: TopNavProps) {
     >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         {/* Wordmark */}
-        <Link href="/" className="font-display text-xl leading-none text-ink">
-          Avanti
+        <Link href="/" className="leading-none">
+          <Logo size="sm" />
         </Link>
 
         {/* User menu */}

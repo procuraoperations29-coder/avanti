@@ -3,8 +3,6 @@ import Link from 'next/link';
 import { Search, ChevronRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
-import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -23,15 +21,15 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_STYLE: Record<string, string> = {
-  individual_customer: 'border-admin-border text-admin-text-muted',
-  corporate_member: 'border-admin-border text-admin-text-muted',
-  corporate_admin: 'border-admin-border text-admin-text-muted',
-  driver: 'border-admin-amber text-admin-amber-text',
-  admin_verifier: 'border-admin-green text-admin-green-text',
-  admin_support: 'border-admin-green text-admin-green-text',
-  admin_finance: 'border-admin-green text-admin-green-text',
-  admin_compliance: 'border-admin-green text-admin-green-text',
-  super_admin: 'border-admin-navy text-admin-navy',
+  individual_customer: 'border-line text-ink-muted',
+  corporate_member: 'border-line text-ink-muted',
+  corporate_admin: 'border-line text-ink-muted',
+  driver: 'border-brass text-brass-text',
+  admin_verifier: 'border-green text-green-text',
+  admin_support: 'border-green text-green-text',
+  admin_finance: 'border-green text-green-text',
+  admin_compliance: 'border-green text-green-text',
+  super_admin: 'border-ink text-ink',
 };
 
 export default async function AdminUsersPage({
@@ -44,11 +42,6 @@ export default async function AdminUsersPage({
   if (!authUser.roles.includes('admin_support') && !authUser.roles.includes('super_admin')) {
     redirect('/admin');
   }
-
-  const isSuper = authUser.roles.includes('super_admin');
-  const canVerify = authUser.roles.includes('admin_verifier') || isSuper;
-  const canFinance = authUser.roles.includes('admin_finance') || isSuper;
-  const canCompliance = authUser.roles.includes('admin_compliance') || isSuper;
 
   const { q } = await searchParams;
   const admin = createServiceRoleClient();
@@ -138,25 +131,13 @@ export default async function AdminUsersPage({
   }
 
   return (
-    <PageShell>
-      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <AdminSidebar
-          active="support"
-          canVerify={canVerify}
-          canPlacements={true}
-          canSupport={true}
-          canFinance={canFinance}
-          canCompliance={canCompliance}
-          isSuper={isSuper}
-        />
-
-        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">Users</p>
+    <>
+      <p className="mb-6 font-body text-lg font-medium text-ink">Users</p>
 
           <form className="mb-6">
             <div className="relative max-w-md">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-text-muted"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
                 strokeWidth={1.75}
               />
               <input
@@ -164,28 +145,28 @@ export default async function AdminUsersPage({
                 name="q"
                 defaultValue={q ?? ''}
                 placeholder="Search name, email, or phone…"
-                className="w-full rounded-lg border border-admin-border bg-admin-card py-2 pl-10 pr-3 font-body text-sm text-admin-text placeholder:text-admin-text-muted focus:border-admin-navy focus:outline-none"
+                className="w-full rounded-lg border border-line bg-paper-2 py-2 pl-10 pr-3 font-body text-sm text-ink placeholder:text-ink-muted focus:border-ink focus:outline-none"
               />
             </div>
           </form>
 
-          <div className="overflow-x-auto rounded-xl border border-admin-border">
-            <table className="w-full bg-admin-card">
-              <thead className="border-b border-admin-border bg-admin-bg">
+          <div className="overflow-x-auto rounded-xl border border-line">
+            <table className="w-full bg-paper-2">
+              <thead className="border-b border-line bg-paper">
                 <tr>
-                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     Name
                   </th>
-                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     Role
                   </th>
-                  <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     As customer
                   </th>
-                  <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     As driver
                   </th>
-                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                  <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     Joined
                   </th>
                   <th className="px-4 py-3"></th>
@@ -205,17 +186,17 @@ export default async function AdminUsersPage({
                     const driverProfileId = driverProfileByUser[u.id];
 
                     return (
-                      <tr key={u.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
+                      <tr key={u.id} className="border-b border-line last:border-0 hover:bg-paper">
                         <td className="px-4 py-3">
-                          <div className="font-body text-sm text-admin-text">{u.full_name}</div>
-                          <div className="font-body text-[12px] text-admin-text-muted">
+                          <div className="font-body text-sm text-ink">{u.full_name}</div>
+                          <div className="font-body text-[12px] text-ink-muted">
                             {u.email ?? u.phone ?? '—'}
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1">
                             {roles.length === 0 ? (
-                              <span className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                              <span className="font-body text-[11px] uppercase tracking-wide text-ink-muted">
                                 No role
                               </span>
                             ) : (
@@ -224,7 +205,7 @@ export default async function AdminUsersPage({
                                   key={r}
                                   className={
                                     'rounded-full border px-2 py-0.5 font-body text-[11px] tracking-wide ' +
-                                    (ROLE_STYLE[r] ?? 'border-admin-border text-admin-text-muted')
+                                    (ROLE_STYLE[r] ?? 'border-line text-ink-muted')
                                   }
                                 >
                                   {ROLE_LABEL[r] ?? r}
@@ -233,26 +214,26 @@ export default async function AdminUsersPage({
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-[12px] text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-[12px] text-ink">
                           {custStats ? (
                             <>
                               {custStats.count} eng. · {formatNaira(custStats.total)}
                             </>
                           ) : (
-                            <span className="text-admin-text-muted">—</span>
+                            <span className="text-ink-muted">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-[12px] text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-[12px] text-ink">
                           {driverProfileId ? (
                             <>
                               {jobsByDriverId[driverProfileId] ?? 0} jobs ·{' '}
                               {formatNaira(earningsByDriverId[driverProfileId] ?? 0)}
                             </>
                           ) : (
-                            <span className="text-admin-text-muted">—</span>
+                            <span className="text-ink-muted">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 font-body text-[12px] text-admin-text-muted">
+                        <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
                           {new Date(u.created_at).toLocaleDateString('en-GB', {
                             day: 'numeric',
                             month: 'short',
@@ -262,7 +243,7 @@ export default async function AdminUsersPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/admin/support/${u.id}`}
-                            className="inline-flex items-center gap-1 font-body text-[12px] font-medium text-admin-navy hover:text-admin-navy-2"
+                            className="inline-flex items-center gap-1 font-body text-[12px] font-medium text-ink hover:text-ink-2"
                           >
                             View
                             <ChevronRight className="h-3 w-3" strokeWidth={2} />
@@ -277,16 +258,14 @@ export default async function AdminUsersPage({
           </div>
 
           {users.length === 0 && (
-            <div className="mt-4 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+            <div className="mt-4 rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
               No users found{q ? ` matching "${q}"` : ''}.
             </div>
           )}
 
-          <p className="mt-4 font-body text-[12px] text-admin-text-muted">
+          <p className="mt-4 font-body text-[12px] text-ink-muted">
             Showing {users.length} most recent{users.length === 200 ? ' (200 max — search to narrow)' : ''}
           </p>
-        </div>
-      </div>
-    </PageShell>
+    </>
   );
 }

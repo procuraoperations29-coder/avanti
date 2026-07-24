@@ -41,13 +41,16 @@ const config: Config = {
         brass: {
           DEFAULT: 'var(--brass)',
           soft: 'var(--brass-soft)',
+          text: 'var(--brass-text)',
         },
         green: {
           DEFAULT: 'var(--green)',
           soft: 'var(--green-soft)',
+          text: 'var(--green-text)',
         },
         oxblood: {
           DEFAULT: 'var(--oxblood)',
+          soft: 'var(--oxblood-soft)',
         },
         line: {
           DEFAULT: 'var(--line)',

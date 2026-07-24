@@ -33,6 +33,7 @@
     /* Accents */
     --brass: #EDA100;        /* tier/accent gold */
     --brass-soft: #FBEEDD;   /* gold tinted background */
+    --brass-text: #854F0B;   /* WCAG-safe text on --brass-soft */
 
     --green: #5FA828;        /* brand green — verification stamps, success, CTAs */
     --green-soft: #EAF3DE;   /* green tinted background */

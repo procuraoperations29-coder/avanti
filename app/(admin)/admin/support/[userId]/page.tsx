@@ -3,8 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
-import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 
@@ -38,11 +36,6 @@ export default async function AdminUserDetailPage({
   if (!authUser.roles.includes('admin_support') && !authUser.roles.includes('super_admin')) {
     redirect('/admin');
   }
-
-  const isSuper = authUser.roles.includes('super_admin');
-  const canVerify = authUser.roles.includes('admin_verifier') || isSuper;
-  const canFinance = authUser.roles.includes('admin_finance') || isSuper;
-  const canCompliance = authUser.roles.includes('admin_compliance') || isSuper;
 
   const { userId } = await params;
   const admin = createServiceRoleClient();
@@ -163,34 +156,22 @@ export default async function AdminUserDetailPage({
   const driverTotalNet = monthlyEarnings.reduce((sum, m) => sum + Number(m.net_total ?? 0), 0);
 
   return (
-    <PageShell>
-      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <AdminSidebar
-          active="support"
-          canVerify={canVerify}
-          canPlacements={true}
-          canSupport={true}
-          canFinance={canFinance}
-          canCompliance={canCompliance}
-          isSuper={isSuper}
-        />
-
-        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
-          <Link
+    <>
+      <Link
             href="/admin/support"
-            className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-admin-text-muted hover:text-admin-text"
+            className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-ink-muted hover:text-ink"
           >
             <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
             Users
           </Link>
 
-          <p className="font-body text-[12px] uppercase tracking-wide text-admin-text-muted">
+          <p className="font-body text-[12px] uppercase tracking-wide text-ink-muted">
             {roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') || 'User'}
           </p>
-          <p className="mt-1 font-body text-2xl font-medium text-admin-text">
+          <p className="mt-1 font-body text-2xl font-medium text-ink">
             {profileUser.full_name}
           </p>
-          <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-admin-text-muted">
+          <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-ink-muted">
             {profileUser.email && <span>{profileUser.email}</span>}
             {profileUser.phone && <span>{profileUser.phone}</span>}
             <span>Joined {fmtDate(profileUser.created_at)}</span>
@@ -198,9 +179,9 @@ export default async function AdminUserDetailPage({
           </div>
 
           {isDriver && driverProfile && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+            <div className="mt-8 rounded-xl border border-line bg-paper-2 p-6">
               <div className="flex items-center justify-between">
-                <p className="font-body text-[13px] font-medium text-admin-text">Driver</p>
+                <p className="font-body text-[13px] font-medium text-ink">Driver</p>
                 <TierBadge tier={(driverProfile.verification_tier as TierLevel) ?? 't1'} label="long" />
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -213,41 +194,41 @@ export default async function AdminUserDetailPage({
               </div>
 
               {driverPlacements.length > 0 && (
-                <div className="mt-6 border-t border-admin-border pt-4">
-                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                <div className="mt-6 border-t border-line pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     Permanent placements
                   </div>
                   {driverPlacements.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-ink">
                       <span className="capitalize">
                         {p.status} · since {fmtDate(p.start_date)}
                       </span>
-                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                      <span className="text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 border-t border-admin-border pt-4">
-                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+              <div className="mt-6 border-t border-line pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                   Recent engagements
                 </div>
                 {driverEngagements.length === 0 ? (
-                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
+                  <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
                 ) : (
-                  <div className="divide-y divide-admin-border">
+                  <div className="divide-y divide-line">
                     {driverEngagements.map((e) => (
                       <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
                         <div>
-                          <span className="text-admin-text">{e.customer_name ?? 'Customer'}</span>
-                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                          <span className="text-ink">{e.customer_name ?? 'Customer'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                             {e.engagement_type?.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 font-body text-[12px]">
-                          <span className="uppercase text-admin-text-muted">{e.status}</span>
-                          <span className="text-admin-text">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
-                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
+                          <span className="uppercase text-ink-muted">{e.status}</span>
+                          <span className="text-ink">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
+                          <span className="text-ink-muted">{fmtDate(e.starts_at)}</span>
                         </div>
                       </div>
                     ))}
@@ -258,49 +239,49 @@ export default async function AdminUserDetailPage({
           )}
 
           {isCustomer && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
-              <p className="font-body text-[13px] font-medium text-admin-text">Customer</p>
+            <div className="mt-8 rounded-xl border border-line bg-paper-2 p-6">
+              <p className="font-body text-[13px] font-medium text-ink">Customer</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <StatCard label="Engagements" value={customerEngagements.length} />
                 <StatCard label="Total paid" value={formatNaira(customerTotal)} tone="success" />
               </div>
 
               {customerPlacements.length > 0 && (
-                <div className="mt-6 border-t border-admin-border pt-4">
-                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                <div className="mt-6 border-t border-line pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                     Permanent placements
                   </div>
                   {customerPlacements.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-ink">
                       <span className="capitalize">
                         {p.status} · since {fmtDate(p.start_date)}
                       </span>
-                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                      <span className="text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 border-t border-admin-border pt-4">
-                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+              <div className="mt-6 border-t border-line pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                   Recent engagements
                 </div>
                 {customerEngagements.length === 0 ? (
-                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
+                  <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
                 ) : (
-                  <div className="divide-y divide-admin-border">
+                  <div className="divide-y divide-line">
                     {customerEngagements.map((e) => (
                       <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
                         <div>
-                          <span className="text-admin-text">{e.driver_name ?? 'Driver'}</span>
-                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                          <span className="text-ink">{e.driver_name ?? 'Driver'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
                             {e.engagement_type?.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 font-body text-[12px]">
-                          <span className="uppercase text-admin-text-muted">{e.status}</span>
-                          <span className="text-admin-text">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
-                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
+                          <span className="uppercase text-ink-muted">{e.status}</span>
+                          <span className="text-ink">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
+                          <span className="text-ink-muted">{fmtDate(e.starts_at)}</span>
                         </div>
                       </div>
                     ))}
@@ -311,12 +292,10 @@ export default async function AdminUserDetailPage({
           )}
 
           {!isDriver && !isCustomer && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+            <div className="mt-8 rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
               This user has no driver or customer role — likely staff/admin only.
             </div>
           )}
-        </div>
-      </div>
-    </PageShell>
+    </>
   );
 }

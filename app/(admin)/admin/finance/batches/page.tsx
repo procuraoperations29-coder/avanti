@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { CreateBatchButton } from './create-batch-button';
 
@@ -104,8 +103,7 @@ export default async function PayoutBatchesPage() {
   const list = batches ?? [];
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
+    <div className="mx-auto max-w-5xl pb-20">
         <Link
           href="/admin/finance"
           className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
@@ -269,7 +267,6 @@ export default async function PayoutBatchesPage() {
             release. Real Paystack Transfers integration comes next.
           </p>
         </div>
-      </div>
-    </PageShell>
+    </div>
   );
 }

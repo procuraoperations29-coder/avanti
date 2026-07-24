@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Search, UserCheck, CalendarDays, ArrowRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
+import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { Button } from '@/components/ui/button';
