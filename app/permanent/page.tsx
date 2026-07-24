@@ -3,6 +3,8 @@ import { ArrowRight, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
+import { SiteHeader } from '@/components/marketing/site-header';
+import { SiteFooter } from '@/components/marketing/site-footer';
 import {
   monthlySalaryForTier,
   positionNameForTier,
@@ -30,37 +32,11 @@ export default async function PermanentPage() {
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      {/* Header */}
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
-          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
-            Avanti
-          </Link>
-          <nav className="flex items-center gap-8">
-            <Link
-              href="/"
-              className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink sm:inline"
-            >
-              Home
-            </Link>
-            {isSignedIn ? (
-              <Link
-                href="/customer/permanent"
-                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
-              >
-                Browse drivers →
-              </Link>
-            ) : (
-              <Link
-                href="/sign-in"
-                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
-              >
-                Sign in
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader
+        isSignedIn={isSignedIn}
+        continueHref="/customer/permanent"
+        navLinks={[{ href: '/', label: 'Home' }]}
+      />
 
       {/* Hero */}
       <section className="border-b border-line">
@@ -100,7 +76,7 @@ export default async function PermanentPage() {
                 {[
                   'Personally vetted by our verification team',
                   'Monthly salary set by us, transparent up front',
-                  'Replacement guarantee if the fit isn&apos;t right',
+                  "Replacement guarantee if the fit isn't right",
                   'You brief them, they work for you',
                   'One placement fee, then monthly salary only',
                 ].map((line, i) => (
@@ -109,7 +85,7 @@ export default async function PermanentPage() {
                       className="mt-0.5 h-4 w-4 shrink-0 text-brass"
                       strokeWidth={2}
                     />
-                    <span dangerouslySetInnerHTML={{ __html: line }} />
+                    <span>{line}</span>
                   </li>
                 ))}
               </ul>
@@ -168,17 +144,17 @@ export default async function PermanentPage() {
               {
                 num: '01',
                 title: 'Browse',
-                body: 'See every driver we&apos;ve verified for permanent placement. Their portrait, experience, languages, and monthly salary.',
+                body: "See every driver we've verified for permanent placement. Their portrait, experience, languages, and monthly salary.",
               },
               {
                 num: '02',
                 title: 'Choose',
-                body: 'Pick the driver you&apos;d like to hire. Send us a short brief — start date, what you need them to do.',
+                body: "Pick the driver you'd like to hire. Send us a short brief — start date, what you need them to do.",
               },
               {
                 num: '03',
                 title: 'Introduction',
-                body: 'We introduce you both. Meet, discuss the schedule, agree on terms. If they&apos;re not the right fit, pick another.',
+                body: "We introduce you both. Meet, discuss the schedule, agree on terms. If they're not the right fit, pick another.",
               },
               {
                 num: '04',
@@ -191,10 +167,9 @@ export default async function PermanentPage() {
                 <h3 className="mt-4 font-display text-xl leading-tight text-ink">
                   {step.title}
                 </h3>
-                <p
-                  className="mt-3 font-body text-sm leading-relaxed text-ink"
-                  dangerouslySetInnerHTML={{ __html: step.body }}
-                />
+                <p className="mt-3 font-body text-sm leading-relaxed text-ink">
+                  {step.body}
+                </p>
               </div>
             ))}
           </div>
@@ -222,13 +197,13 @@ export default async function PermanentPage() {
         </div>
       </section>
 
-      <footer className="bg-paper py-8">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            © 2026 Avanti · Lagos
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        productLinks={[
+          { href: ctaHref, label: 'Browse permanent drivers' },
+          { href: '/', label: 'Book by the hour or day' },
+          { href: '/sign-up?role=driver', label: 'Drive with us' },
+        ]}
+      />
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { StampBadge } from '@/components/avanti/stamp-badge';
 import { TierBadge } from '@/components/avanti/tier-badge';
+import { SiteHeader } from '@/components/marketing/site-header';
+import { SiteFooter } from '@/components/marketing/site-footer';
 
 /**
  * Public landing page.
@@ -19,52 +21,25 @@ import { TierBadge } from '@/components/avanti/tier-badge';
 export default async function LandingPage() {
   const user = await getAuthUser();
   const isSignedIn = Boolean(user);
+  const continueHref = user?.roles.includes('super_admin')
+    ? '/admin'
+    : user?.roles.includes('driver')
+    ? '/driver'
+    : user?.roles.includes('corporate_admin') || user?.roles.includes('corporate_member')
+    ? '/corporate'
+    : '/customer';
 
   return (
     <div className="min-h-screen bg-paper text-ink">
-      {/* ─────────────────── SITE HEADER ─────────────────── */}
-      <header className="border-b border-line">
-        <div className="mx-auto flex max-w-6xl items-baseline justify-between px-6 py-6">
-          <Link href="/" className="font-display text-2xl tracking-tight text-ink">
-            Avanti
-          </Link>
-          <nav className="flex items-center gap-8">
-            <Link
-              href="#how-it-works"
-              className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink sm:inline"
-            >
-              How it works
-            </Link>
-            <Link
-              href="#standards"
-              className="hidden font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink sm:inline"
-            >
-              Standards
-            </Link>
-            {isSignedIn ? (
-              <Link
-                href={
-                  user!.roles.includes('super_admin')
-                    ? '/admin'
-                    : user!.roles.includes('driver')
-                    ? '/driver'
-                    : '/customer'
-                }
-                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
-              >
-                Continue →
-              </Link>
-            ) : (
-              <Link
-                href="/sign-in"
-                className="font-mono text-xs uppercase tracking-wider text-ink hover:text-ink-2"
-              >
-                Sign in
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
+      <SiteHeader
+        isSignedIn={isSignedIn}
+        continueHref={continueHref}
+        navLinks={[
+          { href: '#how-it-works', label: 'How it works' },
+          { href: '#standards', label: 'Standards' },
+          { href: '/permanent', label: 'Permanent placements' },
+        ]}
+      />
 
       {/* ─────────────────── HERO ─────────────────── */}
       <section className="border-b border-line">
@@ -176,7 +151,7 @@ export default async function LandingPage() {
               {
                 label: 'For business',
                 title: 'Executive fleets, without the fleet.',
-                body: 'Assign vetted drivers to your executives. Monthly retainers, corporate billing, single point of contact.',
+                body: 'Assign vetted drivers to your executives. Monthly retainers, corporate billing, single point of contact. Prefer the same driver every day? See permanent placements.',
                 href: isSignedIn ? '/corporate' : '/sign-up?role=corporate',
                 cta: 'For your team',
               },
@@ -297,86 +272,14 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      {/* ─────────────────── FOOTER ─────────────────── */}
-      <footer className="bg-paper">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="grid gap-12 md:grid-cols-4">
-            <div>
-              <div className="font-display text-2xl text-ink">Avanti</div>
-              <p className="mt-3 font-body text-sm leading-relaxed text-ink-muted">
-                Verified professional drivers, on your terms.
-              </p>
-            </div>
-
-            <div>
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Company
-              </div>
-              <ul className="space-y-2 font-body text-sm text-ink">
-                <li>
-                  <Link href="#" className="hover:text-ink-2">About</Link>
-                </li>
-                <li>
-                  <Link href="#standards" className="hover:text-ink-2">Our standards</Link>
-                </li>
-                <li>
-                  <Link href="#" className="hover:text-ink-2">Careers</Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Product
-              </div>
-              <ul className="space-y-2 font-body text-sm text-ink">
-                <li>
-                  <Link
-                    href={isSignedIn ? '/customer/search' : '/sign-up?role=individual'}
-                    className="hover:text-ink-2"
-                  >
-                    Find a driver
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href={isSignedIn ? '/corporate' : '/sign-up?role=corporate'}
-                    className="hover:text-ink-2"
-                  >
-                    For business
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/sign-up?role=driver" className="hover:text-ink-2">
-                    Drive with us
-                  </Link>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                Contact
-              </div>
-              <ul className="space-y-2 font-body text-sm text-ink">
-                <li>hello@avanti.ng</li>
-                <li>Lagos, Nigeria</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="mt-16 flex flex-col items-baseline justify-between gap-4 border-t border-line pt-6 sm:flex-row">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              © 2026 Avanti · All rights reserved
-            </div>
-            <div className="flex gap-6 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              <Link href="#" className="hover:text-ink">Terms</Link>
-              <Link href="#" className="hover:text-ink">Privacy</Link>
-              <Link href="#" className="hover:text-ink">Cookies</Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter
+        productLinks={[
+          { href: isSignedIn ? '/customer/search' : '/sign-up?role=individual', label: 'Find a driver' },
+          { href: isSignedIn ? '/corporate' : '/sign-up?role=corporate', label: 'For business' },
+          { href: '/permanent', label: 'Permanent placements' },
+          { href: '/sign-up?role=driver', label: 'Drive with us' },
+        ]}
+      />
     </div>
   );
 }
