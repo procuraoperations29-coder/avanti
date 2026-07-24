@@ -35,7 +35,7 @@ export async function GET(
     }
 
     const { data: items } = await admin
-      .from('payout_items')
+      .from('payouts')
       .select('*')
       .eq('batch_id', batchId)
       .order('created_at', { ascending: true });
@@ -77,8 +77,8 @@ export async function GET(
 
     const enrichedItems = allItems.map((i) => ({
       ...i,
-      driver_name: driverNames[i.driver_id] ?? 'Driver',
-      engagement_completed_at: engagementDates[i.engagement_id] ?? null,
+      driver_name: driverNames[i.driver_id ?? ''] ?? 'Driver',
+      engagement_completed_at: engagementDates[i.engagement_id ?? ''] ?? null,
     }));
 
     return NextResponse.json({ batch, items: enrichedItems });

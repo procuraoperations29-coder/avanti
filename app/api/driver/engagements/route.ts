@@ -57,7 +57,7 @@ export async function GET() {
     }
 
     const engagements = (data ?? []).map((e) => {
-      const customer = customersById[e.customer_user_id];
+      const customer = e.customer_user_id ? customersById[e.customer_user_id] : undefined;
       const { customer_user_id: _cust, ...rest } = e;
       return {
         ...rest,

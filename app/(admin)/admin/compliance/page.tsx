@@ -32,9 +32,9 @@ export default async function AdminCompliancePage() {
   const auditRows = audits ?? [];
 
   const { data: decisions } = await admin
-    .from('verification_decisions')
+    .from('verification_events')
     .select('*')
-    .order('decided_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(30);
 
   const decisionRows = decisions ?? [];
@@ -110,27 +110,27 @@ export default async function AdminCompliancePage() {
                   <tbody>
                     {decisionRows.map((d) => {
                       const row = d as {
-                        id: string;
-                        decided_at?: string;
-                        decision?: string;
-                        granted_tier?: string;
-                        reviewer_user_id?: string;
+                        id: number;
+                        created_at?: string;
+                        event_type?: string;
+                        to_tier?: string | null;
+                        reviewer_user_id?: string | null;
                         rationale?: string;
                       };
                       return (
                         <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper">
                           <td className="px-4 py-3 font-body text-[12px] text-ink-muted">
-                            {row.decided_at
-                              ? new Date(row.decided_at).toLocaleString('en-GB', {
+                            {row.created_at
+                              ? new Date(row.created_at).toLocaleString('en-GB', {
                                   day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                                 })
                               : '—'}
                           </td>
                           <td className="px-4 py-3 font-body text-[11px] uppercase tracking-wide text-ink">
-                            {row.decision ?? '—'}
+                            {row.event_type?.replace(/_/g, ' ') ?? '—'}
                           </td>
                           <td className="px-4 py-3 font-body text-sm uppercase text-ink">
-                            {row.granted_tier ?? '—'}
+                            {row.to_tier ?? '—'}
                           </td>
                           <td className="px-4 py-3 font-body text-sm text-ink">
                             {actorNames[row.reviewer_user_id ?? ''] ?? '—'}
@@ -167,7 +167,7 @@ export default async function AdminCompliancePage() {
                   <tbody>
                     {auditRows.slice(0, 50).map((a) => {
                       const row = a as {
-                        id: string;
+                        id: number;
                         created_at?: string;
                         actor_user_id?: string;
                         action?: string;

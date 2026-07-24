@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { buttonVariants } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button-variants';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { cn } from '@/lib/utils/cn';
 
@@ -13,7 +13,7 @@ export default function NotFound() {
       <p className="mb-8 font-body leading-relaxed text-ink-muted">
         The page you were looking for either moved or was never here.
       </p>
-      <Link href="/" className={cn(buttonVariants({ variant: 'primary' }))}>
+      <Link href="/" className={cn(buttonVariants({ variant: 'default' }))}>
         Back to home
       </Link>
     </div>

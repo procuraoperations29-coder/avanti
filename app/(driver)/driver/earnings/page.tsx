@@ -203,10 +203,11 @@ export default async function DriverEarningsPage() {
                     tax_withheld_total: number;
                     net_amount: number;
                   }) => {
+                    const batchExecutedAt = p.batch_id ? batchesById[p.batch_id]?.executed_at : null;
                     const displayDate = p.completed_at
                       ? new Date(p.completed_at)
-                      : p.batch_id && batchesById[p.batch_id]?.executed_at
-                      ? new Date(batchesById[p.batch_id].executed_at!)
+                      : batchExecutedAt
+                      ? new Date(batchExecutedAt)
                       : new Date(p.created_at);
                     return (
                       <tr

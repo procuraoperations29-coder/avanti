@@ -66,10 +66,10 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
             x2={width - padRight}
             y1={y(t)}
             y2={y(t)}
-            stroke="var(--line)"
+            stroke="rgb(var(--line))"
             strokeWidth={1}
           />
-          <text x={padLeft - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="var(--ink-muted)">
+          <text x={padLeft - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="rgb(var(--ink-muted))">
             {formatCompactNaira(t)}
           </text>
         </g>
@@ -87,7 +87,7 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
               width={barW}
               height={revH}
               rx={3}
-              fill="var(--green)"
+              fill="rgb(var(--green))"
             />
             <rect
               x={cx + barGap / 2}
@@ -95,14 +95,14 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
               width={barW}
               height={payH}
               rx={3}
-              fill="var(--brass)"
+              fill="rgb(var(--brass))"
             />
             <text
               x={cx}
               y={height - 6}
               textAnchor="middle"
               fontSize={10}
-              fill="var(--ink-muted)"
+              fill="rgb(var(--ink-muted))"
             >
               {d.label}
             </text>
@@ -110,10 +110,10 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
         );
       })}
 
-      <polyline points={linePoints} fill="none" stroke="var(--ink)" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+      <polyline points={linePoints} fill="none" stroke="rgb(var(--ink))" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
       {data.map((d, i) => {
         const cx = padLeft + groupW * i + groupW / 2;
-        return <circle key={i} cx={cx} cy={y(d.net)} r={3} fill="var(--ink)" />;
+        return <circle key={i} cx={cx} cy={y(d.net)} r={3} fill="rgb(var(--ink))" />;
       })}
     </svg>
   );

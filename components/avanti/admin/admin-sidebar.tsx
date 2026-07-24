@@ -119,7 +119,7 @@ export function AdminSidebar({
           </div>
           <nav className="flex flex-col gap-0.5">
             <NavLink
-              item={{ key: 'system', href: '/admin/system', label: 'System', Icon: LayoutGrid }}
+              item={{ href: '/admin/system', label: 'System', Icon: LayoutGrid }}
               isActive={active === 'system'}
             />
           </nav>

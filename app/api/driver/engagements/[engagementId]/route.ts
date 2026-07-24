@@ -36,11 +36,13 @@ export async function GET(
       return NextResponse.json({ error: 'engagement_not_found' }, { status: 404 });
     }
 
-    const { data: customer } = await admin
-      .from('users')
-      .select('full_name, phone')
-      .eq('id', engagement.customer_user_id)
-      .single();
+    const { data: customer } = engagement.customer_user_id
+      ? await admin
+          .from('users')
+          .select('full_name, phone')
+          .eq('id', engagement.customer_user_id)
+          .single()
+      : { data: null };
 
     const { customer_user_id: _cust, ...rest } = engagement;
     return NextResponse.json({

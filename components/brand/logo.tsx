@@ -49,7 +49,7 @@ export function Logo({ variant = 'full', size = 'md', tone = 'auto', className }
 }
 
 function LogoMark({ size, tone }: { size: number; tone: 'auto' | 'light' }) {
-  const navy = tone === 'light' ? '#FFFFFF' : 'var(--ink)';
+  const navy = tone === 'light' ? '#FFFFFF' : 'rgb(var(--ink))';
 
   return (
     <svg
@@ -65,17 +65,17 @@ function LogoMark({ size, tone }: { size: number; tone: 'auto' | 'light' }) {
       {/* Left leg of the A */}
       <path d="M50 8 L14 90 L32 90 L50 46 L68 90 L86 90 Z" fill={navy} />
       {/* Green accent filling the right descender, cut by the road */}
-      <path d="M58 66 L68 90 L86 90 L69 50 Z" fill="var(--green)" />
+      <path d="M58 66 L68 90 L86 90 L69 50 Z" fill="rgb(var(--green))" />
       {/* Road curving up through the crossbar, exiting bottom-left */}
       <path
         d="M20 90 C 34 62, 40 46, 50 34 C 58 24, 66 20, 78 16"
-        stroke={tone === 'light' ? 'rgba(255,255,255,0.9)' : 'var(--paper)'}
+        stroke={tone === 'light' ? 'rgba(255,255,255,0.9)' : 'rgb(var(--paper))'}
         strokeWidth="6"
         strokeLinecap="round"
         fill="none"
       />
       {/* Driver badge */}
-      <circle cx="66" cy="70" r="11" fill={tone === 'light' ? 'rgba(255,255,255,0.16)' : 'var(--paper)'} />
+      <circle cx="66" cy="70" r="11" fill={tone === 'light' ? 'rgba(255,255,255,0.16)' : 'rgb(var(--paper))'} />
       <circle cx="66" cy="66.5" r="3.1" fill={navy} />
       <path
         d="M58.5 76 C 58.5 70.8, 61.8 68, 66 68 C 70.2 68, 73.5 70.8, 73.5 76"

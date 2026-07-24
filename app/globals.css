@@ -12,6 +12,15 @@
  * and a separate navy/green theme scoped only to /admin) — this file keeps
  * the old variable names so most components didn't need to change, but every
  * value now points at the same navy/green brand everywhere.
+ *
+ * Values are stored as space-separated RGB channels (no `#`, no `rgb()`)
+ * rather than hex strings, and consumed via `rgb(var(--x) / <alpha-value>)`
+ * in tailwind.config.ts. This is what lets opacity modifiers like
+ * `bg-ink/60` or `text-paper/70` actually work — a plain hex CSS variable
+ * can't be modified with Tailwind's `/NN` opacity syntax; the utility
+ * silently generates no rule at all, which is exactly what caused the
+ * admin sidebar's nav labels to render invisible (navy text on navy
+ * background) until `hover:text-white` kicked in.
  */
 
 @layer base {
@@ -20,31 +29,31 @@
     --radius: 0.625rem;
 
     /* Neutrals — light surface system (was cream "paper") */
-    --paper: #F6F7F9;       /* page background */
-    --paper-2: #FFFFFF;     /* cards, raised surfaces */
-    --paper-3: #EEF0F3;     /* hover state, subtle recessed surface */
+    --paper: 246 247 249;       /* page background */
+    --paper-2: 255 255 255;     /* cards, raised surfaces */
+    --paper-3: 238 240 243;     /* hover state, subtle recessed surface */
 
     /* Ink — brand navy (was petrol navy, now the logo navy) */
-    --ink: #1A2238;
-    --ink-2: #141B2C;        /* darker, for hover/active */
-    --ink-muted: #6B7280;    /* secondary text */
-    --ink-faint: #9AA1AE;    /* tertiary / placeholder */
+    --ink: 26 34 56;
+    --ink-2: 20 27 44;          /* darker, for hover/active */
+    --ink-muted: 107 114 128;   /* secondary text */
+    --ink-faint: 154 161 174;   /* tertiary / placeholder */
 
     /* Accents */
-    --brass: #EDA100;        /* tier/accent gold */
-    --brass-soft: #FBEEDD;   /* gold tinted background */
-    --brass-text: #854F0B;   /* WCAG-safe text on --brass-soft */
+    --brass: 237 161 0;         /* tier/accent gold */
+    --brass-soft: 251 238 221;  /* gold tinted background */
+    --brass-text: 133 79 11;    /* WCAG-safe text on --brass-soft */
 
-    --green: #5FA828;        /* brand green — verification stamps, success, CTAs */
-    --green-soft: #EAF3DE;   /* green tinted background */
-    --green-text: #3B6D11;   /* WCAG-safe text on --green-soft */
+    --green: 95 168 40;         /* brand green — verification stamps, success, CTAs */
+    --green-soft: 234 243 222;  /* green tinted background */
+    --green-text: 59 109 17;    /* WCAG-safe text on --green-soft */
 
-    --oxblood: #DC3545;      /* error red */
-    --oxblood-soft: #FBE7E9; /* error tinted background */
+    --oxblood: 220 53 69;       /* error red */
+    --oxblood-soft: 251 231 233; /* error tinted background */
 
     /* Lines */
-    --line: #E7E9EE;         /* subtle border */
-    --line-strong: #D1D5DB;  /* stronger border */
+    --line: 231 233 238;        /* subtle border */
+    --line-strong: 209 213 219; /* stronger border */
 
     /* Tier ring accents (Portrait component) — matches TierBadge's border colours */
     --tier-1: var(--ink);
@@ -60,21 +69,21 @@
 
   html {
     font-family: var(--font-body);
-    color: var(--ink);
-    background: var(--paper);
+    color: rgb(var(--ink));
+    background: rgb(var(--paper));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    background: var(--paper);
+    background: rgb(var(--paper));
     min-height: 100dvh;
   }
 
   /* Selection uses ink */
   ::selection {
-    background: var(--ink);
-    color: var(--paper);
+    background: rgb(var(--ink));
+    color: rgb(var(--paper));
   }
 
   /* Tighter type in mono */

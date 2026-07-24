@@ -202,9 +202,9 @@ export default async function AdminHomePage() {
                     Revenue vs payouts
                   </span>
                   <div className="flex gap-3.5 font-body text-[11px] text-ink-muted">
-                    <Legend color="var(--green)" label="Revenue" />
-                    <Legend color="var(--brass)" label="Payouts" />
-                    <Legend color="var(--ink)" label="Net" />
+                    <Legend color="rgb(var(--green))" label="Revenue" />
+                    <Legend color="rgb(var(--brass))" label="Payouts" />
+                    <Legend color="rgb(var(--ink))" label="Net" />
                   </div>
                 </div>
                 <RevenueChart data={chartData} />
