@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Search, UserCheck, CalendarDays, ArrowRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { Button } from '@/components/ui/button';
@@ -25,8 +24,7 @@ export default async function CustomerHomePage() {
   const items = recent ?? [];
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 pb-20">
+    <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 pb-20">
         <div className="mb-10">
           <SectionLabel>Signed in · {user.phone}</SectionLabel>
           <h1 className="mt-2 font-display text-4xl leading-tight text-ink">
@@ -137,7 +135,6 @@ export default async function CustomerHomePage() {
             </div>
           )}
         </div>
-      </div>
-    </PageShell>
+    </div>
   );
 }

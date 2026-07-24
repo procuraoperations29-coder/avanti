@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft, Star, ArrowRight, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
@@ -56,8 +55,7 @@ export default async function DriverDossierPage({
   const firstName = (driver.full_name ?? 'Driver').split(' ')[0];
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
+    <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
         {/* Back link */}
         <Link
           href="/customer/search"
@@ -283,7 +281,6 @@ export default async function DriverDossierPage({
             </Link>
           </div>
         </div>
-      </div>
-    </PageShell>
+    </div>
   );
 }

@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/shell/page-shell';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
@@ -78,8 +77,7 @@ export default async function PermanentDossierPage({
   const placementFee = placementFeeForTier(tier);
 
   return (
-    <PageShell>
-      <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
+    <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
         <Link
           href="/customer/permanent"
           className="mb-8 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
@@ -253,7 +251,6 @@ export default async function PermanentDossierPage({
             defaultContact={customerUser?.phone ? `+${customerUser.phone}` : (customerUser?.email ?? '')}
           />
         </div>
-      </div>
-    </PageShell>
+    </div>
   );
 }
