@@ -174,18 +174,25 @@ export async function POST() {
     }
 
     // ---- driver_payout_methods (unverified) ----
+    // account_number is encrypted at rest via Supabase Vault per the table's
+    // own column comment (account_number_vault_ref "pointer to Supabase
+    // Vault") -- no Vault integration exists yet anywhere in this codebase,
+    // so the real account number isn't persisted here at all yet. Storing
+    // only the last 4 digits (which the table's own check constraint
+    // requires for method_type='bank_account') until that's built; Ops
+    // will need the full account number from another source to actually
+    // process transfers until then.
+    const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
       .insert({
         driver_id: profile.id,
         method_type: 'bank_account',
-        bank_name: payout.bank_name,
         bank_code: payout.bank_code,
-        account_number: payout.account_number,
+        account_number_last4: accountNumber.slice(-4) || null,
         account_holder_name: payout.account_holder_name,
         is_default: true,
-        is_verified: false,
       });
     if (payoutMethodErr && !payoutMethodErr.message?.toLowerCase().includes('duplicate')) {
       console.error('[submit] driver_payout_methods insert:', payoutMethodErr);

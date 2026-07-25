@@ -5,6 +5,7 @@ import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { SectionLabel } from '@/components/avanti/section-label';
 import { CreateBatchButton } from './create-batch-button';
+import { RetryPayoutMethodsButton } from './retry-payout-methods-button';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -146,7 +147,7 @@ export default async function PayoutBatchesPage() {
         {blocked.length > 0 && (
           <div className="mb-10 flex items-start gap-3 border-l-2 border-oxblood bg-paper-2 px-6 py-4">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-oxblood" strokeWidth={1.5} />
-            <div>
+            <div className="flex-1">
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-oxblood">
                 Blocked — missing payout method
               </div>
@@ -154,9 +155,13 @@ export default async function PayoutBatchesPage() {
                 {formatNaira(blockedTotal)} across {blocked.length} engagement
                 {blocked.length === 1 ? '' : 's'} ({blockedDrivers} driver
                 {blockedDrivers === 1 ? '' : 's'}) won&apos;t be included in the next
-                batch — the driver hasn&apos;t added a verified payout method yet. Ask
-                them to complete that step in onboarding, then re-run the batch.
+                batch. If the driver already entered their payout details during
+                onboarding, this was likely a data bug rather than a missing step —
+                try the button below before asking them to redo anything.
               </p>
+              <div className="mt-4">
+                <RetryPayoutMethodsButton />
+              </div>
             </div>
           </div>
         )}
