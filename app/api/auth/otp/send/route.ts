@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/auth/otp/send
@@ -16,8 +16,18 @@ import { createClient } from '@/lib/supabase/server';
  * For signup, we stash the optional phone number in user_metadata so
  * downstream signup routes can pick it up as a contact number (it's
  * no longer the auth identity).
+ *
+ * NOTE: signInWithOtp with shouldCreateUser: true creates the auth.users
+ * row synchronously, right here at send time — which fires
+ * fn_handle_new_auth_user() (see 20260811000000_jwt_claim_shaping.sql),
+ * which inserts into public.users. That insert has no protection against
+ * a phone number that's already attached to a different account —
+ * users.phone has its own unique constraint separate from the id-based
+ * on-conflict guard. Without this check, that hits Postgres error 23505
+ * mid-transaction and Supabase reports it back as an opaque
+ * "Database error saving new user." This check catches it before we
+ * ever attempt account creation, with a message the UI can actually show.
  */
-
 const bodySchema = z.object({
   email: z.string().email(),
   isSignup: z.boolean().default(false),
@@ -26,6 +36,10 @@ const bodySchema = z.object({
   countryCode: z.string().length(2).default('NG'),
   preferredLanguage: z.string().length(2).default('en'),
 });
+
+function normalizePhone(phone: string): string {
+  return phone.startsWith('+') ? phone : `+${phone}`;
+}
 
 export async function POST(req: Request) {
   let body: z.infer<typeof bodySchema>;
@@ -38,8 +52,29 @@ export async function POST(req: Request) {
     );
   }
 
-  const supabase = await createClient();
+  if (body.isSignup && body.phone) {
+    const normalizedPhone = normalizePhone(body.phone);
+    const admin = createServiceRoleClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (admin as any)
+      .from('users')
+      .select('id, email')
+      .eq('phone', normalizedPhone)
+      .maybeSingle();
 
+    if (existing) {
+      return NextResponse.json(
+        {
+          error: 'phone_taken',
+          message:
+            'An account already exists with this phone number. Sign in instead — you can add another role (driver, customer, etc.) from your existing account.',
+        },
+        { status: 409 }
+      );
+    }
+  }
+
+  const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({
     email: body.email,
     options: {
