@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { PageShell } from '@/components/avanti/page-shell';
+import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 
@@ -54,9 +56,23 @@ export default async function SystemOverviewPage() {
 
   const { data: allEngagements } = await admin
     .from('engagements')
-    .select('status, commission_total, driver_payout_total, completed_at');
+    .select('id, status, commission_total, driver_payout_total, completed_at');
 
   const engagements = allEngagements ?? [];
+
+  // Same "already paid" exclusion used on the batches and finance pages —
+  // without it, this figure counts every completed engagement's payout
+  // amount regardless of whether it's actually been paid, so it never
+  // decreases even after a batch is successfully released.
+  const { data: existingPayoutsForSystem } = await admin
+    .from('payouts')
+    .select('engagement_id, status');
+  const activeBatchedIdsForSystem = new Set(
+    (existingPayoutsForSystem ?? [])
+      .filter((p) => !['failed', 'reversed'].includes(p.status as string))
+      .map((p) => p.engagement_id)
+      .filter(Boolean)
+  );
   const engagementStatusCounts: Record<string, number> = {};
   engagements.forEach((e) => {
     if (e.status) {
@@ -73,18 +89,30 @@ export default async function SystemOverviewPage() {
     .reduce((sum, e) => sum + Number(e.commission_total ?? 0), 0);
 
   const pendingPayoutTotal = engagements
-    .filter((e) => e.status === 'completed')
+    .filter((e) => e.status === 'completed' && !activeBatchedIdsForSystem.has(e.id))
     .reduce((sum, e) => sum + Number(e.driver_payout_total ?? 0), 0);
 
   return (
-    <>
-      <Link
+    <PageShell>
+      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
+        <AdminSidebar
+          active="system"
+          canVerify={true}
+          canPlacements={true}
+          canSupport={true}
+          canFinance={true}
+          canCompliance={true}
+          isSuper={true}
+        />
+
+        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
+          <Link
             href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-ink-muted hover:text-ink"
+            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
           >
             ← Admin
           </Link>
-          <p className="mb-6 font-body text-lg font-medium text-ink">
+          <p className="mb-6 font-body text-lg font-medium text-admin-text">
             How Avanti is doing
           </p>
 
@@ -105,7 +133,7 @@ export default async function SystemOverviewPage() {
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-ink">Users by role</p>
+            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Users by role</p>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {[
                 { key: 'individual_customer', label: 'Individual customers' },
@@ -118,11 +146,11 @@ export default async function SystemOverviewPage() {
                 { key: 'admin_support', label: 'Support admins' },
                 { key: 'admin_compliance', label: 'Compliance admins' },
               ].map((r) => (
-                <div key={r.key} className="rounded-xl border border-line bg-paper-2 p-4">
-                  <div className="font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                <div key={r.key} className="rounded-xl border border-admin-border bg-admin-card p-4">
+                  <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                     {r.label}
                   </div>
-                  <div className="mt-1.5 font-body text-xl font-medium text-ink">
+                  <div className="mt-1.5 font-body text-xl font-medium text-admin-text">
                     {roleCounts[r.key] ?? 0}
                   </div>
                 </div>
@@ -131,14 +159,14 @@ export default async function SystemOverviewPage() {
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-ink">Drivers by tier</p>
+            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Drivers by tier</p>
             <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-5">
               {(['t0', 't1', 't2', 't3', 't4'] as const).map((tier) => (
-                <div key={tier} className="rounded-xl border border-line bg-paper-2 p-4">
+                <div key={tier} className="rounded-xl border border-admin-border bg-admin-card p-4">
                   <div className="mb-2">
                     <TierBadge tier={tier as TierLevel} label="short" />
                   </div>
-                  <div className="font-body text-xl font-medium text-ink">
+                  <div className="font-body text-xl font-medium text-admin-text">
                     {tierCounts[tier] ?? 0}
                   </div>
                 </div>
@@ -147,49 +175,51 @@ export default async function SystemOverviewPage() {
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-ink">Engagements by status</p>
+            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Engagements by status</p>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {Object.entries(engagementStatusCounts)
                 .sort((a, b) => b[1] - a[1])
                 .map(([status, count]) => (
-                  <div key={status} className="rounded-xl border border-line bg-paper-2 p-4">
-                    <div className="font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                  <div key={status} className="rounded-xl border border-admin-border bg-admin-card p-4">
+                    <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       {status.replace(/_/g, ' ')}
                     </div>
-                    <div className="mt-1.5 font-body text-xl font-medium text-ink">{count}</div>
+                    <div className="mt-1.5 font-body text-xl font-medium text-admin-text">{count}</div>
                   </div>
                 ))}
               {Object.keys(engagementStatusCounts).length === 0 && (
-                <div className="col-span-full rounded-xl border border-line bg-paper-2 px-6 py-8 text-center font-body text-sm text-ink-muted">
+                <div className="col-span-full rounded-xl border border-admin-border bg-admin-card px-6 py-8 text-center font-body text-sm text-admin-text-muted">
                   No engagements yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mb-8 rounded-xl border border-brass bg-brass-soft p-6">
-            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-brass-text">
+          <div className="mb-8 rounded-xl border border-admin-amber bg-admin-amber-soft p-6">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text">
               Pending payouts (total)
             </div>
-            <div className="mt-2 font-body text-4xl font-medium leading-none text-ink">
+            <div className="mt-2 font-body text-4xl font-medium leading-none text-admin-text">
               {formatNaira(pendingPayoutTotal)}
             </div>
-            <div className="mt-2 max-w-xl font-body text-sm leading-relaxed text-ink">
+            <div className="mt-2 max-w-xl font-body text-sm leading-relaxed text-admin-text">
               Total owed to drivers across all completed engagements. See Finance for what&apos;s
               actually ready to batch right now.
             </div>
           </div>
 
-          <div className="rounded-xl border border-line bg-paper-2 px-6 py-5">
-            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+          <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-5">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               Coming
             </div>
-            <p className="mt-1.5 max-w-2xl font-body text-sm leading-relaxed text-ink">
+            <p className="mt-1.5 max-w-2xl font-body text-sm leading-relaxed text-admin-text">
               Time-series charts. User growth over time. Retention cohort analysis.
               Geographic distribution. Automated alerts on anomalies. User management
               controls (grant role, suspend, delete). Rate card management.
             </p>
           </div>
-    </>
+        </div>
+      </div>
+    </PageShell>
   );
 }
