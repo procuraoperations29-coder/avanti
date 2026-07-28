@@ -2,8 +2,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/shell/page-shell';
-import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 
@@ -93,19 +91,7 @@ export default async function SystemOverviewPage() {
     .reduce((sum, e) => sum + Number(e.driver_payout_total ?? 0), 0);
 
   return (
-    <PageShell>
-      <div className="flex bg-admin-bg" style={{ minHeight: 'calc(100vh - 64px)' }}>
-        <AdminSidebar
-          active="system"
-          canVerify={true}
-          canPlacements={true}
-          canSupport={true}
-          canFinance={true}
-          canCompliance={true}
-          isSuper={true}
-        />
-
-        <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">
+    <>
           <Link
             href="/admin"
             className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
@@ -218,8 +204,6 @@ export default async function SystemOverviewPage() {
               controls (grant role, suspend, delete). Rate card management.
             </p>
           </div>
-        </div>
-      </div>
-    </PageShell>
+    </>
   );
 }

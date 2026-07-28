@@ -23,6 +23,14 @@ export default async function AdminHomePage() {
   const user = await getAuthUser();
   if (!user) redirect('/sign-in');
 
+  const isAdmin =
+    user.roles.includes('admin_verifier') ||
+    user.roles.includes('admin_support') ||
+    user.roles.includes('admin_finance') ||
+    user.roles.includes('admin_compliance') ||
+    user.roles.includes('super_admin');
+  if (!isAdmin) redirect('/sign-in');
+
   const isSuper = user.roles.includes('super_admin');
   const canVerify = user.roles.includes('admin_verifier') || isSuper;
   const canSupport = user.roles.includes('admin_support') || isSuper;
@@ -155,19 +163,19 @@ export default async function AdminHomePage() {
 
   return (
     <>
-      <div className="mb-6 flex items-center justify-between">
+          <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="font-body text-lg font-medium text-ink">
+              <p className="font-body text-lg font-medium text-admin-text">
                 Good morning, {user.email?.split('@')[0] ?? 'there'}
               </p>
-              <p className="mt-0.5 font-body text-[13px] text-ink-muted">
+              <p className="mt-0.5 font-body text-[13px] text-admin-text-muted">
                 Here&apos;s how Avanti is doing today
               </p>
             </div>
             <div className="flex items-center gap-4">
-              <Search className="h-[18px] w-[18px] text-ink-muted" strokeWidth={1.75} />
-              <Bell className="h-[18px] w-[18px] text-ink-muted" strokeWidth={1.75} />
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-soft font-body text-xs font-medium text-green-text">
+              <Search className="h-[18px] w-[18px] text-admin-text-muted" strokeWidth={1.75} />
+              <Bell className="h-[18px] w-[18px] text-admin-text-muted" strokeWidth={1.75} />
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-admin-green-soft font-body text-xs font-medium text-admin-green-text">
                 {(user.email ?? 'A A').slice(0, 2).toUpperCase()}
               </div>
             </div>
@@ -196,15 +204,15 @@ export default async function AdminHomePage() {
                 <KpiCard label="Ready to batch" value={formatNaira(readyToBatch)} />
               </div>
 
-              <div className="mb-5 rounded-xl border border-line bg-paper-2 p-4">
+              <div className="mb-5 rounded-xl border border-admin-border bg-admin-card p-4">
                 <div className="mb-3 flex items-center justify-between">
-                  <span className="font-body text-[13px] font-medium text-ink">
+                  <span className="font-body text-[13px] font-medium text-admin-text">
                     Revenue vs payouts
                   </span>
-                  <div className="flex gap-3.5 font-body text-[11px] text-ink-muted">
-                    <Legend color="rgb(var(--green))" label="Revenue" />
-                    <Legend color="rgb(var(--brass))" label="Payouts" />
-                    <Legend color="rgb(var(--ink))" label="Net" />
+                  <div className="flex gap-3.5 font-body text-[11px] text-admin-text-muted">
+                    <Legend color="var(--admin-green)" label="Revenue" />
+                    <Legend color="var(--admin-amber)" label="Payouts" />
+                    <Legend color="var(--admin-navy)" label="Net" />
                   </div>
                 </div>
                 <RevenueChart data={chartData} />
@@ -283,12 +291,12 @@ function KpiCard({
   accent?: boolean;
 }) {
   return (
-    <div className="rounded-xl border border-line bg-paper-2 p-3.5">
-      <p className="font-body text-[12px] text-ink-muted">{label}</p>
+    <div className="rounded-xl border border-admin-border bg-admin-card p-3.5">
+      <p className="font-body text-[12px] text-admin-text-muted">{label}</p>
       <p
         className={
           'mt-1.5 font-body text-[22px] font-medium ' +
-          (accent ? 'text-brass-text' : 'text-ink')
+          (accent ? 'text-admin-amber-text' : 'text-admin-text')
         }
       >
         {value}
@@ -323,24 +331,24 @@ function ModuleCard({
     <Link
       href={href}
       className={
-        'group flex items-center gap-4 rounded-xl border p-4 transition-colors hover:bg-paper ' +
-        (emphasis ? 'border-brass bg-brass-soft' : 'border-line bg-paper-2')
+        'group flex items-center gap-4 rounded-xl border p-4 transition-colors hover:bg-admin-bg ' +
+        (emphasis ? 'border-admin-amber bg-admin-amber-soft' : 'border-admin-border bg-admin-card')
       }
     >
       <div
         className={
           'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ' +
-          (emphasis ? 'bg-white' : 'bg-paper')
+          (emphasis ? 'bg-white' : 'bg-admin-bg')
         }
       >
-        <Icon className="h-4 w-4 text-ink" strokeWidth={1.75} />
+        <Icon className="h-4 w-4 text-admin-navy" strokeWidth={1.75} />
       </div>
       <div className="flex-1">
-        <div className="font-body text-[14px] font-medium text-ink">{title}</div>
-        <div className="mt-0.5 font-body text-[12px] text-ink-muted">{description}</div>
+        <div className="font-body text-[14px] font-medium text-admin-text">{title}</div>
+        <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">{description}</div>
       </div>
       <ArrowUpRight
-        className="h-4 w-4 shrink-0 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100"
+        className="h-4 w-4 shrink-0 text-admin-text-muted opacity-0 transition-opacity group-hover:opacity-100"
         strokeWidth={1.75}
       />
     </Link>

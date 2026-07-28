@@ -37,6 +37,11 @@ export default async function AdminUserDetailPage({
     redirect('/admin');
   }
 
+  const isSuper = authUser.roles.includes('super_admin');
+  const canVerify = authUser.roles.includes('admin_verifier') || isSuper;
+  const canFinance = authUser.roles.includes('admin_finance') || isSuper;
+  const canCompliance = authUser.roles.includes('admin_compliance') || isSuper;
+
   const { userId } = await params;
   const admin = createServiceRoleClient();
 
@@ -157,21 +162,21 @@ export default async function AdminUserDetailPage({
 
   return (
     <>
-      <Link
+          <Link
             href="/admin/support"
-            className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-ink-muted hover:text-ink"
+            className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-admin-text-muted hover:text-admin-text"
           >
             <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.75} />
             Users
           </Link>
 
-          <p className="font-body text-[12px] uppercase tracking-wide text-ink-muted">
+          <p className="font-body text-[12px] uppercase tracking-wide text-admin-text-muted">
             {roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') || 'User'}
           </p>
-          <p className="mt-1 font-body text-2xl font-medium text-ink">
+          <p className="mt-1 font-body text-2xl font-medium text-admin-text">
             {profileUser.full_name}
           </p>
-          <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-ink-muted">
+          <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-admin-text-muted">
             {profileUser.email && <span>{profileUser.email}</span>}
             {profileUser.phone && <span>{profileUser.phone}</span>}
             <span>Joined {fmtDate(profileUser.created_at)}</span>
@@ -179,9 +184,9 @@ export default async function AdminUserDetailPage({
           </div>
 
           {isDriver && driverProfile && (
-            <div className="mt-8 rounded-xl border border-line bg-paper-2 p-6">
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
               <div className="flex items-center justify-between">
-                <p className="font-body text-[13px] font-medium text-ink">Driver</p>
+                <p className="font-body text-[13px] font-medium text-admin-text">Driver</p>
                 <TierBadge tier={(driverProfile.verification_tier as TierLevel) ?? 't1'} label="long" />
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -194,41 +199,41 @@ export default async function AdminUserDetailPage({
               </div>
 
               {driverPlacements.length > 0 && (
-                <div className="mt-6 border-t border-line pt-4">
-                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                <div className="mt-6 border-t border-admin-border pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                     Permanent placements
                   </div>
                   {driverPlacements.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-ink">
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
                       <span className="capitalize">
                         {p.status} · since {fmtDate(p.start_date)}
                       </span>
-                      <span className="text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 border-t border-line pt-4">
-                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+              <div className="mt-6 border-t border-admin-border pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                   Recent engagements
                 </div>
                 {driverEngagements.length === 0 ? (
-                  <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
+                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
                 ) : (
-                  <div className="divide-y divide-line">
+                  <div className="divide-y divide-admin-border">
                     {driverEngagements.map((e) => (
                       <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
                         <div>
-                          <span className="text-ink">{e.customer_name ?? 'Customer'}</span>
-                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                          <span className="text-admin-text">{e.customer_name ?? 'Customer'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                             {e.engagement_type?.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 font-body text-[12px]">
-                          <span className="uppercase text-ink-muted">{e.status}</span>
-                          <span className="text-ink">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
-                          <span className="text-ink-muted">{fmtDate(e.starts_at)}</span>
+                          <span className="uppercase text-admin-text-muted">{e.status}</span>
+                          <span className="text-admin-text">{formatNaira(Number(e.driver_payout_total ?? 0))}</span>
+                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
                         </div>
                       </div>
                     ))}
@@ -239,49 +244,49 @@ export default async function AdminUserDetailPage({
           )}
 
           {isCustomer && (
-            <div className="mt-8 rounded-xl border border-line bg-paper-2 p-6">
-              <p className="font-body text-[13px] font-medium text-ink">Customer</p>
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+              <p className="font-body text-[13px] font-medium text-admin-text">Customer</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <StatCard label="Engagements" value={customerEngagements.length} />
                 <StatCard label="Total paid" value={formatNaira(customerTotal)} tone="success" />
               </div>
 
               {customerPlacements.length > 0 && (
-                <div className="mt-6 border-t border-line pt-4">
-                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                <div className="mt-6 border-t border-admin-border pt-4">
+                  <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                     Permanent placements
                   </div>
                   {customerPlacements.map((p) => (
-                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-ink">
+                    <div key={p.id} className="flex items-center justify-between py-1.5 font-body text-sm text-admin-text">
                       <span className="capitalize">
                         {p.status} · since {fmtDate(p.start_date)}
                       </span>
-                      <span className="text-ink-muted">{formatNaira(p.monthly_salary)}/mo</span>
+                      <span className="text-admin-text-muted">{formatNaira(p.monthly_salary)}/mo</span>
                     </div>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 border-t border-line pt-4">
-                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+              <div className="mt-6 border-t border-admin-border pt-4">
+                <div className="mb-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                   Recent engagements
                 </div>
                 {customerEngagements.length === 0 ? (
-                  <p className="font-body text-sm text-ink-muted">No engagements yet.</p>
+                  <p className="font-body text-sm text-admin-text-muted">No engagements yet.</p>
                 ) : (
-                  <div className="divide-y divide-line">
+                  <div className="divide-y divide-admin-border">
                     {customerEngagements.map((e) => (
                       <div key={e.id} className="flex items-center justify-between py-2.5 font-body text-sm">
                         <div>
-                          <span className="text-ink">{e.driver_name ?? 'Driver'}</span>
-                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-ink-muted">
+                          <span className="text-admin-text">{e.driver_name ?? 'Driver'}</span>
+                          <span className="ml-2 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                             {e.engagement_type?.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <div className="flex items-center gap-3 font-body text-[12px]">
-                          <span className="uppercase text-ink-muted">{e.status}</span>
-                          <span className="text-ink">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
-                          <span className="text-ink-muted">{fmtDate(e.starts_at)}</span>
+                          <span className="uppercase text-admin-text-muted">{e.status}</span>
+                          <span className="text-admin-text">{formatNaira(Number(e.customer_price_total ?? 0))}</span>
+                          <span className="text-admin-text-muted">{fmtDate(e.starts_at)}</span>
                         </div>
                       </div>
                     ))}
@@ -292,7 +297,7 @@ export default async function AdminUserDetailPage({
           )}
 
           {!isDriver && !isCustomer && (
-            <div className="mt-8 rounded-xl border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
+            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
               This user has no driver or customer role — likely staff/admin only.
             </div>
           )}
