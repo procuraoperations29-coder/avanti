@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { PageShell } from '@/components/avanti/page-shell';
+import { PageShell } from '@/components/shell/page-shell';
 import { AdminSidebar } from '@/components/avanti/admin/admin-sidebar';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
