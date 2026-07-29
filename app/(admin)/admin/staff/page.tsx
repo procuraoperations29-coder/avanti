@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { CreateStaffPanel, StaffRowActions } from './staff-actions';
@@ -100,7 +101,12 @@ export default async function AdminStaffPage() {
                 return (
                   <tr key={r.id} className="border-b border-admin-border last:border-0 hover:bg-admin-bg">
                     <td className="px-4 py-3">
-                      <div className="font-body text-sm text-admin-text">{person?.full_name ?? '—'}</div>
+                      <Link
+                        href={`/admin/staff/${r.id}`}
+                        className="font-body text-sm text-admin-navy hover:underline"
+                      >
+                        {person?.full_name ?? '—'}
+                      </Link>
                       <div className="font-body text-[12px] text-admin-text-muted">
                         {person?.email ?? person?.phone ?? '—'}
                       </div>

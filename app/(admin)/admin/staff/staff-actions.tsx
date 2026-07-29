@@ -10,6 +10,7 @@ const ROLE_OPTIONS = [
   { value: 'admin_support', label: 'Support' },
   { value: 'admin_finance', label: 'Finance' },
   { value: 'admin_compliance', label: 'Compliance' },
+  { value: 'super_admin', label: 'Super admin' },
 ] as const;
 
 interface Approver {

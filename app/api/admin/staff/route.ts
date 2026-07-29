@@ -20,7 +20,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
  * that will fail — everything else in this route doesn't depend on it.
  */
 
-const STAFF_ROLES = ['admin_verifier', 'admin_support', 'admin_finance', 'admin_compliance'] as const;
+const STAFF_ROLES = ['admin_verifier', 'admin_support', 'admin_finance', 'admin_compliance', 'super_admin'] as const;
 
 const bodySchema = z
   .object({
