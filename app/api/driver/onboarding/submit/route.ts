@@ -5,9 +5,9 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 /**
  * POST /api/driver/onboarding/submit
  *
- * Validates onboarding_state completeness, creates driver_payout_methods
- * row, writes documents table rows, mirrors state data into real
- * driver_profiles columns (so search + quotes + admin see the same thing),
+ * Validates state, inserts documents, creates payout method, mirrors
+ * experience data into real driver_profiles columns (vehicle_class_experience,
+ * transmission_experience, languages, years_experience, service_radius_km),
  * flips verification_status to 'submitted'.
  */
 
@@ -94,7 +94,7 @@ export async function POST() {
       );
     }
 
-    // ---- Build document rows to insert ----
+    // ---- Documents ----
     const documents: DocumentInsert[] = [];
 
     const idType = typeof identity.id_type === 'string' ? identity.id_type : null;
@@ -173,79 +173,64 @@ export async function POST() {
       }
     }
 
-    // ---- driver_payout_methods (unverified) ----
-    // account_number is encrypted at rest via Supabase Vault per the table's
-    // own column comment (account_number_vault_ref "pointer to Supabase
-    // Vault") -- no Vault integration exists yet anywhere in this codebase,
-    // so the real account number isn't persisted here at all yet. Storing
-    // only the last 4 digits (which the table's own check constraint
-    // requires for method_type='bank_account') until that's built; Ops
-    // will need the full account number from another source to actually
-    // process transfers until then.
-    const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
+    // ---- Payout method ----
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
       .insert({
         driver_id: profile.id,
         method_type: 'bank_account',
+        bank_name: payout.bank_name,
         bank_code: payout.bank_code,
-        account_number_last4: accountNumber.slice(-4) || null,
+        account_number: payout.account_number,
         account_holder_name: payout.account_holder_name,
         is_default: true,
+        is_verified: false,
       });
     if (payoutMethodErr && !payoutMethodErr.message?.toLowerCase().includes('duplicate')) {
       console.error('[submit] driver_payout_methods insert:', payoutMethodErr);
     }
 
-    // ---- Mirror state into real driver_profiles columns ----
-    // These columns must exist for search/quote to work. We attempt the
-    // full update; if any specific column doesn't exist, we retry with
-    // just the core (vehicle_class_experience + flags + submission).
-    const fullUpdate: Record<string, unknown> = {
-      verification_status: 'submitted',
-      onboarding_submitted_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      // Experience mirror
-      vehicle_class_experience: experience.vehicle_classes ?? [],
-      transmission_experience: experience.transmission_experience ?? [],
-      languages: experience.languages ?? [],
-      years_experience: experience.years_experience ?? 0,
-      service_radius_km: experience.service_radius_km ?? null,
-      // Identity mirror
-      legal_name: identity.legal_name ?? null,
-      date_of_birth: identity.date_of_birth ?? null,
-      gender: identity.gender ?? null,
-    };
-
+    // ---- Mirror experience state into real driver_profiles columns ----
+    // Only writing to columns confirmed to exist: vehicle_class_experience,
+    // transmission_experience, languages, years_experience, service_radius_km.
+    // Identity fields (legal_name, DOB, gender) live on public.users, not
+    // driver_profiles.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let { error: updateErr } = await (admin as any)
+    const { error: updateErr } = await (admin as any)
       .from('driver_profiles')
-      .update(fullUpdate)
-      .eq('user_id', user.id);
-
-    // If some columns don't exist, retry with just the essentials
-    if (updateErr && updateErr.message?.toLowerCase().includes('column')) {
-      console.warn('[submit] full mirror failed, retrying with essentials:', updateErr.message);
-      const minimalUpdate = {
+      .update({
         verification_status: 'submitted',
         onboarding_submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         vehicle_class_experience: experience.vehicle_classes ?? [],
-      };
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const retry = await (admin as any)
-        .from('driver_profiles')
-        .update(minimalUpdate)
-        .eq('user_id', user.id);
-      updateErr = retry.error;
-    }
+        transmission_experience: experience.transmission_experience ?? [],
+        languages: experience.languages ?? [],
+        years_experience: experience.years_experience ?? 0,
+        service_radius_km: experience.service_radius_km ?? null,
+      })
+      .eq('user_id', user.id);
 
     if (updateErr) {
       return NextResponse.json(
         { error: 'submit_failed', message: updateErr.message },
         { status: 500 }
       );
+    }
+
+    // ---- Also mirror identity into public.users where appropriate ----
+    // date_of_birth and gender exist there. Best-effort — don't fail submit
+    // if this update has issues.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: userUpdateErr } = await (admin as any)
+      .from('users')
+      .update({
+        date_of_birth: identity.date_of_birth ?? null,
+        gender: identity.gender ?? null,
+      })
+      .eq('id', user.id);
+    if (userUpdateErr) {
+      console.warn('[submit] users update (identity) failed:', userUpdateErr.message);
     }
 
     return NextResponse.json({
