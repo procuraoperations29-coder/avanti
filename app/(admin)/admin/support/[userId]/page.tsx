@@ -173,7 +173,7 @@ export default async function AdminUserDetailPage({
           <p className="font-body text-[12px] uppercase tracking-wide text-admin-text-muted">
             {roles.map((r) => ROLE_LABEL[r] ?? r).join(' · ') || 'User'}
           </p>
-          <p className="mt-1 font-body text-2xl font-medium text-admin-text">
+          <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-admin-text">
             {profileUser.full_name}
           </p>
           <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-admin-text-muted">
@@ -184,9 +184,9 @@ export default async function AdminUserDetailPage({
           </div>
 
           {isDriver && driverProfile && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+            <div className="mt-8 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
               <div className="flex items-center justify-between">
-                <p className="font-body text-[13px] font-medium text-admin-text">Driver</p>
+                <p className="font-display text-[15px] font-semibold text-admin-text">Driver</p>
                 <TierBadge tier={(driverProfile.verification_tier as TierLevel) ?? 't1'} label="long" />
               </div>
               <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -244,8 +244,8 @@ export default async function AdminUserDetailPage({
           )}
 
           {isCustomer && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
-              <p className="font-body text-[13px] font-medium text-admin-text">Customer</p>
+            <div className="mt-8 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
+              <p className="font-display text-[15px] font-semibold text-admin-text">Customer</p>
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <StatCard label="Engagements" value={customerEngagements.length} />
                 <StatCard label="Total paid" value={formatNaira(customerTotal)} tone="success" />
@@ -297,7 +297,7 @@ export default async function AdminUserDetailPage({
           )}
 
           {!isDriver && !isCustomer && (
-            <div className="mt-8 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+            <div className="mt-8 rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
               This user has no driver or customer role — likely staff/admin only.
             </div>
           )}

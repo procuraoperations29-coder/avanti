@@ -81,7 +81,7 @@ export default async function StaffDetailPage({
       <p className="font-body text-[12px] uppercase tracking-wide text-admin-text-muted">
         {ROLE_LABEL[roleRow.role] ?? roleRow.role}
       </p>
-      <p className="mt-1 font-body text-2xl font-medium text-admin-text">
+      <p className="mt-1 font-display text-2xl font-semibold tracking-tight text-admin-text">
         {person?.full_name ?? '—'}
       </p>
       <div className="mt-2 flex flex-wrap gap-4 font-body text-[12px] text-admin-text-muted">
@@ -90,7 +90,7 @@ export default async function StaffDetailPage({
         <span>Joined {fmtDate(person?.created_at ?? null)}</span>
       </div>
 
-      <div className="mt-8 rounded-xl border border-admin-border bg-admin-card p-6">
+      <div className="mt-8 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
             <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Status</div>
@@ -130,7 +130,7 @@ export default async function StaffDetailPage({
         </div>
       </div>
 
-      <div className="mt-6 rounded-xl border border-admin-border bg-admin-card px-6 py-5">
+      <div className="mt-6 rounded-2xl border border-admin-border bg-admin-card px-6 py-5 shadow-admin-sm">
         <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
           Coming next
         </div>

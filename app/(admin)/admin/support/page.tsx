@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Search, ChevronRight } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -21,15 +22,15 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 const ROLE_STYLE: Record<string, string> = {
-  individual_customer: 'border-admin-border text-admin-text-muted',
-  corporate_member: 'border-admin-border text-admin-text-muted',
-  corporate_admin: 'border-admin-border text-admin-text-muted',
-  driver: 'border-admin-amber text-admin-amber-text',
-  admin_verifier: 'border-admin-green text-admin-green-text',
-  admin_support: 'border-admin-green text-admin-green-text',
-  admin_finance: 'border-admin-green text-admin-green-text',
-  admin_compliance: 'border-admin-green text-admin-green-text',
-  super_admin: 'border-admin-navy text-admin-navy',
+  individual_customer: 'border-admin-border bg-admin-bg text-admin-text-muted',
+  corporate_member: 'border-admin-border bg-admin-bg text-admin-text-muted',
+  corporate_admin: 'border-admin-border bg-admin-bg text-admin-text-muted',
+  driver: 'border-admin-amber/30 bg-admin-amber-soft text-admin-amber-text',
+  admin_verifier: 'border-admin-green/30 bg-admin-green-soft text-admin-green-text',
+  admin_support: 'border-admin-green/30 bg-admin-green-soft text-admin-green-text',
+  admin_finance: 'border-admin-green/30 bg-admin-green-soft text-admin-green-text',
+  admin_compliance: 'border-admin-green/30 bg-admin-green-soft text-admin-green-text',
+  super_admin: 'border-transparent bg-admin-navy text-white',
 };
 
 export default async function AdminUsersPage({
@@ -137,12 +138,17 @@ export default async function AdminUsersPage({
 
   return (
     <>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">Users</p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="Users"
+            subtitle="Search and inspect every account on the platform"
+          />
 
           <form className="mb-6">
             <div className="relative max-w-md">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-text-muted"
+                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-text-muted"
                 strokeWidth={1.75}
               />
               <input
@@ -150,12 +156,12 @@ export default async function AdminUsersPage({
                 name="q"
                 defaultValue={q ?? ''}
                 placeholder="Search name, email, or phone…"
-                className="w-full rounded-lg border border-admin-border bg-admin-card py-2 pl-10 pr-3 font-body text-sm text-admin-text placeholder:text-admin-text-muted focus:border-admin-navy focus:outline-none"
+                className="w-full rounded-xl border border-admin-border bg-admin-card py-2.5 pl-10 pr-3 font-body text-sm text-admin-text shadow-admin-sm outline-none placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
               />
             </div>
           </form>
 
-          <div className="overflow-x-auto rounded-xl border border-admin-border">
+          <div className="overflow-x-auto rounded-2xl border border-admin-border shadow-admin-sm">
             <table className="w-full bg-admin-card">
               <thead className="border-b border-admin-border bg-admin-bg">
                 <tr>
@@ -209,7 +215,7 @@ export default async function AdminUsersPage({
                                 <span
                                   key={r}
                                   className={
-                                    'rounded-full border px-2 py-0.5 font-body text-[11px] tracking-wide ' +
+                                    'rounded-full border px-2 py-0.5 font-body text-[11px] font-medium tracking-wide ' +
                                     (ROLE_STYLE[r] ?? 'border-admin-border text-admin-text-muted')
                                   }
                                 >
@@ -219,7 +225,7 @@ export default async function AdminUsersPage({
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-[12px] text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-[12px] tabular-nums text-admin-text">
                           {custStats ? (
                             <>
                               {custStats.count} eng. · {formatNaira(custStats.total)}
@@ -228,7 +234,7 @@ export default async function AdminUsersPage({
                             <span className="text-admin-text-muted">—</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-[12px] text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-[12px] tabular-nums text-admin-text">
                           {driverProfileId ? (
                             <>
                               {jobsByDriverId[driverProfileId] ?? 0} jobs ·{' '}
@@ -248,7 +254,7 @@ export default async function AdminUsersPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/admin/support/${u.id}`}
-                            className="inline-flex items-center gap-1 font-body text-[12px] font-medium text-admin-navy hover:text-admin-navy-2"
+                            className="inline-flex items-center gap-1 font-body text-[12px] font-medium text-admin-green-text hover:text-admin-green"
                           >
                             View
                             <ChevronRight className="h-3 w-3" strokeWidth={2} />
@@ -263,7 +269,7 @@ export default async function AdminUsersPage({
           </div>
 
           {users.length === 0 && (
-            <div className="mt-4 rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+            <div className="mt-4 rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
               No users found{q ? ` matching "${q}"` : ''}.
             </div>
           )}

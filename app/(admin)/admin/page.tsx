@@ -10,7 +10,11 @@ import {
   ArrowUpRight,
   Search,
   Bell,
+  Activity,
+  Wallet,
+  TrendingUp,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { RevenueChart } from '@/components/avanti/admin/revenue-chart';
@@ -155,64 +159,109 @@ export default async function AdminHomePage() {
       bucket.payouts += Number(row.driver_payout_total ?? 0) * 0.95;
     }
     chartData = Array.from(buckets.entries()).map(([key, v]) => {
-      const [year, month] = key.split('-').map(Number);
+      const [year = 0, month = 0] = key.split('-').map(Number);
       const label = new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'short' });
       return { label, revenue: v.revenue, payouts: v.payouts, net: v.revenue - v.payouts };
     });
   }
 
+  const greeting = (() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  })();
+
   return (
     <>
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="font-body text-lg font-medium text-admin-text">
-                Good morning, {user.email?.split('@')[0] ?? 'there'}
-              </p>
-              <p className="mt-0.5 font-body text-[13px] text-admin-text-muted">
-                Here&apos;s how Avanti is doing today
+              <h1 className="font-display text-2xl font-semibold tracking-tight text-admin-text">
+                {greeting}, {user.email?.split('@')[0] ?? 'there'}
+              </h1>
+              <p className="mt-1 font-body text-[13px] text-admin-text-muted">
+                Here&apos;s how Avanti is doing today.
               </p>
             </div>
-            <div className="flex items-center gap-4">
-              <Search className="h-[18px] w-[18px] text-admin-text-muted" strokeWidth={1.75} />
-              <Bell className="h-[18px] w-[18px] text-admin-text-muted" strokeWidth={1.75} />
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-admin-green-soft font-body text-xs font-medium text-admin-green-text">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-admin-border bg-admin-card text-admin-text-muted shadow-admin-sm transition-colors hover:text-admin-text"
+                aria-label="Search"
+              >
+                <Search className="h-[17px] w-[17px]" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-admin-border bg-admin-card text-admin-text-muted shadow-admin-sm transition-colors hover:text-admin-text"
+                aria-label="Notifications"
+              >
+                <Bell className="h-[17px] w-[17px]" strokeWidth={1.75} />
+                {((queueCount ?? 0) > 0 || (newEnquiryCount ?? 0) > 0) && (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-admin-amber ring-2 ring-admin-card" />
+                )}
+              </button>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-admin-navy font-body text-xs font-semibold text-white shadow-admin-sm">
                 {(user.email ?? 'A A').slice(0, 2).toUpperCase()}
               </div>
             </div>
           </div>
 
           {/* Operational KPIs — safe for every admin role */}
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <KpiCard label="Active drivers" value={String(driverCount ?? 0)} />
-            <KpiCard label="Engagements this month" value={String(engagementsThisMonth ?? 0)} />
+          <div className="mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <KpiCard label="Active drivers" value={String(driverCount ?? 0)} Icon={Users} />
+            <KpiCard
+              label="Engagements this month"
+              value={String(engagementsThisMonth ?? 0)}
+              Icon={Activity}
+            />
             <KpiCard
               label="Verification queue"
               value={String(queueCount ?? 0)}
-              accent={(queueCount ?? 0) > 0}
+              Icon={ClipboardList}
+              tone={(queueCount ?? 0) > 0 ? 'amber' : 'default'}
+              href="/admin/verification"
             />
             <KpiCard
               label="New placement enquiries"
               value={String(newEnquiryCount ?? 0)}
-              accent={(newEnquiryCount ?? 0) > 0}
+              Icon={UserCheck}
+              tone={(newEnquiryCount ?? 0) > 0 ? 'amber' : 'default'}
+              href="/admin/placements"
             />
           </div>
 
           {canFinance && (
             <>
-              <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <KpiCard label="Gross revenue this month" value={formatNaira(revenueThisMonth)} />
-                <KpiCard label="Ready to batch" value={formatNaira(readyToBatch)} />
+              <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <KpiCard
+                  label="Gross revenue this month"
+                  value={formatNaira(revenueThisMonth)}
+                  Icon={TrendingUp}
+                  tone="green"
+                  big
+                />
+                <KpiCard
+                  label="Ready to batch"
+                  value={formatNaira(readyToBatch)}
+                  Icon={Wallet}
+                  big
+                  href="/admin/finance/batches"
+                />
               </div>
 
-              <div className="mb-5 rounded-xl border border-admin-border bg-admin-card p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-body text-[13px] font-medium text-admin-text">
-                    Revenue vs payouts
-                  </span>
-                  <div className="flex gap-3.5 font-body text-[11px] text-admin-text-muted">
-                    <Legend color="var(--admin-green)" label="Revenue" />
-                    <Legend color="var(--admin-amber)" label="Payouts" />
-                    <Legend color="var(--admin-navy)" label="Net" />
+              <div className="mb-5 rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin">
+                <div className="mb-4 flex items-center justify-between">
+                  <div>
+                    <div className="font-display text-[15px] font-semibold text-admin-text">
+                      Revenue vs payouts
+                    </div>
+                    <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">
+                      Last 6 months
+                    </div>
+                  </div>
+                  <div className="flex gap-3.5 font-body text-[11px] font-medium text-admin-text-muted">
+                    <Legend color="rgb(var(--admin-green))" label="Revenue" />
+                    <Legend color="rgb(var(--admin-amber))" label="Payouts" />
+                    <Legend color="rgb(var(--admin-text))" label="Net" />
                   </div>
                 </div>
                 <RevenueChart data={chartData} />
@@ -221,6 +270,9 @@ export default async function AdminHomePage() {
           )}
 
           {/* Section navigation — same role-gating as before, restyled */}
+          <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-admin-text-muted">
+            Jump to
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {canVerify && (
               <ModuleCard
@@ -284,31 +336,73 @@ export default async function AdminHomePage() {
 function KpiCard({
   label,
   value,
-  accent,
+  Icon,
+  tone = 'default',
+  big,
+  href,
 }: {
   label: string;
   value: string;
-  accent?: boolean;
+  Icon: LucideIcon;
+  tone?: 'default' | 'amber' | 'green';
+  big?: boolean;
+  href?: string;
 }) {
-  return (
-    <div className="rounded-xl border border-admin-border bg-admin-card p-3.5">
-      <p className="font-body text-[12px] text-admin-text-muted">{label}</p>
+  const chip = {
+    default: 'bg-admin-bg text-admin-text-muted',
+    amber: 'bg-admin-amber-soft text-admin-amber-text',
+    green: 'bg-admin-green-soft text-admin-green-text',
+  }[tone];
+
+  const inner = (
+    <>
+      <div className="flex items-start justify-between">
+        <span
+          className={
+            'flex h-9 w-9 items-center justify-center rounded-xl ' + chip
+          }
+        >
+          <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+        </span>
+        {tone === 'amber' && (
+          <span className="flex h-1.5 w-1.5 rounded-full bg-admin-amber" aria-hidden />
+        )}
+        {href && (
+          <ArrowUpRight
+            className="h-4 w-4 text-admin-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+            strokeWidth={2}
+          />
+        )}
+      </div>
+      <p className="mt-4 font-body text-[12px] font-medium text-admin-text-muted">{label}</p>
       <p
         className={
-          'mt-1.5 font-body text-[22px] font-medium ' +
-          (accent ? 'text-admin-amber-text' : 'text-admin-text')
+          'mt-1 font-display font-semibold tabular-nums tracking-tight text-admin-text ' +
+          (big ? 'text-[30px] leading-none' : 'text-[26px] leading-none')
         }
       >
         {value}
       </p>
-    </div>
+    </>
   );
+
+  const base =
+    'group flex flex-col rounded-2xl border border-admin-border bg-admin-card p-4 shadow-admin-sm transition-all';
+
+  if (href) {
+    return (
+      <Link href={href} className={base + ' hover:-translate-y-0.5 hover:shadow-admin'}>
+        {inner}
+      </Link>
+    );
+  }
+  return <div className={base}>{inner}</div>;
 }
 
 function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span className="flex items-center gap-1">
-      <span className="inline-block h-2 w-2 rounded-sm" style={{ background: color }} />
+    <span className="flex items-center gap-1.5">
+      <span className="inline-block h-2 w-2 rounded-full" style={{ background: color }} />
       {label}
     </span>
   );
@@ -322,7 +416,7 @@ function ModuleCard({
   emphasis,
 }: {
   href: string;
-  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  Icon: LucideIcon;
   title: string;
   description: string;
   emphasis?: boolean;
@@ -331,24 +425,26 @@ function ModuleCard({
     <Link
       href={href}
       className={
-        'group flex items-center gap-4 rounded-xl border p-4 transition-colors hover:bg-admin-bg ' +
-        (emphasis ? 'border-admin-amber bg-admin-amber-soft' : 'border-admin-border bg-admin-card')
+        'group flex items-center gap-4 rounded-2xl border p-4 shadow-admin-sm transition-all hover:-translate-y-0.5 hover:shadow-admin ' +
+        (emphasis
+          ? 'border-admin-amber/40 bg-admin-amber-soft'
+          : 'border-admin-border bg-admin-card')
       }
     >
       <div
         className={
-          'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ' +
-          (emphasis ? 'bg-white' : 'bg-admin-bg')
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ' +
+          (emphasis ? 'bg-admin-amber text-white' : 'bg-admin-navy text-white')
         }
       >
-        <Icon className="h-4 w-4 text-admin-navy" strokeWidth={1.75} />
+        <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
       </div>
       <div className="flex-1">
-        <div className="font-body text-[14px] font-medium text-admin-text">{title}</div>
+        <div className="font-body text-[14px] font-semibold text-admin-text">{title}</div>
         <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">{description}</div>
       </div>
       <ArrowUpRight
-        className="h-4 w-4 shrink-0 text-admin-text-muted opacity-0 transition-opacity group-hover:opacity-100"
+        className="h-4 w-4 shrink-0 text-admin-text-muted transition-all group-hover:translate-x-0.5 group-hover:text-admin-text"
         strokeWidth={1.75}
       />
     </Link>

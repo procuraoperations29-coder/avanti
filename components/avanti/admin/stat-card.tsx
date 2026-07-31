@@ -10,30 +10,26 @@ export function StatCard({
   tone?: 'default' | 'accent' | 'success' | 'warning';
 }) {
   const toneClass = {
-    default: 'border-line bg-paper-2',
-    accent: 'border-green bg-green-soft',
-    success: 'border-green bg-green-soft',
-    warning: 'border-brass bg-brass-soft',
+    default: 'border-admin-border bg-admin-card',
+    accent: 'border-admin-green/30 bg-admin-green-soft',
+    success: 'border-admin-green/30 bg-admin-green-soft',
+    warning: 'border-admin-amber/30 bg-admin-amber-soft',
   }[tone];
 
   const labelToneClass = {
-    default: 'text-ink-muted',
-    accent: 'text-green-text',
-    success: 'text-green-text',
-    warning: 'text-brass-text',
+    default: 'text-admin-text-muted',
+    accent: 'text-admin-green-text',
+    success: 'text-admin-green-text',
+    warning: 'text-admin-amber-text',
   }[tone];
 
   return (
-    <div className={`rounded-xl border p-5 ${toneClass}`}>
-      <div className={`font-body text-[12px] font-medium uppercase tracking-wide ${labelToneClass}`}>
-        {label}
-      </div>
-      <div className="mt-2 font-body text-[28px] font-medium leading-none text-ink">
+    <div className={`rounded-2xl border p-5 shadow-admin-sm ${toneClass}`}>
+      <div className={`font-body text-[12px] font-medium ${labelToneClass}`}>{label}</div>
+      <div className="mt-2 font-display text-[28px] font-semibold leading-none tabular-nums tracking-tight text-admin-text">
         {value}
       </div>
-      {subtext && (
-        <div className="mt-2 font-body text-[12px] text-ink-muted">{subtext}</div>
-      )}
+      {subtext && <div className="mt-2 font-body text-[12px] text-admin-text-muted">{subtext}</div>}
     </div>
   );
 }

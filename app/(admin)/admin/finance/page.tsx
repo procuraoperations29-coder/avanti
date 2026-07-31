@@ -4,6 +4,7 @@ import { ArrowRight, Wallet } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/avanti/admin/stat-card';
+import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -184,28 +185,27 @@ export default async function AdminFinancePage() {
 
   return (
     <>
-          <Link
-            href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
-          >
-            ← Admin
-          </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
-            Money in, money out
-          </p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="Finance"
+            subtitle="Money in, money out"
+          />
 
-          <div className="mb-6 rounded-xl border border-admin-border bg-admin-card p-6">
+          <div className="mb-6 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin">
             <div className="mb-4 flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-admin-navy" strokeWidth={1.75} />
-              <span className="font-body text-[13px] font-medium text-admin-text">Payout batches</span>
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-admin-green-soft">
+                <Wallet className="h-[18px] w-[18px] text-admin-green-text" strokeWidth={2} />
+              </span>
+              <span className="font-display text-[15px] font-semibold text-admin-text">Payout batches</span>
             </div>
 
             <div className="mb-5 grid gap-5 md:grid-cols-3">
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-amber-text">
+                <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text">
                   Ready to batch
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                <div className="mt-1.5 font-display text-2xl font-semibold tabular-nums tracking-tight text-admin-text">
                   {formatNaira(unbatchedGross)}
                 </div>
                 <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
@@ -216,19 +216,19 @@ export default async function AdminFinancePage() {
                 </div>
               </div>
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                   Batches created
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">{batches.length}</div>
+                <div className="mt-1.5 font-display text-2xl font-semibold tabular-nums tracking-tight text-admin-text">{batches.length}</div>
                 <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">
                   {completedBatches.length} completed
                 </div>
               </div>
               <div>
-                <div className="font-body text-[11px] uppercase tracking-wide text-admin-green-text">
+                <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
                   Released to date
                 </div>
-                <div className="mt-1.5 font-body text-2xl font-medium text-admin-text">
+                <div className="mt-1.5 font-display text-2xl font-semibold tabular-nums tracking-tight text-admin-text">
                   {formatNaira(totalReleased)}
                 </div>
                 <div className="mt-1.5 font-body text-[12px] text-admin-text-muted">Net paid, after WHT</div>
@@ -237,7 +237,7 @@ export default async function AdminFinancePage() {
 
             <Link
               href="/admin/finance/batches"
-              className="inline-flex items-center gap-2 rounded-lg bg-admin-navy px-5 py-2.5 font-body text-sm text-white transition-colors hover:bg-admin-navy-2"
+              className="inline-flex items-center gap-2 rounded-xl bg-admin-navy px-5 py-2.5 font-body text-sm font-medium text-white shadow-admin-sm transition-colors hover:bg-admin-navy-2"
             >
               {unbatched.length > 0 ? 'Manage batches' : 'View batches'}
               <ArrowRight className="h-4 w-4" strokeWidth={1.75} />
@@ -250,16 +250,14 @@ export default async function AdminFinancePage() {
           </div>
 
           <div>
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
-              Completed engagements · {completed.length}
-            </p>
+            <AdminSectionLabel>Completed engagements · {completed.length}</AdminSectionLabel>
 
             {completed.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                 No completed engagements yet.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-admin-border">
+              <div className="overflow-x-auto rounded-2xl border border-admin-border shadow-admin-sm">
                 <table className="w-full bg-admin-card">
                   <thead className="border-b border-admin-border bg-admin-bg">
                     <tr>
@@ -300,13 +298,13 @@ export default async function AdminFinancePage() {
                         <td className="px-4 py-3 font-body text-sm text-admin-text">
                           {customerNames[e.customer_user_id ?? ''] ?? '—'}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                           {formatNaira(Number(e.customer_price_total ?? 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                           {formatNaira(Number(e.driver_payout_total ?? 0))}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                           {formatNaira(Number(e.commission_total ?? 0))}
                         </td>
                       </tr>

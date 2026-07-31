@@ -1,4 +1,7 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -9,6 +12,7 @@ import {
   LayoutGrid,
   UserCog,
 } from 'lucide-react';
+import { ThemeToggle } from './theme-toggle';
 
 export type AdminNavKey =
   | 'dashboard'
@@ -21,7 +25,6 @@ export type AdminNavKey =
   | 'staff';
 
 interface AdminSidebarProps {
-  active: AdminNavKey;
   canVerify: boolean;
   canPlacements: boolean;
   canSupport: boolean;
@@ -30,34 +33,34 @@ interface AdminSidebarProps {
   isSuper: boolean;
 }
 
-const NAV_ITEMS: {
-  key: AdminNavKey;
-  href: string;
-  label: string;
-  Icon: typeof LayoutDashboard;
-}[] = [
+type NavItem = { key: AdminNavKey; href: string; label: string; Icon: typeof LayoutDashboard };
+
+const OVERVIEW: NavItem[] = [
   { key: 'dashboard', href: '/admin', label: 'Dashboard', Icon: LayoutDashboard },
   { key: 'verification', href: '/admin/verification', label: 'Verification', Icon: ClipboardList },
   { key: 'placements', href: '/admin/placements', label: 'Placements', Icon: UserCheck },
+];
+
+const OPERATIONS: NavItem[] = [
   { key: 'support', href: '/admin/support', label: 'Users', Icon: Users },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
   { key: 'compliance', href: '/admin/compliance', label: 'Compliance', Icon: ShieldAlert },
 ];
 
+const SUPER: NavItem[] = [
+  { key: 'system', href: '/admin/system', label: 'System', Icon: LayoutGrid },
+  { key: 'staff', href: '/admin/staff', label: 'Staff', Icon: UserCog },
+];
+
 /**
- * AdminSidebar — persistent left nav for the fintech-style admin redesign.
+ * AdminSidebar — persistent left chrome for the fintech admin console.
  *
- * Deliberately NOT a shared app/(admin)/layout.tsx yet — several admin
- * pages (verification, placements, compliance, finance index, system)
- * haven't been reviewed/redesigned, and each still renders its own
- * <PageShell> (with TopNav). Wrapping them all in a layout-level sidebar
- * before checking what those pages actually render risks doubled-up
- * chrome. This component is built standalone so it can be dropped into
- * each page's content area one at a time, and promoted to a shared
- * layout once every admin page has been reviewed.
+ * The active item is derived from the live pathname (client component), which
+ * is why this no longer takes an `active` prop: the shared layout renders the
+ * sidebar once and can't know which child route is showing. Role flags gate
+ * which items appear.
  */
 export function AdminSidebar({
-  active,
   canVerify,
   canPlacements,
   canSupport,
@@ -65,6 +68,8 @@ export function AdminSidebar({
   canCompliance,
   isSuper,
 }: AdminSidebarProps) {
+  const pathname = usePathname();
+
   const visible: Record<AdminNavKey, boolean> = {
     dashboard: true,
     verification: canVerify,
@@ -76,77 +81,91 @@ export function AdminSidebar({
     staff: isSuper,
   };
 
+  const overview = OVERVIEW.filter((i) => visible[i.key]);
+  const operations = OPERATIONS.filter((i) => visible[i.key]);
+  const superItems = SUPER.filter((i) => visible[i.key]);
+
+  function isActive(href: string) {
+    if (href === '/admin') return pathname === '/admin';
+    return pathname === href || pathname.startsWith(href + '/');
+  }
+
   return (
-    <div className="w-[220px] shrink-0 bg-admin-navy px-3 py-5">
-      <div className="mb-7 flex items-center gap-2 px-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-admin-green">
-          <span className="font-body text-xs font-medium text-admin-navy-2">A</span>
+    <aside className="sticky top-0 flex h-dvh w-[240px] shrink-0 flex-col border-r border-admin-navy-2/50 bg-gradient-to-b from-admin-navy to-admin-navy-2">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 px-5 pb-6 pt-6">
+        <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-admin-green shadow-admin-glow">
+          <span className="font-display text-sm font-bold text-admin-navy-2">A</span>
         </div>
-        <span className="font-body text-[15px] font-medium text-white">Avanti</span>
+        <div className="leading-none">
+          <div className="font-display text-[15px] font-semibold tracking-tight text-white">Avanti</div>
+          <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.18em] text-admin-nav-text">
+            Console
+          </div>
+        </div>
       </div>
 
-      <div className="mb-2 px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-admin-nav-text/70">
-        Overview
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto px-3">
+        <NavGroup label="Overview" items={overview} isActive={isActive} />
+        {operations.length > 0 && (
+          <NavGroup label="Operations" items={operations} isActive={isActive} className="mt-6" />
+        )}
+        {superItems.length > 0 && (
+          <NavGroup label="Super admin" items={superItems} isActive={isActive} className="mt-6" />
+        )}
       </div>
-      <nav className="mb-5 flex flex-col gap-0.5">
-        {NAV_ITEMS.slice(0, 3)
-          .filter((item) => visible[item.key])
-          .map((item) => (
-            <NavLink key={item.key} item={item} isActive={active === item.key} />
-          ))}
-      </nav>
 
-      <div className="mb-2 px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-admin-nav-text/70">
-        Operations
+      {/* Theme */}
+      <div className="border-t border-white/5 p-3">
+        <ThemeToggle />
+      </div>
+    </aside>
+  );
+}
+
+function NavGroup({
+  label,
+  items,
+  isActive,
+  className = '',
+}: {
+  label: string;
+  items: NavItem[];
+  isActive: (href: string) => boolean;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="mb-1.5 px-3 font-mono text-[10px] uppercase tracking-[0.14em] text-admin-nav-text/60">
+        {label}
       </div>
       <nav className="flex flex-col gap-0.5">
-        {NAV_ITEMS.slice(3)
-          .filter((item) => visible[item.key])
-          .map((item) => (
-            <NavLink key={item.key} item={item} isActive={active === item.key} />
-          ))}
+        {items.map((item) => (
+          <NavLink key={item.key} item={item} active={isActive(item.href)} />
+        ))}
       </nav>
-
-      {isSuper && (
-        <>
-          <div className="mb-2 mt-5 px-3 font-mono text-[10px] uppercase tracking-[0.1em] text-admin-nav-text/70">
-            Super admin
-          </div>
-          <nav className="flex flex-col gap-0.5">
-            <NavLink
-              item={{ key: 'system', href: '/admin/system', label: 'System', Icon: LayoutGrid }}
-              isActive={active === 'system'}
-            />
-            <NavLink
-              item={{ key: 'staff', href: '/admin/staff', label: 'Staff', Icon: UserCog }}
-              isActive={active === 'staff'}
-            />
-          </nav>
-        </>
-      )}
     </div>
   );
 }
 
-function NavLink({
-  item,
-  isActive,
-}: {
-  item: { href: string; label: string; Icon: typeof LayoutDashboard };
-  isActive: boolean;
-}) {
+function NavLink({ item, active }: { item: NavItem; active: boolean }) {
   const { href, label, Icon } = item;
   return (
     <Link
       href={href}
+      aria-current={active ? 'page' : undefined}
       className={
-        'flex items-center gap-2.5 rounded-lg px-3 py-2 font-body text-[13px] transition-colors ' +
-        (isActive
-          ? 'bg-admin-green text-admin-navy-2 font-medium'
+        'group flex items-center gap-2.5 rounded-lg px-3 py-2 font-body text-[13px] transition-all ' +
+        (active
+          ? 'bg-admin-green font-semibold text-admin-navy-2 shadow-admin-glow'
           : 'text-admin-nav-text hover:bg-admin-navy-soft hover:text-white')
       }
     >
-      <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+      <Icon
+        className={active ? 'h-[17px] w-[17px] shrink-0' : 'h-[17px] w-[17px] shrink-0 opacity-80'}
+        strokeWidth={active ? 2.25 : 1.75}
+      />
       {label}
     </Link>
   );

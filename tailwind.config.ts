@@ -62,6 +62,45 @@ const config: Config = {
           3: 'rgb(var(--tier-3) / <alpha-value>)',
           4: 'rgb(var(--tier-4) / <alpha-value>)',
         },
+
+        /*
+         * Admin console skin — semantic tokens for /admin only (see the
+         * `--admin-*` block in globals.css). Light + dark are handled by the
+         * CSS variables, so these utilities work in both themes unchanged.
+         */
+        admin: {
+          bg: 'rgb(var(--admin-bg) / <alpha-value>)',
+          card: 'rgb(var(--admin-card) / <alpha-value>)',
+          border: 'rgb(var(--admin-border) / <alpha-value>)',
+          text: {
+            DEFAULT: 'rgb(var(--admin-text) / <alpha-value>)',
+            muted: 'rgb(var(--admin-text-muted) / <alpha-value>)',
+          },
+          navy: {
+            DEFAULT: 'rgb(var(--admin-navy) / <alpha-value>)',
+            2: 'rgb(var(--admin-navy-2) / <alpha-value>)',
+            soft: 'rgb(var(--admin-navy-soft) / <alpha-value>)',
+          },
+          nav: {
+            text: 'rgb(var(--admin-nav-text) / <alpha-value>)',
+          },
+          green: {
+            DEFAULT: 'rgb(var(--admin-green) / <alpha-value>)',
+            soft: 'rgb(var(--admin-green-soft) / <alpha-value>)',
+            text: 'rgb(var(--admin-green-text) / <alpha-value>)',
+          },
+          amber: {
+            DEFAULT: 'rgb(var(--admin-amber) / <alpha-value>)',
+            soft: 'rgb(var(--admin-amber-soft) / <alpha-value>)',
+            text: 'rgb(var(--admin-amber-text) / <alpha-value>)',
+          },
+        },
+      },
+      boxShadow: {
+        'admin-sm': 'var(--admin-shadow-sm)',
+        admin: 'var(--admin-shadow)',
+        'admin-lg': 'var(--admin-shadow-lg)',
+        'admin-glow': 'var(--admin-glow)',
       },
       borderRadius: {
         lg: 'var(--radius)',

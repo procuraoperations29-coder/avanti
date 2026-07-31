@@ -1,9 +1,11 @@
 import { redirect, notFound } from 'next/navigation';
-import Link from 'next/link';
 import { getAuthUser, hasPermission } from '@/lib/auth';
 import { fetchDriverForReview } from '@/app/api/admin/verification/queue/route';
-import { SectionLabel } from '@/components/avanti/section-label';
-import { SpecRow } from '@/components/avanti/spec-row';
+import {
+  AdminPageHeader,
+  AdminSectionLabel,
+  AdminSpecRow,
+} from '@/components/avanti/admin/page-header';
 import { TierBadge } from '@/components/avanti/tier-badge';
 import { DecisionPanel } from '@/components/admin/decision-panel';
 
@@ -76,42 +78,35 @@ export default async function DriverVerificationReviewPage({
   const references = Array.isArray(background.references) ? background.references : [];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 pb-24">
-      <Link
-        href="/admin/verification"
-        className="mb-6 inline-block font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-      >
-        ← Queue
-      </Link>
-
-      <div className="mb-8 flex items-start justify-between gap-4">
-        <div>
-          <SectionLabel>Under review</SectionLabel>
-          <h1 className="mt-2 font-display text-4xl leading-tight text-ink">
-            {profile.users?.full_name ?? 'Driver'}
-          </h1>
-          <div className="mt-2 font-mono text-sm text-ink-muted">
-            {profile.users?.phone ?? '—'} · {profile.users?.country_code ?? '—'}
+    <div className="pb-24">
+      <AdminPageHeader
+        backHref="/admin/verification"
+        backLabel="Queue"
+        title={profile.users?.full_name ?? 'Driver'}
+        subtitle={`${profile.users?.phone ?? '—'} · ${profile.users?.country_code ?? '—'}`}
+        actions={
+          <div className="text-right">
+            <TierBadge
+              tier={(profile.verification_tier as 't0' | 't1' | 't2' | 't3' | 't4') ?? 't0'}
+              label="long"
+            />
+            <div className="mt-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
+              {humanise(profile.verification_status)}
+            </div>
           </div>
-        </div>
-        <div className="text-right">
-          <TierBadge tier={(profile.verification_tier as 't0' | 't1' | 't2' | 't3' | 't4') ?? 't0'} label="long" />
-          <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            {humanise(profile.verification_status)}
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Left column: applicant details */}
         <div className="md:col-span-1 space-y-6">
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Applicant details</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Applicant details</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Full name" value={profile.users?.full_name ?? '—'} />
-              <SpecRow label="Phone" value={profile.users?.phone ?? '—'} variant="mono" />
-              <SpecRow label="Email" value={profile.users?.email || '—'} variant="mono" />
-              <SpecRow
+              <AdminSpecRow label="Full name" value={profile.users?.full_name ?? '—'} />
+              <AdminSpecRow label="Phone" value={profile.users?.phone ?? '—'} variant="mono" />
+              <AdminSpecRow label="Email" value={profile.users?.email || '—'} variant="mono" />
+              <AdminSpecRow
                 label="Submitted"
                 value={
                   profile.onboarding_submitted_at
@@ -120,67 +115,67 @@ export default async function DriverVerificationReviewPage({
                 }
                 variant="mono"
               />
-              <SpecRow label="Availability" value={availabilitySummary} />
+              <AdminSpecRow label="Availability" value={availabilitySummary} />
             </dl>
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Identity</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Identity</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Legal name" value={identity.legal_name ?? '—'} />
-              <SpecRow label="Date of birth" value={identity.date_of_birth ?? '—'} variant="mono" />
-              <SpecRow label="Gender" value={humanise(identity.gender)} />
-              <SpecRow label="ID type" value={humanise(identity.id_type)} />
-              <SpecRow label="ID number" value={identity.id_number ?? '—'} variant="mono" />
+              <AdminSpecRow label="Legal name" value={identity.legal_name ?? '—'} />
+              <AdminSpecRow label="Date of birth" value={identity.date_of_birth ?? '—'} variant="mono" />
+              <AdminSpecRow label="Gender" value={humanise(identity.gender)} />
+              <AdminSpecRow label="ID type" value={humanise(identity.id_type)} />
+              <AdminSpecRow label="ID number" value={identity.id_number ?? '—'} variant="mono" />
             </dl>
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Licence</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Licence</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Number" value={licence.licence_number ?? '—'} variant="mono" />
-              <SpecRow label="Class" value={licence.licence_class ?? '—'} />
-              <SpecRow label="Issued" value={licence.issue_date ?? '—'} variant="mono" />
-              <SpecRow label="Expires" value={licence.expiry_date ?? '—'} variant="mono" />
+              <AdminSpecRow label="Number" value={licence.licence_number ?? '—'} variant="mono" />
+              <AdminSpecRow label="Class" value={licence.licence_class ?? '—'} />
+              <AdminSpecRow label="Issued" value={licence.issue_date ?? '—'} variant="mono" />
+              <AdminSpecRow label="Expires" value={licence.expiry_date ?? '—'} variant="mono" />
             </dl>
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Address</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Address</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Street" value={address.street_address ?? '—'} />
-              <SpecRow label="City" value={address.city ?? '—'} />
-              <SpecRow label="State" value={address.state ?? '—'} />
-              <SpecRow label="Landmark" value={address.landmark ?? '—'} />
+              <AdminSpecRow label="Street" value={address.street_address ?? '—'} />
+              <AdminSpecRow label="City" value={address.city ?? '—'} />
+              <AdminSpecRow label="State" value={address.state ?? '—'} />
+              <AdminSpecRow label="Landmark" value={address.landmark ?? '—'} />
             </dl>
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Experience</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Experience</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Years" value={experience.years_experience?.toString() ?? '—'} />
-              <SpecRow label="Vehicle classes" value={vehicleClasses} />
-              <SpecRow label="Transmissions" value={transmissions} />
-              <SpecRow label="Languages" value={languages} />
-              <SpecRow
+              <AdminSpecRow label="Years" value={experience.years_experience?.toString() ?? '—'} />
+              <AdminSpecRow label="Vehicle classes" value={vehicleClasses} />
+              <AdminSpecRow label="Transmissions" value={transmissions} />
+              <AdminSpecRow label="Languages" value={languages} />
+              <AdminSpecRow
                 label="Night driving"
                 value={experience.can_drive_at_night === undefined ? '—' : experience.can_drive_at_night ? 'Yes' : 'No'}
               />
-              <SpecRow
+              <AdminSpecRow
                 label="Smartphone"
                 value={experience.has_smartphone === undefined ? '—' : experience.has_smartphone ? 'Yes' : 'No'}
               />
-              <SpecRow
+              <AdminSpecRow
                 label="Service radius"
                 value={experience.service_radius_km ? `${experience.service_radius_km} km` : '—'}
               />
             </dl>
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Background</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Background</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow
+              <AdminSpecRow
                 label="Criminal disclosure"
                 value={
                   background.criminal_record_disclosure === undefined
@@ -192,15 +187,15 @@ export default async function DriverVerificationReviewPage({
               />
             </dl>
             {references.length > 0 && (
-              <div className="mt-4 space-y-3 border-t border-line pt-4">
+              <div className="mt-4 space-y-3 border-t border-admin-border pt-4">
                 {references.map((ref: { name?: string; phone?: string; relationship?: string; years_known?: number }, i: number) => (
                   <div key={i}>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <div className="font-body text-[10px] font-medium uppercase tracking-wide text-admin-text-muted">
                       Reference {i + 1}
                     </div>
-                    <div className="mt-1 font-body text-sm text-ink">{ref.name ?? '—'}</div>
-                    <div className="font-mono text-xs text-ink-muted">{ref.phone ?? '—'}</div>
-                    <div className="font-body text-xs text-ink-muted">
+                    <div className="mt-1 font-body text-sm text-admin-text">{ref.name ?? '—'}</div>
+                    <div className="font-mono text-xs text-admin-text-muted">{ref.phone ?? '—'}</div>
+                    <div className="font-body text-xs text-admin-text-muted">
                       {ref.relationship ?? '—'}
                       {ref.years_known ? ` · ${ref.years_known} years known` : ''}
                     </div>
@@ -209,33 +204,33 @@ export default async function DriverVerificationReviewPage({
               </div>
             )}
             {background.criminal_record_details && (
-              <div className="mt-4 border-t border-line pt-4">
-                <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+              <div className="mt-4 border-t border-admin-border pt-4">
+                <div className="mb-1 font-body text-[10px] font-medium uppercase tracking-wide text-admin-text-muted">
                   Disclosure details
                 </div>
-                <p className="font-body text-sm leading-relaxed text-ink">
+                <p className="font-body text-sm leading-relaxed text-admin-text">
                   {background.criminal_record_details}
                 </p>
               </div>
             )}
           </div>
 
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Payout</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Payout</AdminSectionLabel>
             <dl className="mt-3">
-              <SpecRow label="Bank" value={payout.bank_name ?? '—'} />
-              <SpecRow label="Account no." value={payout.account_number ?? '—'} variant="mono" />
-              <SpecRow label="Account holder" value={payout.account_holder_name ?? '—'} />
+              <AdminSpecRow label="Bank" value={payout.bank_name ?? '—'} />
+              <AdminSpecRow label="Account no." value={payout.account_number ?? '—'} variant="mono" />
+              <AdminSpecRow label="Account holder" value={payout.account_holder_name ?? '—'} />
             </dl>
           </div>
         </div>
 
         {/* Right column: documents + history */}
         <div className="md:col-span-2 space-y-6">
-          <div className="border border-line bg-paper-2 p-5">
-            <SectionLabel>Documents · {documents.length}</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <AdminSectionLabel>Documents · {documents.length}</AdminSectionLabel>
             {documents.length === 0 ? (
-              <p className="mt-3 font-body text-sm text-ink-muted">
+              <p className="mt-3 font-body text-sm text-admin-text-muted">
                 No documents uploaded.
               </p>
             ) : (
@@ -246,7 +241,7 @@ export default async function DriverVerificationReviewPage({
                     href={d.previewUrl ?? '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="group block border border-line-strong bg-paper transition-colors hover:bg-paper-3"
+                    className="group block overflow-hidden rounded-xl border border-admin-border bg-admin-bg transition-colors hover:border-admin-green/40"
                   >
                     {d.previewUrl && d.mime_type.startsWith('image/') ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -256,26 +251,26 @@ export default async function DriverVerificationReviewPage({
                         className="h-48 w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-48 items-center justify-center bg-paper-3">
-                        <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">
+                      <div className="flex h-48 items-center justify-center bg-admin-bg">
+                        <div className="font-mono text-xs uppercase tracking-wider text-admin-text-muted">
                           {d.mime_type}
                         </div>
                       </div>
                     )}
-                    <div className="border-t border-line-strong p-3">
-                      <div className="font-mono text-xs uppercase tracking-wider text-ink">
+                    <div className="border-t border-admin-border p-3">
+                      <div className="font-mono text-xs uppercase tracking-wider text-admin-text">
                         {DOC_LABEL[d.document_type] ?? d.document_type}
                       </div>
-                      <div className="mt-0.5 truncate font-mono text-[10px] text-ink-muted">
+                      <div className="mt-0.5 truncate font-mono text-[10px] text-admin-text-muted">
                         {d.filename}
                       </div>
                       {d.reference_number && (
-                        <div className="mt-1 font-mono text-[10px] text-ink-muted">
+                        <div className="mt-1 font-mono text-[10px] text-admin-text-muted">
                           Ref: {d.reference_number}
                         </div>
                       )}
                       {d.expiry_date && (
-                        <div className="mt-1 font-mono text-[10px] text-ink-muted">
+                        <div className="mt-1 font-mono text-[10px] text-admin-text-muted">
                           Expires: {d.expiry_date}
                         </div>
                       )}
@@ -287,8 +282,8 @@ export default async function DriverVerificationReviewPage({
           </div>
 
           {events.length > 0 && (
-            <div className="border border-line bg-paper-2 p-5">
-              <SectionLabel>History</SectionLabel>
+            <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+              <AdminSectionLabel>History</AdminSectionLabel>
               <ul className="mt-3 space-y-3">
                 {events.map((e: {
                   id: string;
@@ -298,18 +293,18 @@ export default async function DriverVerificationReviewPage({
                   rationale: string | null;
                   created_at: string;
                 }) => (
-                  <li key={e.id} className="border-l-2 border-line-strong pl-3">
+                  <li key={e.id} className="border-l-2 border-admin-green/40 pl-3">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="font-mono text-xs uppercase tracking-wider text-ink">
+                      <span className="font-mono text-xs uppercase tracking-wider text-admin-text">
                         {e.event_type.replace(/_/g, ' ')}
                         {e.to_tier && ` → ${e.to_tier.toUpperCase()}`}
                       </span>
-                      <span className="font-mono text-[10px] text-ink-muted">
+                      <span className="font-mono text-[10px] tabular-nums text-admin-text-muted">
                         {new Date(e.created_at).toLocaleString()}
                       </span>
                     </div>
                     {e.rationale && (
-                      <p className="mt-1 font-body text-sm text-ink">{e.rationale}</p>
+                      <p className="mt-1 font-body text-sm text-admin-text">{e.rationale}</p>
                     )}
                   </li>
                 ))}

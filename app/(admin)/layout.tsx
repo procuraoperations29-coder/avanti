@@ -28,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const canPlacements = canSupport || canVerify;
 
   return (
-    <div className="flex min-h-dvh bg-paper">
+    <div className="flex min-h-dvh bg-admin-bg text-admin-text">
       <AdminSidebar
         canVerify={canVerify}
         canPlacements={canPlacements}
@@ -37,7 +37,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         canCompliance={canCompliance}
         isSuper={isSuper}
       />
-      <div className="min-w-0 flex-1 px-6 py-6 sm:px-8">{children}</div>
+      <div className="mx-auto min-w-0 max-w-6xl flex-1 px-5 py-7 sm:px-8">{children}</div>
     </div>
   );
 }

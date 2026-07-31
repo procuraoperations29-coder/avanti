@@ -4,6 +4,7 @@ import { ShieldAlert } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/avanti/admin/stat-card';
+import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 
 /**
  * Compliance — audit log viewer, verification decisions, disputes.
@@ -71,15 +72,12 @@ export default async function AdminCompliancePage() {
 
   return (
     <>
-          <Link
-            href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
-          >
-            ← Admin
-          </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
-            Compliance
-          </p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="Compliance"
+            subtitle="Audit trail, verification decisions, and open disputes"
+          />
 
           <div className="mb-8 grid gap-3 md:grid-cols-3">
             <StatCard label="Audit entries" value={auditRows.length} subtext="Last 100 shown" />
@@ -93,15 +91,13 @@ export default async function AdminCompliancePage() {
           </div>
 
           <div className="mb-10">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
-              Recent verification decisions
-            </p>
+            <AdminSectionLabel>Recent verification decisions</AdminSectionLabel>
             {decisionRows.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                 No verification decisions recorded yet.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-admin-border">
+              <div className="overflow-hidden rounded-2xl border border-admin-border shadow-admin-sm">
                 <table className="w-full bg-admin-card">
                   <thead className="border-b border-admin-border bg-admin-bg">
                     <tr>
@@ -153,13 +149,13 @@ export default async function AdminCompliancePage() {
           </div>
 
           <div>
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Audit log</p>
+            <AdminSectionLabel>Audit log</AdminSectionLabel>
             {auditRows.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                 Audit log is empty. Any admin action or state change should appear here.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-admin-border">
+              <div className="overflow-hidden rounded-2xl border border-admin-border shadow-admin-sm">
                 <table className="w-full bg-admin-card">
                   <thead className="border-b border-admin-border bg-admin-bg">
                     <tr>
@@ -206,7 +202,7 @@ export default async function AdminCompliancePage() {
             )}
           </div>
 
-          <div className="mt-8 flex items-start gap-3 rounded-xl border border-admin-border bg-admin-card px-6 py-5">
+          <div className="mt-8 flex items-start gap-3 rounded-2xl border border-admin-border bg-admin-card px-6 py-5 shadow-admin-sm">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
             <div>
               <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">

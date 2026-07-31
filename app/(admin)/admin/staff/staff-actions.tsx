@@ -71,7 +71,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg bg-admin-navy px-4 py-2.5 font-body text-sm font-medium text-white transition-colors hover:bg-admin-navy-2"
+        className="inline-flex items-center gap-2 rounded-xl bg-admin-navy px-4 py-2.5 font-body text-sm font-medium text-white shadow-admin-sm transition-colors hover:bg-admin-navy-2"
       >
         <Plus className="h-4 w-4" strokeWidth={2} />
         Add staff
@@ -80,15 +80,15 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
   }
 
   return (
-    <div className="mb-6 rounded-xl border border-admin-border bg-admin-card p-5">
-      <p className="mb-4 font-body text-[13px] font-medium text-admin-text">New staff member</p>
+    <div className="mb-6 rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin">
+      <p className="mb-4 font-display text-[15px] font-semibold text-admin-text">New staff member</p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <label className="mb-1 block font-body text-[12px] text-admin-text-muted">Full name</label>
           <input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full rounded-lg border border-admin-border px-3 py-2 font-body text-sm text-admin-text focus:border-admin-navy focus:outline-none"
+            className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm text-admin-text outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
           />
         </div>
         <div>
@@ -97,7 +97,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-admin-border px-3 py-2 font-body text-sm text-admin-text focus:border-admin-navy focus:outline-none"
+            className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm text-admin-text outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
           />
         </div>
         <div>
@@ -105,7 +105,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as typeof role)}
-            className="w-full rounded-lg border border-admin-border px-3 py-2 font-body text-sm text-admin-text focus:border-admin-navy focus:outline-none"
+            className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm text-admin-text outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
           >
             {ROLE_OPTIONS.map((r) => (
               <option key={r.value} value={r.value}>
@@ -120,7 +120,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
             value={approverUserId}
             disabled={!requiresApproval}
             onChange={(e) => setApproverUserId(e.target.value)}
-            className="w-full rounded-lg border border-admin-border px-3 py-2 font-body text-sm text-admin-text focus:border-admin-navy focus:outline-none disabled:opacity-50"
+            className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm text-admin-text outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20 disabled:opacity-50"
           >
             {approvers.length === 0 && <option value="">No admins yet</option>}
             {approvers.map((a) => (
@@ -146,7 +146,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
         <button
           onClick={submit}
           disabled={busy}
-          className="inline-flex items-center gap-2 rounded-lg bg-admin-green px-4 py-2 font-body text-sm font-medium text-admin-navy-2 transition-colors hover:brightness-95 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-admin-green px-4 py-2 font-body text-sm font-medium text-admin-navy-2 shadow-admin-sm transition-colors hover:brightness-95 disabled:opacity-60"
         >
           {busy && <Loader2 className="h-4 w-4 animate-spin" />}
           Create

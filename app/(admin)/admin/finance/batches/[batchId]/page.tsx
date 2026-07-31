@@ -1,9 +1,8 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { ReleaseBatchButton } from './release-batch-button';
 
 function formatNaira(n: number): string {
@@ -11,12 +10,12 @@ function formatNaira(n: number): string {
 }
 
 const ITEM_STATUS_STYLE: Record<string, string> = {
-  batched: 'text-brass',
-  initiated: 'text-brass',
-  completed: 'text-green',
-  failed: 'text-oxblood',
-  reversed: 'text-oxblood',
-  held: 'text-oxblood',
+  batched: 'bg-admin-amber-soft text-admin-amber-text',
+  initiated: 'bg-admin-amber-soft text-admin-amber-text',
+  completed: 'bg-admin-green-soft text-admin-green-text',
+  failed: 'bg-red-500/12 text-red-600',
+  reversed: 'bg-red-500/12 text-red-600',
+  held: 'bg-red-500/12 text-red-600',
 };
 
 export default async function PayoutBatchDetailPage({
@@ -100,69 +99,60 @@ export default async function PayoutBatchDetailPage({
   const canRelease = batch.status === 'draft' || batch.status === 'approved';
 
   return (
-    <div className="mx-auto max-w-6xl pb-20">
-        <Link
-          href="/admin/finance/batches"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Batches
-        </Link>
-
-        <div className="mb-8 flex items-start justify-between gap-6">
-          <div>
-            <SectionLabel>Batch · {batch.status}</SectionLabel>
-            <h1 className="mt-2 font-display text-4xl leading-tight text-ink">
-              Scheduled{' '}
-              {new Date(batch.scheduled_for).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </h1>
-            <p className="mt-2 font-mono text-xs text-ink-muted">
-              Created {new Date(batch.created_at).toLocaleString()}
-              {batch.executed_at &&
-                ` · Executed ${new Date(batch.executed_at).toLocaleString()}`}
-            </p>
-          </div>
-        </div>
+    <div className="pb-20">
+        <AdminPageHeader
+          backHref="/admin/finance/batches"
+          backLabel="Batches"
+          title={`Scheduled ${new Date(batch.scheduled_for).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          })}`}
+          subtitle={`Created ${new Date(batch.created_at).toLocaleString()}${
+            batch.executed_at ? ` · Executed ${new Date(batch.executed_at).toLocaleString()}` : ''
+          }`}
+          actions={
+            <span className="inline-flex items-center rounded-full bg-admin-bg px-2.5 py-1 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
+              {batch.status}
+            </span>
+          }
+        />
 
         {/* Totals */}
         <div className="mb-10 grid gap-4 md:grid-cols-4">
-          <div className="border border-line bg-paper-2 p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               Gross
             </div>
-            <div className="mt-2 font-display text-2xl leading-none text-ink">
+            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {formatNaira(Number(batch.total_gross ?? 0))}
             </div>
           </div>
-          <div className="border border-line bg-paper-2 p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               WHT (5%)
             </div>
-            <div className="mt-2 font-display text-2xl leading-none text-ink">
+            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {formatNaira(Number(batch.total_tax_withheld ?? 0))}
             </div>
-            <div className="mt-1 font-mono text-[10px] text-ink-muted">To remit to FIRS</div>
+            <div className="mt-1 font-body text-[11px] text-admin-text-muted">To remit to FIRS</div>
           </div>
-          <div className="border-2 border-brass bg-brass-soft p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+          <div className="rounded-2xl border border-admin-green/30 bg-admin-green-soft p-5 shadow-admin-sm">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
               Net paid to drivers
             </div>
-            <div className="mt-2 font-display text-2xl leading-none text-ink">
+            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {formatNaira(Number(batch.total_net ?? 0))}
             </div>
           </div>
-          <div className="border border-line bg-paper-2 p-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               Recipients
             </div>
-            <div className="mt-2 font-display text-2xl leading-none text-ink">
+            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {distinctDrivers}
             </div>
-            <div className="mt-1 font-mono text-[10px] text-ink-muted">
+            <div className="mt-1 font-body text-[11px] text-admin-text-muted">
               {batch.payout_count} payout{batch.payout_count === 1 ? '' : 's'}
             </div>
           </div>
@@ -170,9 +160,9 @@ export default async function PayoutBatchDetailPage({
 
         {/* Release action */}
         {canRelease && (
-          <div className="mb-10 border-2 border-ink bg-paper-2 p-6">
-            <SectionLabel>Ready to release</SectionLabel>
-            <p className="mt-3 max-w-2xl font-body text-sm leading-relaxed text-ink">
+          <div className="mb-10 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin">
+            <AdminSectionLabel>Ready to release</AdminSectionLabel>
+            <p className="mt-1 max-w-2xl font-body text-sm leading-relaxed text-admin-text">
               Review the payouts below. When you release, every pending payout is marked
               completed and the audit trail is written. Actual money transfer happens
               out-of-band — upload to your bank portal after release.
@@ -184,11 +174,11 @@ export default async function PayoutBatchDetailPage({
         )}
 
         {batch.status === 'completed' && (
-          <div className="mb-10 border-l-2 border-green bg-green-soft px-6 py-5">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-green">
+          <div className="mb-10 rounded-2xl border border-admin-green/30 bg-admin-green-soft px-6 py-5 shadow-admin-sm">
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
               Released
             </div>
-            <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
+            <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-admin-text">
               This batch has been released. All payouts are marked completed. Complete the
               bank transfer separately if not already done.
             </p>
@@ -197,35 +187,35 @@ export default async function PayoutBatchDetailPage({
 
         {/* Payouts table */}
         <div>
-          <SectionLabel>Payouts · {allPayouts.length}</SectionLabel>
+          <AdminSectionLabel>Payouts · {allPayouts.length}</AdminSectionLabel>
           {allPayouts.length === 0 ? (
-            <div className="mt-4 border border-line bg-paper-2 px-6 py-10 text-center font-body text-sm text-ink-muted">
+            <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
               No payouts in this batch.
             </div>
           ) : (
-            <div className="mt-4 overflow-x-auto border border-line">
-              <table className="w-full">
-                <thead className="border-b border-line bg-paper-2">
+            <div className="overflow-x-auto rounded-2xl border border-admin-border shadow-admin-sm">
+              <table className="w-full bg-admin-card">
+                <thead className="border-b border-admin-border bg-admin-bg">
                   <tr>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Driver
                     </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Status
                     </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Gross
                     </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       WHT
                     </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Penalties
                     </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Net
                     </th>
-                    <th className="px-4 py-3 text-left font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                    <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Engagement
                     </th>
                   </tr>
@@ -243,34 +233,34 @@ export default async function PayoutBatchDetailPage({
                   }) => (
                     <tr
                       key={item.id}
-                      className="border-b border-line last:border-0 hover:bg-paper-2"
+                      className="border-b border-admin-border last:border-0 hover:bg-admin-bg"
                     >
-                      <td className="px-4 py-3 font-body text-sm text-ink">
+                      <td className="px-4 py-3 font-body text-sm text-admin-text">
                         {driverNames[item.driver_id] ?? '—'}
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={
-                            'font-mono text-[10px] uppercase tracking-wider ' +
-                            (ITEM_STATUS_STYLE[item.status] ?? 'text-ink-muted')
+                            'inline-flex items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' +
+                            (ITEM_STATUS_STYLE[item.status] ?? 'bg-admin-bg text-admin-text-muted')
                           }
                         >
                           {item.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
+                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                         {formatNaira(Number(item.gross_payout))}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink-muted">
+                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text-muted">
                         {formatNaira(Number(item.tax_withheld_total))}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink-muted">
+                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text-muted">
                         {formatNaira(Number(item.penalties_deducted ?? 0))}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-ink">
+                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                         {formatNaira(Number(item.net_amount))}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-ink-muted">
+                      <td className="px-4 py-3 font-mono text-xs tabular-nums text-admin-text-muted">
                         {item.engagement_id ? item.engagement_id.slice(0, 8) : '—'}
                       </td>
                     </tr>

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 import { CreateStaffPanel, StaffRowActions } from './staff-actions';
 
 const ROLE_LABEL: Record<string, string> = {
@@ -60,19 +61,21 @@ export default async function AdminStaffPage() {
 
   return (
     <>
-      <p className="mb-1 font-body text-lg font-medium text-admin-text">Staff</p>
-      <p className="mb-6 font-body text-[13px] text-admin-text-muted">
-        {rows.length} admin account{rows.length === 1 ? '' : 's'} across every department
-      </p>
+      <AdminPageHeader
+        backHref="/admin"
+        backLabel="Admin"
+        title="Staff"
+        subtitle={`${rows.length} admin account${rows.length === 1 ? '' : 's'} across every department`}
+      />
 
       <CreateStaffPanel approvers={approvers} />
 
       {rows.length === 0 ? (
-        <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+        <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
           No staff accounts yet — you&apos;re the only admin.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-admin-border">
+        <div className="overflow-hidden rounded-2xl border border-admin-border shadow-admin-sm">
           <table className="w-full bg-admin-card">
             <thead className="border-b border-admin-border bg-admin-bg">
               <tr>
@@ -103,7 +106,7 @@ export default async function AdminStaffPage() {
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/staff/${r.id}`}
-                        className="font-body text-sm text-admin-navy hover:underline"
+                        className="font-body text-sm font-medium text-admin-text hover:text-admin-green-text hover:underline"
                       >
                         {person?.full_name ?? '—'}
                       </Link>
@@ -119,15 +122,20 @@ export default async function AdminStaffPage() {
                     </td>
                     <td className="px-4 py-3">
                       {r.revoked_at ? (
-                        <span className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
+                        <span className="inline-flex items-center rounded-full bg-admin-bg px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                           Deactivated
                         </span>
                       ) : r.suspended ? (
-                        <span className="font-body text-[11px] uppercase tracking-wide text-admin-amber-text" title={r.suspended_reason ?? undefined}>
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-admin-amber-soft px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text"
+                          title={r.suspended_reason ?? undefined}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-admin-amber" />
                           Suspended
                         </span>
                       ) : (
-                        <span className="font-body text-[11px] uppercase tracking-wide text-admin-green-text">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-admin-green-soft px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
+                          <span className="h-1.5 w-1.5 rounded-full bg-admin-green" />
                           Active
                         </span>
                       )}

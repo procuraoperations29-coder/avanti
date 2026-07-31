@@ -4,6 +4,7 @@ import { ChevronRight, Clock, User } from 'lucide-react';
 import { getAuthUser, hasPermission } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/avanti/empty-state';
+import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 
 /**
  * Verification queue. Reads from v_verification_queue view (Slice 2).
@@ -31,21 +32,15 @@ export default async function VerificationQueuePage() {
 
   return (
     <>
-          <Link
-            href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
-          >
-            ← Admin
-          </Link>
-          <p className="font-body text-lg font-medium text-admin-text">
-            Verification queue
-          </p>
-          <p className="mt-0.5 mb-6 font-body text-[13px] text-admin-text-muted">
-            {items?.length ?? 0} driver{(items?.length ?? 0) === 1 ? '' : 's'} pending
-          </p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="Verification queue"
+            subtitle={`${items?.length ?? 0} driver${(items?.length ?? 0) === 1 ? '' : 's'} pending`}
+          />
 
           {!items || items.length === 0 ? (
-            <div className="rounded-xl border border-admin-border bg-admin-card">
+            <div className="rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
               <EmptyState
                 Icon={Clock}
                 title="Queue is clear"
@@ -53,7 +48,7 @@ export default async function VerificationQueuePage() {
               />
             </div>
           ) : (
-            <ul className="overflow-hidden rounded-xl border border-admin-border bg-admin-card">
+            <ul className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
               {items.map((item: {
                 driver_id: string;
                 full_name: string;

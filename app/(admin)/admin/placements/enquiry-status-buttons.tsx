@@ -40,7 +40,7 @@ export function EnquiryStatusButtons({
 
   if (options.length === 0) {
     return (
-      <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+      <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
         Final state · no further actions
       </div>
     );
@@ -80,10 +80,10 @@ export function EnquiryStatusButtons({
           onClick={() => update(opt.next)}
           disabled={busy}
           className={cn(
-            'border px-4 py-2 font-body text-sm transition-colors disabled:opacity-50',
+            'rounded-xl border px-4 py-2 font-body text-sm font-medium shadow-admin-sm transition-all disabled:opacity-50',
             opt.next === 'declined' || opt.next === 'closed'
-              ? 'border-line-strong bg-paper text-ink-muted hover:bg-paper-3'
-              : 'border-ink bg-ink text-paper hover:bg-ink-2'
+              ? 'border-admin-border bg-admin-card text-admin-text-muted hover:text-admin-text'
+              : 'border-admin-navy bg-admin-navy text-white hover:bg-admin-navy-2'
           )}
         >
           {busy ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.5} /> : opt.label}

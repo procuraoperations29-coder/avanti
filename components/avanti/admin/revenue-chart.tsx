@@ -16,16 +16,18 @@ function formatCompactNaira(n: number): string {
 /**
  * RevenueChart — plain SVG bar + line combo, no charting library.
  *
- * Pure presentational component (no hooks), so it renders fine as a
- * Server Component child — no "use client" needed.
+ * Fintech skin: gradient-filled rounded revenue/payout bars, a soft area under
+ * the net line, and a glowing net stroke. Pure presentational (no hooks), so
+ * it renders fine as a Server Component child. All colours resolve from the
+ * `--admin-*` tokens, so it re-themes with the console (incl. dark mode).
  */
 export function RevenueChart({ data }: { data: MonthPoint[] }) {
-  const width = 600;
-  const height = 220;
-  const padTop = 12;
-  const padBottom = 26;
-  const padLeft = 44;
-  const padRight = 8;
+  const width = 620;
+  const height = 240;
+  const padTop = 16;
+  const padBottom = 28;
+  const padLeft = 46;
+  const padRight = 10;
   const chartW = width - padLeft - padRight;
   const chartH = height - padTop - padBottom;
 
@@ -38,15 +40,18 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
   const zeroY = y(0);
 
   const groupW = chartW / data.length;
-  const barW = Math.min(20, groupW * 0.28);
-  const barGap = 4;
+  const barW = Math.min(18, groupW * 0.26);
+  const barGap = 5;
 
-  const linePoints = data
-    .map((d, i) => {
-      const cx = padLeft + groupW * i + groupW / 2;
-      return `${cx},${y(d.net)}`;
-    })
-    .join(' ');
+  const netPts = data.map((d, i) => ({
+    x: padLeft + groupW * i + groupW / 2,
+    yv: y(d.net),
+  }));
+  const linePoints = netPts.map((p) => `${p.x},${p.yv}`).join(' ');
+  const first = netPts[0];
+  const last = netPts[netPts.length - 1];
+  const areaPoints =
+    first && last ? `${first.x},${zeroY} ${linePoints} ${last.x},${zeroY}` : '';
 
   const yTicks = [domainMin, domainMin + span / 2, domainMax];
 
@@ -54,11 +59,27 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
     <svg
       viewBox={`0 0 ${width} ${height}`}
       className="w-full"
-      style={{ height: 220 }}
+      style={{ height: 240 }}
       role="img"
       aria-label="Chart of monthly revenue, payouts, and net balance"
     >
       <title>Revenue vs payouts, last 6 months</title>
+      <defs>
+        <linearGradient id="rev-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgb(var(--admin-green))" stopOpacity="1" />
+          <stop offset="100%" stopColor="rgb(var(--admin-green))" stopOpacity="0.55" />
+        </linearGradient>
+        <linearGradient id="pay-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgb(var(--admin-amber))" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="rgb(var(--admin-amber))" stopOpacity="0.5" />
+        </linearGradient>
+        <linearGradient id="net-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgb(var(--admin-text))" stopOpacity="0.12" />
+          <stop offset="100%" stopColor="rgb(var(--admin-text))" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Gridlines */}
       {yTicks.map((t, i) => (
         <g key={i}>
           <line
@@ -66,15 +87,25 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
             x2={width - padRight}
             y1={y(t)}
             y2={y(t)}
-            stroke="rgb(var(--line))"
+            stroke="rgb(var(--admin-border))"
             strokeWidth={1}
+            strokeDasharray={i === 0 ? '0' : '3 4'}
           />
-          <text x={padLeft - 8} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={10} fill="rgb(var(--ink-muted))">
+          <text
+            x={padLeft - 10}
+            y={y(t)}
+            textAnchor="end"
+            dominantBaseline="middle"
+            fontSize={10}
+            fontWeight={500}
+            fill="rgb(var(--admin-text-muted))"
+          >
             {formatCompactNaira(t)}
           </text>
         </g>
       ))}
 
+      {/* Bars */}
       {data.map((d, i) => {
         const cx = padLeft + groupW * i + groupW / 2;
         const revH = Math.abs(y(d.revenue) - zeroY);
@@ -86,23 +117,24 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
               y={Math.min(y(d.revenue), zeroY)}
               width={barW}
               height={revH}
-              rx={3}
-              fill="rgb(var(--green))"
+              rx={4}
+              fill="url(#rev-grad)"
             />
             <rect
               x={cx + barGap / 2}
               y={Math.min(y(d.payouts), zeroY)}
               width={barW}
               height={payH}
-              rx={3}
-              fill="rgb(var(--brass))"
+              rx={4}
+              fill="url(#pay-grad)"
             />
             <text
               x={cx}
-              y={height - 6}
+              y={height - 8}
               textAnchor="middle"
               fontSize={10}
-              fill="rgb(var(--ink-muted))"
+              fontWeight={500}
+              fill="rgb(var(--admin-text-muted))"
             >
               {d.label}
             </text>
@@ -110,11 +142,29 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
         );
       })}
 
-      <polyline points={linePoints} fill="none" stroke="rgb(var(--ink))" strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-      {data.map((d, i) => {
-        const cx = padLeft + groupW * i + groupW / 2;
-        return <circle key={i} cx={cx} cy={y(d.net)} r={3} fill="rgb(var(--ink))" />;
-      })}
+      {/* Net line + soft area */}
+      {areaPoints && <polygon points={areaPoints} fill="url(#net-area)" />}
+      <polyline
+        points={linePoints}
+        fill="none"
+        stroke="rgb(var(--admin-text))"
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      {netPts.map((p, i) => (
+        <g key={i}>
+          <circle cx={p.x} cy={p.yv} r={4.5} fill="rgb(var(--admin-card))" />
+          <circle
+            cx={p.x}
+            cy={p.yv}
+            r={3}
+            fill="rgb(var(--admin-text))"
+            stroke="rgb(var(--admin-card))"
+            strokeWidth={1}
+          />
+        </g>
+      ))}
     </svg>
   );
 }

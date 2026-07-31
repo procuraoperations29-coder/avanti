@@ -3,17 +3,18 @@ import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/avanti/admin/stat-card';
+import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { monthlySalaryForTier, formatNaira } from '@/lib/permanent/salary';
 import { EnquiryStatusButtons } from './enquiry-status-buttons';
 
 const STATUS_STYLE: Record<string, string> = {
-  new: 'text-admin-amber-text font-medium',
-  reviewing: 'text-admin-amber-text',
-  introduced: 'text-admin-amber-text',
-  matched: 'text-admin-green-text',
-  closed: 'text-admin-text-muted',
-  declined: 'text-red-600',
+  new: 'bg-admin-amber-soft text-admin-amber-text',
+  reviewing: 'bg-admin-amber-soft text-admin-amber-text',
+  introduced: 'bg-admin-amber-soft text-admin-amber-text',
+  matched: 'bg-admin-green-soft text-admin-green-text',
+  closed: 'bg-admin-bg text-admin-text-muted',
+  declined: 'bg-red-500/12 text-red-600',
 };
 
 export default async function AdminPlacementsPage() {
@@ -114,15 +115,12 @@ export default async function AdminPlacementsPage() {
 
   return (
     <>
-          <Link
-            href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
-          >
-            ← Admin
-          </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
-            Permanent placements
-          </p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="Permanent placements"
+            subtitle="Long-term driver hires — from first enquiry to active placement"
+          />
 
           <div className="mb-8 grid gap-3 sm:grid-cols-2 md:grid-cols-4">
             <StatCard label="New enquiries" value={stats.new} tone={stats.new > 0 ? 'warning' : 'default'} />
@@ -132,12 +130,10 @@ export default async function AdminPlacementsPage() {
           </div>
 
           <div className="mb-10">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
-              Enquiries · {list.length}
-            </p>
+            <AdminSectionLabel>Enquiries · {list.length}</AdminSectionLabel>
 
             {list.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                 No enquiries yet.
               </div>
             ) : (
@@ -158,13 +154,13 @@ export default async function AdminPlacementsPage() {
                   const salary = driver ? monthlySalaryForTier(driver.tier) : 0;
 
                   return (
-                    <div key={e.id} className="rounded-xl border border-admin-border bg-admin-card p-5">
+                    <div key={e.id} className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
                       <div className="mb-4 flex items-baseline justify-between gap-4">
                         <div className="flex items-baseline gap-3">
                           <span
                             className={
-                              'font-body text-[11px] uppercase tracking-wide ' +
-                              (STATUS_STYLE[e.status] ?? 'text-admin-text-muted')
+                              'inline-flex items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' +
+                              (STATUS_STYLE[e.status] ?? 'bg-admin-bg text-admin-text-muted')
                             }
                           >
                             {e.status}
@@ -239,16 +235,14 @@ export default async function AdminPlacementsPage() {
           </div>
 
           <div>
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">
-              Placements · {activePlacements.length}
-            </p>
+            <AdminSectionLabel>Placements · {activePlacements.length}</AdminSectionLabel>
             {activePlacements.length === 0 ? (
-              <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted">
+              <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                 No placements yet. Once an enquiry is marked matched, its placement is
                 created automatically and will show here.
               </div>
             ) : (
-              <div className="overflow-hidden rounded-xl border border-admin-border">
+              <div className="overflow-hidden rounded-2xl border border-admin-border shadow-admin-sm">
                 <table className="w-full bg-admin-card">
                   <thead className="border-b border-admin-border bg-admin-bg">
                     <tr>
@@ -295,7 +289,7 @@ export default async function AdminPlacementsPage() {
                         <td className="px-4 py-3 font-body text-sm text-admin-text">
                           {driverInfo[p.driver_id]?.name ?? '—'}
                         </td>
-                        <td className="px-4 py-3 text-right font-body text-sm font-medium text-admin-text">
+                        <td className="px-4 py-3 text-right font-body text-sm font-medium tabular-nums text-admin-text">
                           {formatNaira(Number(p.monthly_salary ?? 0))}
                         </td>
                       </tr>
@@ -306,7 +300,7 @@ export default async function AdminPlacementsPage() {
             )}
           </div>
 
-          <div className="mt-8 rounded-xl border border-admin-border bg-admin-card px-6 py-5">
+          <div className="mt-8 rounded-2xl border border-admin-border bg-admin-card px-6 py-5 shadow-admin-sm">
             <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               How this works
             </div>

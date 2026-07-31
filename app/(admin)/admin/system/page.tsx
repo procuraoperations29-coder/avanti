@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/avanti/admin/stat-card';
+import { AdminPageHeader, MiniStat, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 
 /**
@@ -92,15 +93,12 @@ export default async function SystemOverviewPage() {
 
   return (
     <>
-          <Link
-            href="/admin"
-            className="mb-4 inline-block font-body text-[13px] text-admin-text-muted hover:text-admin-text"
-          >
-            ← Admin
-          </Link>
-          <p className="mb-6 font-body text-lg font-medium text-admin-text">
-            How Avanti is doing
-          </p>
+          <AdminPageHeader
+            backHref="/admin"
+            backLabel="Admin"
+            title="System overview"
+            subtitle="How Avanti is doing, across the whole platform"
+          />
 
           <div className="mb-8 grid gap-3 md:grid-cols-4">
             <StatCard label="Users" value={totalUsers ?? 0} />
@@ -119,7 +117,7 @@ export default async function SystemOverviewPage() {
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Users by role</p>
+            <AdminSectionLabel>Users by role</AdminSectionLabel>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {[
                 { key: 'individual_customer', label: 'Individual customers' },
@@ -132,60 +130,49 @@ export default async function SystemOverviewPage() {
                 { key: 'admin_support', label: 'Support admins' },
                 { key: 'admin_compliance', label: 'Compliance admins' },
               ].map((r) => (
-                <div key={r.key} className="rounded-xl border border-admin-border bg-admin-card p-4">
-                  <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
-                    {r.label}
-                  </div>
-                  <div className="mt-1.5 font-body text-xl font-medium text-admin-text">
-                    {roleCounts[r.key] ?? 0}
-                  </div>
-                </div>
+                <MiniStat key={r.key} label={r.label} value={roleCounts[r.key] ?? 0} />
               ))}
             </div>
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Drivers by tier</p>
+            <AdminSectionLabel>Drivers by tier</AdminSectionLabel>
             <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-5">
               {(['t0', 't1', 't2', 't3', 't4'] as const).map((tier) => (
-                <div key={tier} className="rounded-xl border border-admin-border bg-admin-card p-4">
+                <MiniStat
+                  key={tier}
+                  label=""
+                  value={tierCounts[tier] ?? 0}
+                >
                   <div className="mb-2">
                     <TierBadge tier={tier as TierLevel} label="short" />
                   </div>
-                  <div className="font-body text-xl font-medium text-admin-text">
-                    {tierCounts[tier] ?? 0}
-                  </div>
-                </div>
+                </MiniStat>
               ))}
             </div>
           </div>
 
           <div className="mb-8">
-            <p className="mb-3 font-body text-[13px] font-medium text-admin-text">Engagements by status</p>
+            <AdminSectionLabel>Engagements by status</AdminSectionLabel>
             <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
               {Object.entries(engagementStatusCounts)
                 .sort((a, b) => b[1] - a[1])
                 .map(([status, count]) => (
-                  <div key={status} className="rounded-xl border border-admin-border bg-admin-card p-4">
-                    <div className="font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
-                      {status.replace(/_/g, ' ')}
-                    </div>
-                    <div className="mt-1.5 font-body text-xl font-medium text-admin-text">{count}</div>
-                  </div>
+                  <MiniStat key={status} label={status.replace(/_/g, ' ')} value={count} />
                 ))}
               {Object.keys(engagementStatusCounts).length === 0 && (
-                <div className="col-span-full rounded-xl border border-admin-border bg-admin-card px-6 py-8 text-center font-body text-sm text-admin-text-muted">
+                <div className="col-span-full rounded-2xl border border-admin-border bg-admin-card px-6 py-8 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
                   No engagements yet.
                 </div>
               )}
             </div>
           </div>
 
-          <div className="mb-8 rounded-xl border border-admin-amber bg-admin-amber-soft p-6">
+          <div className="mb-8 overflow-hidden rounded-2xl border border-admin-amber/30 bg-admin-amber-soft p-6 shadow-admin">
             <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text">
               Pending payouts (total)
             </div>
-            <div className="mt-2 font-body text-4xl font-medium leading-none text-admin-text">
+            <div className="mt-2 font-display text-4xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {formatNaira(pendingPayoutTotal)}
             </div>
             <div className="mt-2 max-w-xl font-body text-sm leading-relaxed text-admin-text">
@@ -194,7 +181,7 @@ export default async function SystemOverviewPage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-admin-border bg-admin-card px-6 py-5">
+          <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-5 shadow-admin-sm">
             <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               Coming
             </div>

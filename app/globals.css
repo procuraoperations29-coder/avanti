@@ -65,6 +65,76 @@
     --font-display: 'Sora', ui-sans-serif, sans-serif;
     --font-body: 'Inter', ui-sans-serif, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    /*
+     * ── Admin console tokens (modern-fintech surface) ──
+     *
+     * A dedicated semantic layer for /admin, distinct from the editorial
+     * marketing palette above. This is the "product" skin: deep near-black
+     * navy chrome, a vivid emerald primary that reads as money/positive, and
+     * real elevation. Every /admin/* page consumes ONLY these tokens, so the
+     * whole console re-themes (incl. dark mode) by swapping the values here —
+     * no per-page changes. Light values live on :root; dark overrides live in
+     * the `.dark` block below and win when <html> carries the `dark` class.
+     */
+    --admin-bg: 247 249 252;        /* page canvas — cool near-white */
+    --admin-card: 255 255 255;      /* raised surface */
+    --admin-border: 228 232 240;    /* hairline */
+    --admin-text: 15 22 41;         /* primary ink */
+    --admin-text-muted: 100 114 139;/* secondary */
+
+    --admin-navy: 13 17 34;         /* sidebar / brand chrome */
+    --admin-navy-2: 8 11 22;        /* darker — active/hover on navy */
+    --admin-navy-soft: 30 37 61;    /* raised surface on navy */
+    --admin-nav-text: 148 161 194;  /* inactive nav label */
+
+    --admin-green: 22 189 105;      /* vivid emerald primary */
+    --admin-green-soft: 220 246 230;/* green tint bg */
+    --admin-green-text: 16 122 66;  /* WCAG-safe on green-soft */
+
+    --admin-amber: 245 158 11;      /* attention / pending */
+    --admin-amber-soft: 254 243 199;
+    --admin-amber-text: 146 84 14;
+
+    /* Elevation — layered, soft. Adapts per theme. */
+    --admin-shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.05);
+    --admin-shadow: 0 1px 3px 0 rgb(15 23 42 / 0.05), 0 10px 28px -8px rgb(15 23 42 / 0.12);
+    --admin-shadow-lg: 0 16px 48px -12px rgb(15 23 42 / 0.20);
+    --admin-glow: 0 0 0 1px rgb(22 189 105 / 0.20), 0 8px 24px -8px rgb(22 189 105 / 0.40);
+  }
+
+  /*
+   * Dark console. Scoped to whatever carries `.dark` (the admin theme toggle
+   * sets it on <html>). Only the admin tokens above get dark overrides, so the
+   * light-only marketing / customer / driver surfaces are never affected even
+   * while the class is present.
+   */
+  .dark {
+    color-scheme: dark;
+
+    --admin-bg: 8 10 18;
+    --admin-card: 17 21 33;
+    --admin-border: 33 40 58;
+    --admin-text: 226 232 243;
+    --admin-text-muted: 143 156 183;
+
+    --admin-navy: 11 14 24;
+    --admin-navy-2: 5 7 14;
+    --admin-navy-soft: 30 37 56;
+    --admin-nav-text: 148 161 194;
+
+    --admin-green: 34 197 110;
+    --admin-green-soft: 18 46 33;
+    --admin-green-text: 74 222 140;
+
+    --admin-amber: 251 191 36;
+    --admin-amber-soft: 54 42 15;
+    --admin-amber-text: 253 214 110;
+
+    --admin-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.50);
+    --admin-shadow: 0 2px 8px -2px rgb(0 0 0 / 0.50), 0 14px 36px -10px rgb(0 0 0 / 0.66);
+    --admin-shadow-lg: 0 24px 56px -16px rgb(0 0 0 / 0.78);
+    --admin-glow: 0 0 0 1px rgb(34 197 110 / 0.28), 0 8px 28px -8px rgb(34 197 110 / 0.45);
   }
 
   html {
