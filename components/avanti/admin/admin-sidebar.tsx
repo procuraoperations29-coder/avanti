@@ -11,6 +11,7 @@ import {
   ShieldAlert,
   LayoutGrid,
   UserCog,
+  Route,
 } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 
@@ -18,6 +19,7 @@ export type AdminNavKey =
   | 'dashboard'
   | 'verification'
   | 'placements'
+  | 'trips'
   | 'support'
   | 'finance'
   | 'compliance'
@@ -43,6 +45,7 @@ const OVERVIEW: NavItem[] = [
 
 const OPERATIONS: NavItem[] = [
   { key: 'support', href: '/admin/support', label: 'Users', Icon: Users },
+  { key: 'trips', href: '/admin/trips', label: 'Trips', Icon: Route },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
   { key: 'compliance', href: '/admin/compliance', label: 'Compliance', Icon: ShieldAlert },
 ];
@@ -74,6 +77,7 @@ export function AdminSidebar({
     dashboard: true,
     verification: canVerify,
     placements: canPlacements,
+    trips: canSupport || canVerify || canFinance,
     support: canSupport,
     finance: canFinance,
     compliance: canCompliance,

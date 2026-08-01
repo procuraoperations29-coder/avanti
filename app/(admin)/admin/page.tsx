@@ -13,6 +13,7 @@ import {
   Activity,
   Wallet,
   TrendingUp,
+  Route,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
@@ -51,6 +52,12 @@ export default async function AdminHomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { count: newEnquiryCount } = await (admin as any)
     .from('placement_enquiries')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'new');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: newTripCount } = await (admin as any)
+    .from('trip_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'new');
 
@@ -294,6 +301,19 @@ export default async function AdminHomePage() {
                     : 'Permanent driver enquiries'
                 }
                 emphasis={(newEnquiryCount ?? 0) > 0}
+              />
+            )}
+            {canPlacements && (
+              <ModuleCard
+                href="/admin/trips"
+                Icon={Route}
+                title="Out-of-state trips"
+                description={
+                  (newTripCount ?? 0) > 0
+                    ? `${newTripCount} new request${newTripCount === 1 ? '' : 's'}`
+                    : 'Inter-city driver requests'
+                }
+                emphasis={(newTripCount ?? 0) > 0}
               />
             )}
             {canSupport && (

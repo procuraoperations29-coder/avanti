@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Search, UserCheck, CalendarDays, ArrowRight } from 'lucide-react';
+import { Search, UserCheck, CalendarDays, ArrowRight, Route } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { EmptyState } from '@/components/avanti/empty-state';
@@ -34,7 +34,7 @@ export default async function CustomerHomePage() {
         </div>
 
         {/* ─── PRIMARY ACTIONS ─── */}
-        <div className="mb-10 grid gap-4 sm:grid-cols-2">
+        <div className="mb-4 grid gap-4 sm:grid-cols-2">
           {/* Hourly / Daily */}
           <Link
             href="/customer/search"
@@ -78,6 +78,28 @@ export default async function CustomerHomePage() {
             </div>
           </Link>
         </div>
+
+        {/* ─── OUT OF STATE ─── */}
+        <Link
+          href="/customer/travel"
+          className="group mb-10 flex items-center gap-4 rounded-2xl border border-admin-amber/30 bg-admin-amber-soft p-5 shadow-admin-sm transition-all hover:-translate-y-0.5 hover:shadow-admin"
+        >
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-admin-card text-admin-amber-text shadow-admin-sm">
+            <Route className="h-5 w-5" strokeWidth={2} />
+          </span>
+          <div className="flex-1">
+            <div className="font-body text-[15px] font-semibold text-admin-text">
+              Travelling out of state?
+            </div>
+            <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">
+              Multi-day inter-city trips — tell us your plan and we&apos;ll quote a driver.
+            </div>
+          </div>
+          <ArrowRight
+            className="h-4 w-4 shrink-0 text-admin-amber-text transition-transform group-hover:translate-x-0.5"
+            strokeWidth={2}
+          />
+        </Link>
 
         {/* ─── SECONDARY ─── */}
         <Link
