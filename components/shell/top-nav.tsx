@@ -82,7 +82,7 @@ export function TopNav({ user, className }: TopNavProps) {
   return (
     <header
       className={cn(
-        'sticky top-0 z-30 border-b border-line-strong bg-paper/95 backdrop-blur',
+        'sticky top-0 z-30 border-b border-admin-border bg-admin-card/85 shadow-admin-sm backdrop-blur-md',
         className
       )}
     >
@@ -95,23 +95,23 @@ export function TopNav({ user, className }: TopNavProps) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 focus:outline-none">
+            <button className="flex items-center gap-2 rounded-full border border-admin-border bg-admin-card py-1 pl-1 pr-2.5 shadow-admin-sm transition-colors hover:bg-admin-bg focus:outline-none">
               <Portrait initials={initials} size="sm" />
               <div className="hidden text-right sm:block">
-                <div className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                <div className="font-body text-[11px] font-medium text-admin-text">{user.phone}</div>
+                <div className="font-body text-[10px] uppercase tracking-wide text-admin-text-muted">
                   {user.activeRole ? ROLE_LABEL[user.activeRole] ?? user.activeRole : 'Signed in'}
                 </div>
-                <div className="font-mono text-xs text-ink">{user.phone}</div>
               </div>
-              <ChevronDown className="h-4 w-4 text-ink-muted" />
+              <ChevronDown className="h-4 w-4 text-admin-text-muted" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-[16rem]">
             <DropdownMenuLabel>Signed in</DropdownMenuLabel>
             <div className="px-3 pb-2">
-              <div className="font-mono text-sm text-ink">{user.phone}</div>
+              <div className="font-body text-sm font-medium text-admin-text">{user.phone}</div>
               {user.email && (
-                <div className="font-mono text-xs text-ink-muted">{user.email}</div>
+                <div className="font-body text-xs text-admin-text-muted">{user.email}</div>
               )}
             </div>
             {otherRoles.length > 0 && (

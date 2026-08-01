@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, Users } from 'lucide-react';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { ErrorState } from '@/components/avanti/error-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -63,20 +63,20 @@ export default function SearchPage() {
   }, [query, tier, vehicleClass]);
 
   const chip =
-    'border px-3 py-1.5 font-mono text-xs uppercase tracking-wider transition-colors';
+    'rounded-full border px-3 py-1.5 font-body text-[11px] font-medium uppercase tracking-wide transition-all';
 
   return (
     <div className="mx-auto max-w-4xl px-4 pt-8 sm:px-6 pb-20">
       <Link
         href="/customer"
-        className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+        className="mb-4 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text"
       >
-        <ChevronLeft className="h-3.5 w-3.5" /> Home
+        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} /> Home
       </Link>
 
-      <SectionLabel>Search</SectionLabel>
-      <h1 className="mb-6 mt-2 font-display text-4xl leading-tight text-ink">
-        Find a <em className="italic">driver</em>.
+      <AdminSectionLabel>Search</AdminSectionLabel>
+      <h1 className="mb-6 mt-2 font-display text-4xl font-semibold tracking-tight leading-tight text-admin-text">
+        Find a driver.
       </h1>
 
       {/* Filters */}
@@ -86,11 +86,11 @@ export default function SearchPage() {
           placeholder="Search by name…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="w-full border border-line-strong bg-paper-2 px-4 py-3 font-body text-sm text-ink outline-none placeholder:text-ink-faint focus:border-ink"
+          className="w-full rounded-xl border border-admin-border bg-admin-card px-3 py-2.5 font-body text-sm text-admin-text shadow-admin-sm outline-none placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
         />
 
         <div>
-          <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+          <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
             Tier
           </div>
           <div className="flex flex-wrap gap-2">
@@ -103,8 +103,8 @@ export default function SearchPage() {
                   className={cn(
                     chip,
                     selected
-                      ? 'border-ink bg-ink text-paper'
-                      : 'border-line-strong bg-paper-2 text-ink hover:bg-paper-3'
+                      ? 'border-admin-navy bg-admin-navy text-white shadow-admin-sm'
+                      : 'border-admin-border bg-admin-card text-admin-text hover:bg-admin-bg'
                   )}
                 >
                   {t === 'any' ? 'Any' : t.toUpperCase() + '+'}
@@ -115,7 +115,7 @@ export default function SearchPage() {
         </div>
 
         <div>
-          <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+          <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
             Vehicle class
           </div>
           <div className="flex flex-wrap gap-2">
@@ -128,8 +128,8 @@ export default function SearchPage() {
                   className={cn(
                     chip,
                     selected
-                      ? 'border-ink bg-ink text-paper'
-                      : 'border-line-strong bg-paper-2 text-ink hover:bg-paper-3'
+                      ? 'border-admin-navy bg-admin-navy text-white shadow-admin-sm'
+                      : 'border-admin-border bg-admin-card text-admin-text hover:bg-admin-bg'
                   )}
                 >
                   {v}

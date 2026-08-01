@@ -24,15 +24,15 @@ function formatNaira(n: number): string {
 }
 
 const STATUS_STYLE: Record<string, string> = {
-  draft: 'text-ink-muted',
-  pending_confirmation: 'text-brass',
-  confirmed: 'text-green',
-  activated: 'text-green',
-  in_progress: 'text-green',
-  completed: 'text-ink-muted',
-  cancelled: 'text-oxblood',
-  expired: 'text-ink-muted',
-  refunded: 'text-ink-muted',
+  draft: 'bg-admin-bg text-admin-text-muted',
+  pending_confirmation: 'bg-admin-amber-soft text-admin-amber-text',
+  confirmed: 'bg-admin-green-soft text-admin-green-text',
+  activated: 'bg-admin-green-soft text-admin-green-text',
+  in_progress: 'bg-admin-green-soft text-admin-green-text',
+  completed: 'bg-admin-bg text-admin-text-muted',
+  cancelled: 'bg-red-500/12 text-red-600',
+  expired: 'bg-admin-bg text-admin-text-muted',
+  refunded: 'bg-admin-bg text-admin-text-muted',
 };
 
 export function EngagementCard({
@@ -48,17 +48,22 @@ export function EngagementCard({
   return (
     <Link
       href={`/customer/engagements/${engagementId}`}
-      className="group flex items-center justify-between gap-4 border-b border-line px-4 py-4 transition-colors hover:bg-paper-3"
+      className="group flex items-center justify-between gap-4 border-b border-admin-border px-4 py-4 transition-colors last:border-0 hover:bg-admin-bg"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <div className="truncate font-body text-sm text-ink">{driverName}</div>
-          <div className={cn('font-mono text-[10px] uppercase tracking-wider', STATUS_STYLE[status] ?? 'text-ink-muted')}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="truncate font-body text-sm font-medium text-admin-text">{driverName}</div>
+          <span
+            className={cn(
+              'inline-flex shrink-0 items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide',
+              STATUS_STYLE[status] ?? 'bg-admin-bg text-admin-text-muted'
+            )}
+          >
             {status.replace(/_/g, ' ')}
-          </div>
+          </span>
         </div>
-        <div className="mt-1 flex items-baseline justify-between gap-2 font-mono text-xs text-ink-muted">
-          <span>
+        <div className="mt-1.5 flex items-baseline justify-between gap-2 font-body text-xs text-admin-text-muted">
+          <span className="truncate capitalize">
             {engagementType.replace(/_/g, ' ')} ·{' '}
             {startDate.toLocaleDateString('en-GB', {
               day: 'numeric',
@@ -67,12 +72,12 @@ export function EngagementCard({
             })}{' '}
             · {startDate.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
           </span>
-          <span className="text-ink">
+          <span className="shrink-0 font-medium tabular-nums text-admin-text">
             {currency === 'NGN' ? formatNaira(customerPriceTotal) : `${currency} ${customerPriceTotal}`}
           </span>
         </div>
       </div>
-      <ArrowRight className="h-4 w-4 shrink-0 text-ink-muted" />
+      <ArrowRight className="h-4 w-4 shrink-0 text-admin-text-muted transition-transform group-hover:translate-x-0.5" />
     </Link>
   );
 }

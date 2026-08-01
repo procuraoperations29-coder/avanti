@@ -74,15 +74,15 @@ export function HireForm({
 
   if (sent) {
     return (
-      <div className="border-2 border-green bg-green-soft p-8">
-        <div className="mb-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-green">
+      <div className="rounded-2xl border border-admin-green/30 bg-admin-green-soft p-8 shadow-admin">
+        <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-admin-green-soft px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
           <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
           Sent
         </div>
-        <p className="max-w-2xl font-display text-2xl leading-snug text-ink md:text-3xl">
-          Thank you. We&apos;ll be in touch <em className="italic">shortly</em>.
+        <p className="max-w-2xl font-display text-2xl font-semibold leading-snug tracking-tight text-admin-text md:text-3xl">
+          Thank you. We&apos;ll be in touch shortly.
         </p>
-        <p className="mt-4 max-w-xl font-body leading-relaxed text-ink">
+        <p className="mt-4 max-w-xl font-body leading-relaxed text-admin-text-muted">
           We&apos;ll confirm {driverFirstName}&apos;s availability and reach out at{' '}
           {contactDetail}. Usually within one business day.
         </p>
@@ -90,45 +90,46 @@ export function HireForm({
     );
   }
 
+  const labelClass =
+    'mb-2 block font-body text-[12px] font-medium text-admin-text';
+  const inputClass =
+    'rounded-xl border-admin-border bg-admin-card text-admin-text shadow-admin-sm placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20';
+
   return (
-    <div className="border border-line bg-paper-2 p-6 md:p-8">
+    <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin md:p-8">
       <div className="space-y-6">
         {/* Requirements */}
         <div>
-          <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-            What do you need {driverFirstName} for?
-          </label>
+          <label className={labelClass}>What do you need {driverFirstName} for?</label>
           <textarea
             value={requirements}
             onChange={(e) => setRequirements(e.target.value.slice(0, 1000))}
             rows={4}
             placeholder="e.g. School run in Ikoyi Mon-Fri, plus occasional weekend errands. Automatic sedan. Prefer someone with executive experience."
-            className="w-full resize-none border border-line-strong bg-paper p-3 font-body text-base leading-relaxed text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none"
+            className="w-full resize-none rounded-xl border border-admin-border bg-admin-card p-3 font-body text-base leading-relaxed text-admin-text shadow-admin-sm outline-none placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
           />
-          <div className="mt-2 font-mono text-[10px] text-ink-muted">
+          <div className="mt-2 font-body text-[11px] tabular-nums text-admin-text-muted">
             {requirements.length}/1000
           </div>
         </div>
 
         {/* Preferred start date */}
         <div>
-          <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          <label className={labelClass}>
             Preferred start date{' '}
-            <span className="normal-case tracking-normal text-ink-faint">(optional)</span>
+            <span className="font-normal text-admin-text-muted">(optional)</span>
           </label>
           <Input
             type="date"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
-            className="max-w-xs font-mono"
+            className={`max-w-xs ${inputClass}`}
           />
         </div>
 
         {/* Contact method */}
         <div>
-          <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-            How should we reach you?
-          </label>
+          <label className={labelClass}>How should we reach you?</label>
           <div className="flex flex-wrap gap-2">
             {(['whatsapp', 'phone', 'email'] as const).map((m) => (
               <button
@@ -136,10 +137,10 @@ export function HireForm({
                 type="button"
                 onClick={() => setContactMethod(m)}
                 className={
-                  'border px-4 py-2 font-body text-sm capitalize transition-colors ' +
+                  'rounded-xl border px-4 py-2 font-body text-sm font-medium capitalize transition-all ' +
                   (contactMethod === m
-                    ? 'border-ink bg-ink text-paper'
-                    : 'border-line-strong bg-paper text-ink hover:bg-paper-3')
+                    ? 'border-admin-green bg-admin-green-soft text-admin-green-text shadow-admin-sm'
+                    : 'border-admin-border bg-admin-bg text-admin-text hover:border-admin-green/40')
                 }
               >
                 {m}
@@ -150,13 +151,13 @@ export function HireForm({
 
         {/* Contact detail */}
         <div>
-          <label className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+          <label className={labelClass}>
             {contactMethod === 'email' ? 'Your email' : 'Your phone number'}
           </label>
           <Input
             value={contactDetail}
             onChange={(e) => setContactDetail(e.target.value)}
-            className="max-w-md font-mono"
+            className={`max-w-md ${inputClass}`}
             placeholder={contactMethod === 'email' ? 'you@example.com' : '+234...'}
           />
         </div>
@@ -166,7 +167,7 @@ export function HireForm({
             onClick={submit}
             disabled={busy}
             size="lg"
-            className="min-w-[220px]"
+            className="min-w-[220px] border-admin-green bg-admin-green text-admin-navy-2 shadow-admin-sm hover:bg-admin-green hover:brightness-95 disabled:opacity-60"
           >
             {busy ? (
               <>
@@ -183,7 +184,7 @@ export function HireForm({
         </div>
       </div>
 
-      <p className="mt-8 border-t border-line pt-6 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+      <p className="mt-8 border-t border-admin-border pt-6 font-body text-[12px] leading-relaxed text-admin-text-muted">
         We&apos;ll confirm {driverFirstName}&apos;s availability and reach out within one
         business day. No obligation until you sign a contract.
       </p>

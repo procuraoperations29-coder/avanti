@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { ChevronLeft, CalendarDays } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { SectionLabel } from '@/components/avanti/section-label';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { EngagementCard } from '@/components/customer/engagement-card';
 import { Button } from '@/components/ui/button';
@@ -27,15 +26,19 @@ export default async function EngagementsListPage() {
     <div className="mx-auto max-w-3xl px-4 pt-8 sm:px-6 pb-20">
       <Link
         href="/customer"
-        className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+        className="mb-4 inline-flex items-center gap-1 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text"
       >
         <ChevronLeft className="h-3.5 w-3.5" /> Home
       </Link>
 
-      <SectionLabel>Engagements</SectionLabel>
-      <h1 className="mb-8 mt-2 font-display text-4xl leading-tight text-ink">
-        <em className="italic">Everything</em> you&apos;ve booked.
-      </h1>
+      <div className="mb-8">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-admin-text">
+          Your engagements
+        </h1>
+        <p className="mt-1 font-body text-[13px] text-admin-text-muted">
+          Everything you&apos;ve booked.
+        </p>
+      </div>
 
       {items.length === 0 ? (
         <EmptyState
@@ -49,7 +52,7 @@ export default async function EngagementsListPage() {
           }
         />
       ) : (
-        <div className="border border-line bg-paper-2">
+        <div className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
           {items.map((e: {
             id: string;
             driver_name: string | null;

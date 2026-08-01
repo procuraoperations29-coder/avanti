@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils/cn';
 /**
  * DriverCard — used in search results and shortlists.
  *
- * Deliberately editorial: portrait, name in serif, tier stamp on the
- * right, credentials in mono. Not a hover-lifting Bento card.
+ * Fintech surface: elevated card that lifts on hover, portrait with tier ring,
+ * tier badge on the right, rating + credentials as compact tabular stats.
  */
 
 export interface DriverCardProps {
@@ -34,6 +34,23 @@ function initialsOf(name: string): string {
     .join('');
 }
 
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
+      <span className="font-semibold tabular-nums text-admin-text">{value}</span>
+      {label}
+    </span>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
+      {children}
+    </span>
+  );
+}
+
 export function DriverCard({
   driverId,
   fullName,
@@ -51,7 +68,7 @@ export function DriverCard({
     <Link
       href={`/customer/drivers/${driverId}`}
       className={cn(
-        'group block border border-line bg-paper-2 p-5 transition-colors hover:bg-paper-3',
+        'group block rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm transition-all hover:-translate-y-0.5 hover:border-admin-green/40 hover:shadow-admin',
         className
       )}
     >
@@ -61,49 +78,34 @@ export function DriverCard({
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="truncate font-display text-2xl leading-tight text-ink">{fullName}</h3>
+              <h3 className="truncate font-display text-xl font-semibold tracking-tight text-admin-text">
+                {fullName}
+              </h3>
               {averageRating != null && (totalRatings ?? 0) > 0 && (
-                <div className="mt-1 flex items-center gap-1 font-mono text-xs text-ink-muted">
-                  <Star className="h-3 w-3 fill-brass text-brass" strokeWidth={0} />
-                  {averageRating.toFixed(1)}
-                  <span className="text-ink-faint">·</span>
-                  <span>{totalRatings} rating{totalRatings === 1 ? '' : 's'}</span>
+                <div className="mt-1 flex items-center gap-1.5 font-body text-[12px] text-admin-text-muted">
+                  <Star className="h-3.5 w-3.5 fill-admin-amber text-admin-amber" strokeWidth={0} />
+                  <span className="font-medium tabular-nums text-admin-text">
+                    {averageRating.toFixed(1)}
+                  </span>
+                  <span className="text-admin-text-muted">
+                    · {totalRatings} rating{totalRatings === 1 ? '' : 's'}
+                  </span>
                 </div>
               )}
             </div>
             <TierBadge tier={tier} />
           </div>
 
-          {bio && (
-            <p className="mt-3 line-clamp-2 font-body text-sm text-ink">{bio}</p>
-          )}
+          {bio && <p className="mt-3 line-clamp-2 font-body text-sm text-admin-text-muted">{bio}</p>}
 
-          <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            {(yearsExperience ?? 0) > 0 && (
-              <div>
-                <dt className="inline text-ink-faint">years </dt>
-                <dd className="inline">{yearsExperience}</dd>
-              </div>
-            )}
-            {(completedJobs ?? 0) > 0 && (
-              <div>
-                <dt className="inline text-ink-faint">jobs </dt>
-                <dd className="inline">{completedJobs}</dd>
-              </div>
-            )}
+          <div className="mt-3.5 flex flex-wrap gap-1.5">
+            {(yearsExperience ?? 0) > 0 && <Stat label="yrs" value={yearsExperience!} />}
+            {(completedJobs ?? 0) > 0 && <Stat label="jobs" value={completedJobs!} />}
             {(vehicleClassExperience ?? []).length > 0 && (
-              <div>
-                <dt className="inline text-ink-faint">classes </dt>
-                <dd className="inline">{(vehicleClassExperience ?? []).join(', ')}</dd>
-              </div>
+              <Chip>{(vehicleClassExperience ?? []).join(', ')}</Chip>
             )}
-            {(languages ?? []).length > 0 && (
-              <div>
-                <dt className="inline text-ink-faint">langs </dt>
-                <dd className="inline">{(languages ?? []).join(', ')}</dd>
-              </div>
-            )}
-          </dl>
+            {(languages ?? []).length > 0 && <Chip>{(languages ?? []).join(', ')}</Chip>}
+          </div>
         </div>
       </div>
     </Link>

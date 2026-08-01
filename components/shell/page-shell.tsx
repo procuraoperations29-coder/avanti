@@ -37,7 +37,7 @@ export async function PageShell({
   const user = await getAuthUser();
 
   return (
-    <div className="min-h-dvh bg-paper">
+    <div className="min-h-dvh bg-admin-bg text-admin-text">
       {user && <TopNav user={user} />}
       <main className={cn('mx-auto px-4 py-8 sm:px-6', MAX_WIDTH[maxWidth], className)}>
         {children}

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
@@ -75,18 +75,18 @@ export default async function PermanentBrowsePage() {
     <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
         <Link
           href="/customer"
-          className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+          className="mb-4 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text"
         >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
           Home
         </Link>
 
         <div className="mb-10">
-          <SectionLabel>Permanent placements</SectionLabel>
-          <h1 className="mt-2 font-display text-4xl leading-tight text-ink md:text-5xl">
-            <em className="italic">Drivers</em> available for hire.
+          <AdminSectionLabel>Permanent placements</AdminSectionLabel>
+          <h1 className="mt-2 font-display text-4xl font-semibold leading-tight tracking-tight text-admin-text md:text-5xl">
+            Drivers available for hire.
           </h1>
-          <p className="mt-6 max-w-2xl font-body text-lg leading-relaxed text-ink">
+          <p className="mt-6 max-w-2xl font-body text-lg leading-relaxed text-admin-text-muted">
             Handpicked, personally verified, available for permanent placement.
             Salary shown is set by Avanti and reflects the driver&apos;s tier.
           </p>
@@ -117,7 +117,7 @@ export default async function PermanentBrowsePage() {
                 <Link
                   key={p.id}
                   href={`/customer/permanent/${p.id}`}
-                  className="group flex gap-6 border border-line bg-paper-2 p-6 transition-colors hover:bg-paper-3"
+                  className="group flex gap-6 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm transition-all hover:-translate-y-0.5 hover:border-admin-green/40 hover:shadow-admin"
                 >
                   <div className="shrink-0">
                     <Portrait
@@ -129,22 +129,22 @@ export default async function PermanentBrowsePage() {
                   <div className="min-w-0 flex-1">
                     <div className="mb-2 flex items-center gap-2">
                       <TierBadge tier={tier} label="short" />
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                      <span className="inline-flex items-center rounded-full bg-admin-bg px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                         {positionNameForTier(tier)}
                       </span>
                     </div>
-                    <div className="font-display text-2xl leading-tight text-ink">
+                    <div className="font-display text-2xl font-semibold leading-tight tracking-tight text-admin-text">
                       {name}
                     </div>
 
-                    <div className="mt-3 font-display text-xl leading-none text-brass">
+                    <div className="mt-3 font-display text-xl font-semibold leading-none tracking-tight tabular-nums text-admin-text">
                       {formatNaira(salary)}
-                      <span className="ml-2 font-mono text-xs uppercase tracking-wider text-ink-muted">
+                      <span className="ml-2 font-body text-xs font-medium text-admin-text-muted">
                         /month
                       </span>
                     </div>
 
-                    <div className="mt-4 grid gap-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+                    <div className="mt-4 grid gap-1.5 font-body text-[12px] text-admin-text-muted">
                       {(p.years_experience ?? 0) > 0 && (
                         <div>
                           {p.years_experience} years professional experience
@@ -155,8 +155,8 @@ export default async function PermanentBrowsePage() {
                       )}
                     </div>
 
-                    <div className="mt-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink transition-transform group-hover:translate-x-1">
-                      Read more <ChevronRight className="h-3 w-3" />
+                    <div className="mt-4 inline-flex items-center gap-1 font-body text-[13px] font-medium text-admin-green-text transition-transform group-hover:translate-x-1">
+                      Read more <ChevronRight className="h-3.5 w-3.5" />
                     </div>
                   </div>
                 </Link>
@@ -165,15 +165,15 @@ export default async function PermanentBrowsePage() {
           </div>
         )}
 
-        <div className="mt-16 border-l-2 border-brass bg-brass-soft px-6 py-5">
-          <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+        <div className="mt-16 rounded-2xl border border-admin-green/30 bg-admin-green-soft px-6 py-5 shadow-admin-sm">
+          <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
             Not what you&apos;re looking for?
           </div>
-          <p className="mt-2 font-body text-sm leading-relaxed text-ink">
+          <p className="mt-2 font-body text-sm leading-relaxed text-admin-text">
             If you need a driver only occasionally rather than permanently,{' '}
             <Link
               href="/customer/search"
-              className="text-ink underline decoration-brass underline-offset-2 hover:decoration-2"
+              className="font-medium text-admin-green-text underline underline-offset-2 hover:text-admin-green"
             >
               book by the hour or day
             </Link>{' '}

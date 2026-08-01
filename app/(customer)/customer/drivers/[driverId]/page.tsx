@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, Star, ArrowRight, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { StampBadge } from '@/components/avanti/stamp-badge';
@@ -59,14 +59,14 @@ export default async function DriverDossierPage({
         {/* Back link */}
         <Link
           href="/customer/search"
-          className="mb-8 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+          className="mb-8 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text"
         >
-          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
           Return to search
         </Link>
 
-        {/* ─────────── EDITORIAL HERO ─────────── */}
-        <div className="mb-16 grid gap-10 md:grid-cols-5 md:gap-12">
+        {/* ─────────── HERO ─────────── */}
+        <div className="mb-12 grid gap-10 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin md:grid-cols-5 md:gap-12 md:p-8">
           {/* Portrait column */}
           <div className="md:col-span-2">
             <div className="flex justify-center md:block">
@@ -80,12 +80,13 @@ export default async function DriverDossierPage({
 
             {/* Ratings under portrait — subtle */}
             {driver.average_rating != null && (driver.total_ratings ?? 0) > 0 && (
-              <div className="mt-6 flex items-center justify-center gap-2 font-mono text-xs text-ink md:justify-start">
-                <Star className="h-3.5 w-3.5 fill-brass text-brass" strokeWidth={0} />
-                <span>{driver.average_rating.toFixed(1)}</span>
-                <span className="text-ink-faint">·</span>
-                <span className="text-ink-muted">
-                  {driver.total_ratings} rating{driver.total_ratings === 1 ? '' : 's'}
+              <div className="mt-6 flex items-center justify-center gap-1.5 font-body text-[13px] text-admin-text md:justify-start">
+                <Star className="h-3.5 w-3.5 fill-admin-amber text-admin-amber" strokeWidth={0} />
+                <span className="font-medium tabular-nums text-admin-text">
+                  {driver.average_rating.toFixed(1)}
+                </span>
+                <span className="text-admin-text-muted">
+                  · {driver.total_ratings} rating{driver.total_ratings === 1 ? '' : 's'}
                 </span>
               </div>
             )}
@@ -93,18 +94,21 @@ export default async function DriverDossierPage({
 
           {/* Copy column */}
           <div className="md:col-span-3 md:pt-4">
-            <div className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+            <div className="mb-4 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
               Verified professional driver · Est. Lagos
             </div>
-            <h1 className="font-display text-5xl leading-[1.05] text-ink md:text-6xl">
+            <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight text-admin-text md:text-6xl">
               {driver.full_name}
             </h1>
 
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <TierBadge tier={tier} label="long" size="lg" />
               {(driver.completed_jobs ?? 0) > 0 && (
-                <div className="font-mono text-xs uppercase tracking-wider text-ink-muted">
-                  {driver.completed_jobs} completed engagements
+                <div className="font-body text-[13px] text-admin-text-muted">
+                  <span className="font-medium tabular-nums text-admin-text">
+                    {driver.completed_jobs}
+                  </span>{' '}
+                  completed engagements
                 </div>
               )}
             </div>
@@ -113,19 +117,19 @@ export default async function DriverDossierPage({
 
         {/* ─────────── PULL QUOTE FROM BIO ─────────── */}
         {driver.bio && (
-          <div className="mb-16 border-l-2 border-brass bg-paper-2 px-8 py-10">
-            <div className="mb-3 font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
+          <div className="mb-12 rounded-2xl border border-admin-border border-l-4 border-l-admin-green bg-admin-card px-8 py-10 shadow-admin-sm">
+            <div className="mb-3 font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
               In their own words
             </div>
-            <blockquote className="max-w-3xl font-display text-2xl italic leading-relaxed text-ink md:text-3xl">
+            <blockquote className="max-w-3xl font-display text-2xl font-semibold leading-relaxed tracking-tight text-admin-text md:text-3xl">
               &ldquo;{driver.bio}&rdquo;
             </blockquote>
           </div>
         )}
 
         {/* ─────────── CREDENTIALS BAND ─────────── */}
-        <div className="mb-16 border-y border-line py-10">
-          <SectionLabel>Verified credentials</SectionLabel>
+        <div className="mb-12 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm md:p-8">
+          <AdminSectionLabel>Verified credentials</AdminSectionLabel>
           <div className="mt-4 flex flex-wrap gap-3">
             <StampBadge label="Identity confirmed" />
             <StampBadge label="Licence verified" />
@@ -134,7 +138,7 @@ export default async function DriverDossierPage({
             {['t3', 't4'].includes(tier) && <StampBadge label="Professional tier" />}
             {tier === 't4' && <StampBadge label="Executive certified" variant="filled" />}
           </div>
-          <p className="mt-6 max-w-2xl font-body text-sm leading-relaxed text-ink-muted">
+          <p className="mt-6 max-w-2xl font-body text-sm leading-relaxed text-admin-text-muted">
             {firstName} was reviewed personally by our verification team. Each stamp
             represents a document verified or a check completed — no algorithmic
             assessments, no self-service approvals.
@@ -142,20 +146,20 @@ export default async function DriverDossierPage({
         </div>
 
         {/* ─────────── DETAILS GRID ─────────── */}
-        <div className="mb-16 grid gap-12 md:grid-cols-2">
+        <div className="mb-12 grid gap-6 md:grid-cols-2">
           {/* Experience column */}
-          <div>
-            <SectionLabel>Experience</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm md:p-8">
+            <AdminSectionLabel>Experience</AdminSectionLabel>
             <div className="mt-6 space-y-6">
               {(driver.years_experience ?? 0) > 0 && (
                 <div>
-                  <div className="font-display text-5xl text-ink">
-                    {driver.years_experience}
-                    <span className="ml-2 font-mono text-sm uppercase tracking-wider text-ink-muted">
+                  <div className="font-display text-5xl font-semibold tracking-tight text-admin-text">
+                    <span className="tabular-nums">{driver.years_experience}</span>
+                    <span className="ml-2 font-body text-sm font-medium uppercase tracking-wide text-admin-text-muted">
                       years
                     </span>
                   </div>
-                  <div className="mt-1 font-body text-sm text-ink-muted">
+                  <div className="mt-1 font-body text-sm text-admin-text-muted">
                     Professional driving experience
                   </div>
                 </div>
@@ -163,14 +167,14 @@ export default async function DriverDossierPage({
 
               {(driver.vehicle_class_experience ?? []).length > 0 && (
                 <div>
-                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                     Vehicle classes
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(driver.vehicle_class_experience ?? []).map((v) => (
                       <span
                         key={v}
-                        className="border border-line-strong bg-paper-2 px-3 py-1 font-body text-sm capitalize text-ink"
+                        className="inline-flex items-center rounded-lg bg-admin-bg px-3 py-1 font-body text-sm capitalize text-admin-text"
                       >
                         {v}
                       </span>
@@ -181,14 +185,14 @@ export default async function DriverDossierPage({
 
               {(driver.transmission_experience ?? []).length > 0 && (
                 <div>
-                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                     Transmissions
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(driver.transmission_experience ?? []).map((v) => (
                       <span
                         key={v}
-                        className="border border-line-strong bg-paper-2 px-3 py-1 font-body text-sm capitalize text-ink"
+                        className="inline-flex items-center rounded-lg bg-admin-bg px-3 py-1 font-body text-sm capitalize text-admin-text"
                       >
                         {v}
                       </span>
@@ -200,19 +204,19 @@ export default async function DriverDossierPage({
           </div>
 
           {/* Service column */}
-          <div>
-            <SectionLabel>Service</SectionLabel>
+          <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm md:p-8">
+            <AdminSectionLabel>Service</AdminSectionLabel>
             <div className="mt-6 space-y-6">
               {(driver.languages ?? []).length > 0 && (
                 <div>
-                  <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                  <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                     Languages spoken
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {(driver.languages ?? []).map((l) => (
                       <span
                         key={l}
-                        className="border border-line-strong bg-paper-2 px-3 py-1 font-body text-sm text-ink"
+                        className="inline-flex items-center rounded-lg bg-admin-bg px-3 py-1 font-body text-sm text-admin-text"
                       >
                         {l}
                       </span>
@@ -223,23 +227,23 @@ export default async function DriverDossierPage({
 
               {driver.service_radius_km && (
                 <div>
-                  <div className="font-display text-5xl text-ink">
-                    {driver.service_radius_km}
-                    <span className="ml-2 font-mono text-sm uppercase tracking-wider text-ink-muted">
+                  <div className="font-display text-5xl font-semibold tracking-tight text-admin-text">
+                    <span className="tabular-nums">{driver.service_radius_km}</span>
+                    <span className="ml-2 font-body text-sm font-medium uppercase tracking-wide text-admin-text-muted">
                       km
                     </span>
                   </div>
-                  <div className="mt-1 font-body text-sm text-ink-muted">
+                  <div className="mt-1 font-body text-sm text-admin-text-muted">
                     Willing to travel from home base
                   </div>
                 </div>
               )}
 
               <div>
-                <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+                <div className="mb-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
                   What you get
                 </div>
-                <ul className="space-y-2 font-body text-sm text-ink">
+                <ul className="space-y-2 font-body text-sm text-admin-text">
                   {[
                     'Transparent, published rate card',
                     'Direct contact with the driver',
@@ -248,7 +252,7 @@ export default async function DriverDossierPage({
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2">
                       <Check
-                        className="mt-0.5 h-4 w-4 shrink-0 text-brass"
+                        className="mt-0.5 h-4 w-4 shrink-0 text-admin-green-text"
                         strokeWidth={2}
                       />
                       <span>{item}</span>
@@ -261,20 +265,23 @@ export default async function DriverDossierPage({
         </div>
 
         {/* ─────────── BOOK CTA ─────────── */}
-        <div className="border-t-2 border-ink pt-12 text-center md:pt-16">
-          <div className="mb-4 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
+        <div className="rounded-2xl bg-gradient-to-br from-admin-navy to-admin-navy-2 p-10 text-center text-white shadow-admin md:p-16">
+          <div className="mb-4 font-body text-[11px] font-medium uppercase tracking-wide text-white/60">
             Ready?
           </div>
-          <h2 className="mx-auto max-w-2xl font-display text-3xl leading-tight text-ink md:text-5xl">
-            Book <em className="italic">{firstName}</em> for your next engagement.
+          <h2 className="mx-auto max-w-2xl font-display text-3xl font-semibold leading-tight tracking-tight text-white md:text-5xl">
+            Book {firstName} for your next engagement.
           </h2>
-          <p className="mx-auto mt-6 max-w-lg font-body text-ink-muted">
+          <p className="mx-auto mt-6 max-w-lg font-body text-white/70">
             Configure your booking. See the price before you commit. Confirm when
             you&apos;re ready.
           </p>
           <div className="mt-10 flex justify-center">
             <Link href={`/customer/drivers/${driverId}/book`}>
-              <Button size="lg" className="min-w-[240px]">
+              <Button
+                size="lg"
+                className="min-w-[240px] rounded-xl bg-admin-green text-admin-navy-2 shadow-admin-sm transition-colors hover:bg-admin-green/90"
+              >
                 Configure booking
                 <ArrowRight className="ml-2 h-4 w-4" strokeWidth={1.5} />
               </Button>

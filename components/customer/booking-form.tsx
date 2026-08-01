@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { toast } from '@/components/ui/sonner';
 import { PriceQuoteCard } from './price-quote-card';
 import { cn } from '@/lib/utils/cn';
@@ -127,14 +127,18 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
   };
 
   const field =
-    'mt-2 w-full border border-line-strong bg-paper px-3 py-2 font-body text-sm text-ink outline-none focus:border-ink';
+    'mt-2 w-full rounded-xl border border-admin-border bg-admin-card px-3 py-2.5 font-body text-sm text-admin-text shadow-admin-sm outline-none placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20';
+
+  const labelClass = 'font-body text-[12px] font-medium normal-case tracking-normal text-admin-text';
+  const inputClass =
+    'mt-2 rounded-xl border-admin-border bg-admin-card text-admin-text shadow-admin-sm placeholder:text-admin-text-muted focus:border-admin-green focus:ring-2 focus:ring-admin-green/20';
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
       {/* Left column — inputs */}
       <div className="space-y-6">
         <div>
-          <SectionLabel>Engagement type</SectionLabel>
+          <AdminSectionLabel>Engagement type</AdminSectionLabel>
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {(
               [
@@ -153,17 +157,17 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
                     if (opt.v === 'full_day') setDurationHours(8);
                   }}
                   className={cn(
-                    'border p-3 text-left transition-colors',
+                    'rounded-xl border p-3 text-left transition-colors',
                     selected
-                      ? 'border-ink bg-ink text-paper'
-                      : 'border-line-strong bg-paper-2 text-ink hover:bg-paper-3'
+                      ? 'border-admin-green bg-admin-green-soft text-admin-text shadow-admin-sm'
+                      : 'border-admin-border bg-admin-bg text-admin-text hover:border-admin-green/40'
                   )}
                 >
-                  <div className="font-body text-sm">{opt.label}</div>
+                  <div className="font-body text-sm font-medium">{opt.label}</div>
                   <div
                     className={cn(
-                      'mt-0.5 font-mono text-[10px] uppercase tracking-wider',
-                      selected ? 'text-paper/70' : 'text-ink-muted'
+                      'mt-0.5 font-body text-[11px] font-medium uppercase tracking-wide',
+                      'text-admin-text-muted'
                     )}
                   >
                     {opt.hint}
@@ -175,7 +179,9 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
         </div>
 
         <div>
-          <Label htmlFor="vehicleClass">Vehicle class</Label>
+          <Label htmlFor="vehicleClass" className={labelClass}>
+            Vehicle class
+          </Label>
           <select
             id="vehicleClass"
             className={field}
@@ -195,11 +201,13 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="startsAt">Start</Label>
+            <Label htmlFor="startsAt" className={labelClass}>
+              Start
+            </Label>
             <Input
               id="startsAt"
               type="datetime-local"
-              className="mt-2"
+              className={inputClass}
               value={startsAt}
               onChange={(e) => {
                 setStartsAt(e.target.value);
@@ -208,7 +216,7 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
             />
           </div>
           <div>
-            <Label htmlFor="duration">
+            <Label htmlFor="duration" className={labelClass}>
               {engagementType === 'full_day' ? 'Days' : 'Hours'}
             </Label>
             <Input
@@ -216,7 +224,7 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
               type="number"
               min={1}
               max={engagementType === 'full_day' ? 30 : 24}
-              className="mt-2"
+              className={inputClass}
               value={engagementType === 'full_day' ? Math.ceil(durationHours / 8) : durationHours}
               onChange={(e) => {
                 const v = Number(e.target.value) || 1;
@@ -228,10 +236,12 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
         </div>
 
         <div>
-          <Label htmlFor="pickup">Pickup address</Label>
+          <Label htmlFor="pickup" className={labelClass}>
+            Pickup address
+          </Label>
           <Input
             id="pickup"
-            className="mt-2"
+            className={inputClass}
             placeholder="12 Marina Road, Ikoyi, Lagos"
             value={pickupLine}
             onChange={(e) => setPickupLine(e.target.value)}
@@ -239,17 +249,24 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
         </div>
 
         <div>
-          <Label htmlFor="instructions">Special instructions · optional</Label>
+          <Label htmlFor="instructions" className={labelClass}>
+            Special instructions · optional
+          </Label>
           <Textarea
             id="instructions"
-            className="mt-2"
+            className={inputClass}
             placeholder="Please wear a suit; may include a stop at the airport"
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
           />
         </div>
 
-        <Button variant="secondary" onClick={fetchQuote} disabled={!canQuote || quoting}>
+        <Button
+          variant="secondary"
+          onClick={fetchQuote}
+          disabled={!canQuote || quoting}
+          className="rounded-xl bg-admin-navy font-medium text-white shadow-admin-sm hover:brightness-110 disabled:opacity-60"
+        >
           {quoting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {quoting ? 'Pricing…' : quote ? 'Update quote' : 'Get quote'}
         </Button>
@@ -268,18 +285,23 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
               breakdown={quote.breakdown}
               expiresAt={quote.expiresAt}
             />
-            <Button size="lg" onClick={book} disabled={!canBook || booking} className="w-full">
+            <Button
+              size="lg"
+              onClick={book}
+              disabled={!canBook || booking}
+              className="w-full rounded-xl bg-admin-green font-medium text-admin-navy-2 shadow-admin-sm hover:brightness-95 disabled:opacity-60"
+            >
               {booking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {booking ? 'Redirecting…' : `Book ${driverName}`}
             </Button>
-            <p className="font-mono text-[10px] uppercase tracking-wider text-ink-muted">
+            <p className="font-body text-[12px] leading-relaxed text-admin-text-muted">
               You&apos;ll be sent to a secure payment page. The engagement is only confirmed after
               payment succeeds.
             </p>
           </>
         ) : (
-          <div className="border border-dashed border-line-strong bg-paper-2 px-6 py-16 text-center">
-            <p className="font-body text-sm text-ink-muted">
+          <div className="rounded-2xl border border-dashed border-admin-border bg-admin-card px-6 py-16 text-center shadow-admin-sm">
+            <p className="font-body text-sm text-admin-text-muted">
               Set your booking details on the left, then get a live quote.
             </p>
           </div>

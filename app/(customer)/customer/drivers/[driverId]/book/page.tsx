@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { SectionLabel } from '@/components/avanti/section-label';
+import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { BookingForm } from '@/components/customer/booking-form';
 
 /**
@@ -76,13 +76,13 @@ export default async function BookDriverPage({
     <div className="mx-auto max-w-5xl px-4 pt-8 sm:px-6 pb-24">
       <Link
         href={`/customer/drivers/${driverId}`}
-        className="mb-4 inline-flex items-center gap-1 font-mono text-xs uppercase tracking-wider text-ink-muted hover:text-ink"
+        className="mb-4 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text"
       >
         <ChevronLeft className="h-3.5 w-3.5" /> Back
       </Link>
 
-      <SectionLabel>Book</SectionLabel>
-      <h1 className="mb-8 mt-2 font-display text-4xl leading-tight text-ink">
+      <AdminSectionLabel>Book</AdminSectionLabel>
+      <h1 className="mb-8 mt-2 font-display text-4xl font-semibold leading-tight tracking-tight text-admin-text">
         {driver.full_name}
       </h1>
 

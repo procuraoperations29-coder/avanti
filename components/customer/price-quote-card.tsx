@@ -1,5 +1,4 @@
-import { SectionLabel } from '@/components/avanti/section-label';
-import { SpecRow } from '@/components/avanti/spec-row';
+import { AdminSectionLabel, AdminSpecRow } from '@/components/avanti/admin/page-header';
 import { cn } from '@/lib/utils/cn';
 
 /**
@@ -46,32 +45,38 @@ export function PriceQuoteCard({
   );
 
   return (
-    <div className={cn('border border-line bg-paper-2 p-5', className)}>
-      <SectionLabel>Price</SectionLabel>
-      <div className="mt-3 mb-4">
-        <div className="font-display text-4xl leading-none text-ink">
+    <div
+      className={cn(
+        'rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin',
+        className
+      )}
+    >
+      <AdminSectionLabel>Price</AdminSectionLabel>
+      <div className="mt-1 mb-4">
+        <div className="font-display text-4xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
           {formatNaira(customerTotal)}
         </div>
-        <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-          Total · {currency} · expires in {expiresMinutes} min
+        <div className="mt-2 font-body text-[12px] text-admin-text-muted">
+          Total · {currency} · expires in{' '}
+          <span className="font-medium tabular-nums text-admin-text">{expiresMinutes}</span> min
         </div>
       </div>
 
-      <dl className="border-t border-line pt-2">
-        <SpecRow
+      <dl className="border-t border-admin-border pt-1">
+        <AdminSpecRow
           label={`${breakdown.unit === 'hour' ? 'Hours' : 'Days'} × rate`}
           value={`${breakdown.unitCount} × ${formatNaira(breakdown.unitPrice)}`}
           variant="mono"
         />
-        <SpecRow label="Base" value={formatNaira(base)} variant="mono" />
+        <AdminSpecRow label="Base" value={formatNaira(base)} variant="mono" />
         {overtime > 0 && (
-          <SpecRow
+          <AdminSpecRow
             label={`Overtime (${breakdown.overtimeHours}h × ${breakdown.overtimeMultiplier}×)`}
             value={formatNaira(overtime)}
             variant="mono"
           />
         )}
-        <SpecRow label="VAT (7.5%)" value={formatNaira(vat)} variant="mono" />
+        <AdminSpecRow label="VAT (7.5%)" value={formatNaira(vat)} variant="mono" />
       </dl>
     </div>
   );
