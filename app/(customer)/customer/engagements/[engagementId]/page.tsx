@@ -2,11 +2,12 @@ import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, MapPin, Info } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminSectionLabel, AdminSpecRow } from '@/components/avanti/admin/page-header';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { cn } from '@/lib/utils/cn';
 import { PaymentCallbackHandler } from './payment-callback-handler';
+import { ConfirmCompletionButton } from './confirm-completion-button';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
@@ -47,6 +48,16 @@ export default async function EngagementDetailPage({
     .single();
 
   if (!engagement) notFound();
+
+  // customer_confirmed_at isn't on the customer view — read it directly.
+  const admin = createServiceRoleClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: engRow } = await (admin as any)
+    .from('engagements')
+    .select('customer_confirmed_at')
+    .eq('id', engagementId)
+    .single();
+  const customerConfirmedAt: string | null = engRow?.customer_confirmed_at ?? null;
 
   const startDate = new Date(engagement.starts_at);
   const endDate = engagement.ends_at ? new Date(engagement.ends_at) : null;
@@ -120,6 +131,39 @@ export default async function EngagementDetailPage({
             </span>{' '}
             — this engagement was cancelled.
           </p>
+        </div>
+      )}
+      {engagement.status === 'active' && (
+        <div className="mb-6 rounded-2xl border-l-2 border-admin-green bg-admin-green-soft px-4 py-3 shadow-admin-sm">
+          <p className="font-body text-sm text-admin-text">
+            <span className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
+              In progress
+            </span>{' '}
+            — {engagement.driver_name ?? 'your driver'} is on the job.
+          </p>
+        </div>
+      )}
+      {engagement.status === 'completed' && (
+        <div className="mb-6 rounded-2xl border border-admin-border bg-admin-card px-5 py-4 shadow-admin-sm">
+          {customerConfirmedAt ? (
+            <p className="font-body text-sm text-admin-text">
+              <span className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
+                Completed & confirmed
+              </span>{' '}
+              — thanks for confirming. We hope it went well.
+            </p>
+          ) : (
+            <>
+              <p className="font-body text-sm text-admin-text">
+                <span className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
+                  Marked complete
+                </span>{' '}
+                — {engagement.driver_name ?? 'your driver'} marked this engagement done. Please
+                confirm on your end so we know everything went well.
+              </p>
+              <ConfirmCompletionButton engagementId={engagementId} />
+            </>
+          )}
         </div>
       )}
 

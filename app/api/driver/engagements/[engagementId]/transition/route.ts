@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { getTransition, type DriverAction } from '@/lib/engagement/driver-transitions';
+import { notifyEngagementEvent } from '@/lib/email/engagement-notify';
 import type { Database } from '@/types/database';
 
 const bodySchema = z.object({
@@ -79,6 +80,13 @@ export async function POST(
         { status: 500 }
       );
     }
+
+    // Notify customer + Avanti ops of the driver's action.
+    await notifyEngagementEvent(
+      admin,
+      engagementId,
+      action === 'activate' ? 'driver_on_way' : 'driver_completed'
+    );
 
     return NextResponse.json({ ok: true, status: transition.to });
   } catch (err) {

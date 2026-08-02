@@ -9,7 +9,9 @@
  */
 export const COMPANY = {
   legalName: 'Avanti Solutions Services',
-  supportEmail: 'support@avanti.ng',
+  // Ops inbox — where "to Avanti" notifications land. Override per-env with
+  // AVANTI_OPS_EMAIL; this is the fallback.
+  supportEmail: 'hello@avanti.com.ng',
 } as const;
 
 export const BANK_ACCOUNT = {

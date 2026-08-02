@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { verifyWebhookSignature, verifyTransaction, paystackConfigured } from '@/lib/payments/paystack';
+import { notifyEngagementEvent } from '@/lib/email/engagement-notify';
+import { sendPaymentReceipt } from '@/lib/email/payment-receipt';
+
+function formatNaira(n: number): string {
+  return `₦${Math.round(n).toLocaleString('en-NG')}`;
+}
 
 export async function POST(req: Request) {
   if (!paystackConfigured()) {
@@ -60,6 +66,11 @@ export async function POST(req: Request) {
       .eq('id', payment.engagement_id!)
       .neq('status', 'confirmed');
 
+    // Payment confirmation to the customer + Avanti ops.
+    if (payment.engagement_id) {
+      await notifyEngagementEvent(admin, payment.engagement_id, 'payment_confirmed');
+    }
+
     return NextResponse.json({ ok: true });
   }
 
@@ -67,7 +78,7 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: trip } = await (admin as any)
     .from('trip_requests')
-    .select('id, payment_status')
+    .select('id, payment_status, customer_user_id, offer_price, origin_city, destinations, trip_type')
     .eq('payment_reference', event.data.reference)
     .maybeSingle();
 
@@ -85,6 +96,22 @@ export async function POST(req: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', trip.id);
+
+    const route = [trip.origin_city, ...(Array.isArray(trip.destinations) ? trip.destinations : [])].join(' → ');
+    await sendPaymentReceipt(admin, {
+      customerUserId: trip.customer_user_id,
+      eyebrow: 'Trip confirmed',
+      customerHeadline: 'Payment received — your trip is confirmed',
+      customerParagraphs: [
+        'We\'ve received your payment for your out-of-state trip. Your driver is confirmed and we\'ll be in touch with the final details.',
+      ],
+      opsHeadline: 'Out-of-state trip paid',
+      summary: [
+        { label: 'Route', value: route },
+        { label: 'Total', value: formatNaira(Number(trip.offer_price ?? 0)) },
+      ],
+    });
+
     return NextResponse.json({ ok: true, trip: trip.id });
   }
 
@@ -92,7 +119,7 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: plInvoice } = await (admin as any)
     .from('placement_invoices')
-    .select('id, placement_id, kind, payment_status')
+    .select('id, placement_id, kind, payment_status, customer_user_id, amount')
     .eq('payment_reference', event.data.reference)
     .maybeSingle();
 
@@ -116,6 +143,23 @@ export async function POST(req: Request) {
         .eq('id', plInvoice.placement_id)
         .eq('status', 'pending');
     }
+
+    await sendPaymentReceipt(admin, {
+      customerUserId: plInvoice.customer_user_id,
+      eyebrow: 'Placement payment',
+      customerHeadline:
+        plInvoice.kind === 'upfront'
+          ? 'Payment received — your placement is active'
+          : 'Payment received — thank you',
+      customerParagraphs: [
+        plInvoice.kind === 'upfront'
+          ? 'We\'ve received your upfront payment. Your permanent placement is now active.'
+          : 'We\'ve received your monthly placement payment. Thank you.',
+      ],
+      opsHeadline: plInvoice.kind === 'upfront' ? 'Placement upfront paid — now active' : 'Placement monthly paid',
+      summary: [{ label: 'Amount', value: formatNaira(Number(plInvoice.amount ?? 0)) }],
+    });
+
     return NextResponse.json({ ok: true, placementInvoice: plInvoice.id });
   }
 
