@@ -183,6 +183,23 @@ export default async function AdminFinancePage() {
     );
   }
 
+  // Out-of-state trip invoices that have been paid. These are billed by hand
+  // (not through the engagement/rate-card flow), so they don't appear in the
+  // figures above — surface them separately here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: paidTripsData } = await (admin as any)
+    .from('trip_requests')
+    .select('offer_price, paid_at, payment_status')
+    .in('payment_status', ['paid', 'manual_paid']);
+  const paidTrips = paidTripsData ?? [];
+  const tripRevenueTotal = paidTrips.reduce(
+    (s: number, t: { offer_price: number | null }) => s + Number(t.offer_price ?? 0),
+    0
+  );
+  const tripRevenueThisMonth = paidTrips
+    .filter((t: { paid_at: string | null }) => t.paid_at && new Date(t.paid_at) >= monthStart)
+    .reduce((s: number, t: { offer_price: number | null }) => s + Number(t.offer_price ?? 0), 0);
+
   return (
     <>
           <AdminPageHeader
@@ -244,9 +261,20 @@ export default async function AdminFinancePage() {
             </Link>
           </div>
 
-          <div className="mb-8 grid gap-3 md:grid-cols-2">
+          <div className="mb-8 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <StatCard label="Gross this month" value={formatNaira(grossThisMonth)} subtext="Customer payments captured" />
             <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's revenue" />
+            <StatCard
+              label="Trip revenue this month"
+              value={formatNaira(tripRevenueThisMonth)}
+              subtext="Out-of-state trips paid"
+              tone={tripRevenueThisMonth > 0 ? 'accent' : 'default'}
+            />
+            <StatCard
+              label="Trip revenue to date"
+              value={formatNaira(tripRevenueTotal)}
+              subtext={`${paidTrips.length} trip${paidTrips.length === 1 ? '' : 's'} paid`}
+            />
           </div>
 
           <div>

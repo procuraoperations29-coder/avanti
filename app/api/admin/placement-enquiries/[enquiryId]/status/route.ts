@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { monthlySalaryForTier } from '@/lib/permanent/salary';
+import { issueUpfrontInvoice, deriveBillingDay } from '@/lib/permanent/billing';
 import type { TierLevel } from '@/components/avanti/tier-badge';
 
 const bodySchema = z.object({
@@ -86,18 +87,25 @@ export async function POST(
 
         const tier = (driverProfile?.verification_tier as TierLevel) ?? 't1';
         const monthlySalary = monthlySalaryForTier(tier);
+        const startDate = enquiry.preferred_start_date ?? new Date().toISOString().slice(0, 10);
 
+        // Placement starts 'pending' — it only activates once the 70% upfront
+        // invoice is paid (handled by the Paystack webhook).
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: placementError } = await (admin as any).from('placements').insert({
-          driver_id: enquiry.driver_id,
-          customer_user_id: enquiry.customer_user_id,
-          enquiry_id: enquiryId,
-          monthly_salary: monthlySalary,
-          currency: 'NGN',
-          start_date: enquiry.preferred_start_date ?? new Date().toISOString().slice(0, 10),
-          status: 'active',
-          activated_at: new Date().toISOString(),
-        });
+        const { data: newPlacement, error: placementError } = await (admin as any)
+          .from('placements')
+          .insert({
+            driver_id: enquiry.driver_id,
+            customer_user_id: enquiry.customer_user_id,
+            enquiry_id: enquiryId,
+            monthly_salary: monthlySalary,
+            currency: 'NGN',
+            start_date: startDate,
+            billing_day: deriveBillingDay(startDate),
+            status: 'pending',
+          })
+          .select('id')
+          .single();
 
         if (placementError) {
           // The enquiry status update above already succeeded — don't roll
@@ -124,6 +132,50 @@ export async function POST(
           .from('driver_profiles')
           .update({ available_permanent: false })
           .eq('id', enquiry.driver_id);
+
+        // Raise the 70% upfront invoice and email it. The placement activates
+        // when it's paid (Paystack webhook). Failure here shouldn't roll back
+        // the match — surface it but keep going; ops can re-issue.
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: cust } = await (admin as any)
+            .from('users')
+            .select('full_name, email')
+            .eq('id', enquiry.customer_user_id)
+            .single();
+          let driverName = 'your driver';
+          if (driverProfile) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: dProfile } = await (admin as any)
+              .from('driver_profiles')
+              .select('user_id')
+              .eq('id', enquiry.driver_id)
+              .single();
+            if (dProfile?.user_id) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: dUser } = await (admin as any)
+                .from('users')
+                .select('full_name')
+                .eq('id', dProfile.user_id)
+                .single();
+              driverName = dUser?.full_name ?? 'your driver';
+            }
+          }
+          if (cust?.email && newPlacement) {
+            await issueUpfrontInvoice(
+              admin,
+              {
+                id: newPlacement.id,
+                customer_user_id: enquiry.customer_user_id,
+                monthly_salary: monthlySalary,
+                currency: 'NGN',
+              },
+              { customerName: cust.full_name ?? 'there', customerEmail: cust.email, driverName }
+            );
+          }
+        } catch (billingErr) {
+          console.error('[placement-enquiry status] upfront invoice failed', billingErr);
+        }
       }
     }
 

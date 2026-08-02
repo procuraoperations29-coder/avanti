@@ -88,5 +88,36 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, trip: trip.id });
   }
 
+  // ── Permanent placement invoices (references start with PLINV-) ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: plInvoice } = await (admin as any)
+    .from('placement_invoices')
+    .select('id, placement_id, kind, payment_status')
+    .eq('payment_reference', event.data.reference)
+    .maybeSingle();
+
+  if (plInvoice) {
+    if (plInvoice.payment_status === 'paid') {
+      return NextResponse.json({ ok: true, already: 'paid' });
+    }
+    const nowIso = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any)
+      .from('placement_invoices')
+      .update({ status: 'paid', payment_status: 'paid', paid_at: nowIso, updated_at: nowIso })
+      .eq('id', plInvoice.id);
+
+    // The upfront payment is what starts the placement.
+    if (plInvoice.kind === 'upfront') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any)
+        .from('placements')
+        .update({ status: 'active', activated_at: nowIso, updated_at: nowIso })
+        .eq('id', plInvoice.placement_id)
+        .eq('status', 'pending');
+    }
+    return NextResponse.json({ ok: true, placementInvoice: plInvoice.id });
+  }
+
   return NextResponse.json({ ok: true, skipped: 'reference_not_found' });
 }

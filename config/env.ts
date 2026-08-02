@@ -50,6 +50,9 @@ const serverSchema = z.object({
   RESEND_FROM_EMAIL: z.string().email().optional().or(z.literal('')),
 
   TURNSTILE_SECRET_KEY: z.string().optional().or(z.literal('')),
+
+  // Shared secret Vercel Cron sends as `Authorization: Bearer <CRON_SECRET>`.
+  CRON_SECRET: z.string().optional().or(z.literal('')),
 });
 
 export const publicEnv = publicSchema.parse({
@@ -77,6 +80,7 @@ export function serverEnv(): z.infer<typeof serverSchema> {
       RESEND_API_KEY: process.env.RESEND_API_KEY,
       RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL,
       TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
+      CRON_SECRET: process.env.CRON_SECRET,
     });
   }
   return cachedServerEnv;
