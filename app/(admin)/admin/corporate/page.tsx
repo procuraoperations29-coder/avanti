@@ -1,8 +1,16 @@
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { AdminPageHeader, MiniStat } from '@/components/avanti/admin/page-header';
+import { AdminPageHeader, MiniStat, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { CorporateActions, type DriverOption } from './corporate-actions';
+import { OrgActions } from './org-actions';
+
+const ORG_STATUS_PILL: Record<string, string> = {
+  pending_verification: 'bg-admin-amber-soft text-admin-amber-text',
+  active: 'bg-admin-green-soft text-admin-green-text',
+  suspended: 'bg-red-500/12 text-red-600',
+  closed: 'bg-admin-bg text-admin-text-muted',
+};
 
 const TIER_LABEL: Record<string, string> = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4' };
 const STATUS_PILL: Record<string, string> = {
@@ -93,6 +101,19 @@ export default async function AdminCorporatePage() {
     label: `${dNameByUser[d.user_id] ?? 'Driver'} · ${TIER_LABEL[d.verification_tier] ?? d.verification_tier}`,
   }));
 
+  // Organisations (pending activation first)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: orgRows } = await (admin as any)
+    .from('organizations')
+    .select('id, name, status, billing_email, created_at')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(100);
+  const orgs = (orgRows ?? []).sort((a: { status: string }, b: { status: string }) =>
+    a.status === 'pending_verification' ? -1 : b.status === 'pending_verification' ? 1 : 0
+  );
+  const pendingOrgs = orgs.filter((o: { status: string }) => o.status === 'pending_verification').length;
+
   const counts = {
     new: requests.filter((r: { status: string }) => r.status === 'new').length,
     open: requests.filter((r: { status: string }) => ['new', 'reviewing', 'partially_fulfilled'].includes(r.status)).length,
@@ -108,11 +129,35 @@ export default async function AdminCorporatePage() {
         subtitle="Organisation driver requests — assign vetted drivers and set rates"
       />
 
-      <div className="mb-8 grid grid-cols-3 gap-3">
-        <MiniStat label="New" value={counts.new} />
-        <MiniStat label="Open" value={counts.open} />
+      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <MiniStat label="Pending orgs" value={pendingOrgs} />
+        <MiniStat label="New requests" value={counts.new} />
+        <MiniStat label="Open requests" value={counts.open} />
         <MiniStat label="Fulfilled" value={counts.fulfilled} />
       </div>
+
+      {/* Organisations */}
+      {orgs.length > 0 && (
+        <div className="mb-10">
+          <AdminSectionLabel>Organisations</AdminSectionLabel>
+          <div className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
+            {orgs.map((o: { id: string; name: string; status: string; billing_email: string | null }) => (
+              <div key={o.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-admin-border px-5 py-3.5 last:border-0">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-body text-sm font-medium text-admin-text">{o.name}</span>
+                    <span className={'inline-flex items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' + (ORG_STATUS_PILL[o.status] ?? 'bg-admin-bg text-admin-text-muted')}>
+                      {o.status.replace(/_/g, ' ')}
+                    </span>
+                  </div>
+                  {o.billing_email && <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">{o.billing_email}</div>}
+                </div>
+                <OrgActions orgId={o.id} status={o.status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {requests.length === 0 ? (
         <div className="rounded-2xl border border-admin-border bg-admin-card px-6 py-10 text-center font-body text-sm text-admin-text-muted shadow-admin-sm">
