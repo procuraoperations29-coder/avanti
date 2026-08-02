@@ -14,6 +14,7 @@ import {
   Wallet,
   TrendingUp,
   Route,
+  Building2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
@@ -60,6 +61,12 @@ export default async function AdminHomePage() {
     .from('trip_requests')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'new');
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { count: openCorpCount } = await (admin as any)
+    .from('corporate_driver_requests')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['new', 'reviewing']);
 
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -314,6 +321,19 @@ export default async function AdminHomePage() {
                     : 'Inter-city driver requests'
                 }
                 emphasis={(newTripCount ?? 0) > 0}
+              />
+            )}
+            {canPlacements && (
+              <ModuleCard
+                href="/admin/corporate"
+                Icon={Building2}
+                title="Corporate staffing"
+                description={
+                  (openCorpCount ?? 0) > 0
+                    ? `${openCorpCount} open request${openCorpCount === 1 ? '' : 's'}`
+                    : 'Organisation driver requests'
+                }
+                emphasis={(openCorpCount ?? 0) > 0}
               />
             )}
             {canSupport && (
