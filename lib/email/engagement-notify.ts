@@ -2,6 +2,7 @@ import 'server-only';
 import { publicEnv } from '@/config/env';
 import { COMPANY } from '@/config/company';
 import { sendEmail } from '@/lib/email/resend';
+import { sendSMS } from '@/lib/notify/sms';
 import { brandedEmail } from '@/lib/email/templates/branded';
 
 /**
@@ -41,11 +42,13 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
       .single();
 
     let driverName = 'your driver';
+    let driverPhone: string | null = null;
     if (eng.driver_id) {
       const { data: dp } = await admin.from('driver_profiles').select('user_id').eq('id', eng.driver_id).single();
       if (dp?.user_id) {
-        const { data: du } = await admin.from('users').select('full_name').eq('id', dp.user_id).single();
+        const { data: du } = await admin.from('users').select('full_name, phone').eq('id', dp.user_id).single();
         driverName = du?.full_name ?? 'your driver';
+        driverPhone = du?.phone ?? null;
       }
     }
 
@@ -165,6 +168,15 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
     }
     if (opsSubject) {
       await sendEmail({ to: opsEmail(), subject: opsSubject, html: opsHtml });
+    }
+
+    // Driver alert on a new confirmed booking — SMS, since drivers may not
+    // check email (and some aren't very tech-savvy).
+    if (event === 'payment_confirmed' && driverPhone) {
+      await sendSMS({
+        to: driverPhone,
+        message: `Avanti: you have a new booking — ${type} on ${when}. Open the Avanti app to see the details.`,
+      });
     }
   } catch (err) {
     console.error('[engagement-notify] failed', engagementId, event, err);
