@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader, MiniStat, AdminSectionLabel } from '@/components/avanti/admin/page-header';
@@ -127,6 +128,14 @@ export default async function AdminCorporatePage() {
         backLabel="Admin"
         title="Corporate staffing"
         subtitle="Organisation driver requests — assign vetted drivers and set rates"
+        actions={
+          <Link
+            href="/admin/corporate/oversight"
+            className="inline-flex items-center rounded-xl border border-admin-border bg-admin-card px-4 py-2 font-body text-sm font-medium text-admin-text shadow-admin-sm transition-colors hover:bg-admin-bg"
+          >
+            Finance & payouts
+          </Link>
+        }
       />
 
       <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">

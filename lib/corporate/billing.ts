@@ -195,7 +195,7 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
 
     const { data: asgs } = await admin
       .from('corporate_assignments')
-      .select('id, driver_id, monthly_rate, overtime_hourly_rate, currency, start_date')
+      .select('id, driver_id, monthly_rate, driver_monthly_pay, overtime_hourly_rate, currency, start_date')
       .eq('organization_id', org.id)
       .eq('status', 'active')
       .lte('start_date', periodEndIso);
@@ -231,17 +231,35 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
     const nameByDriver = Object.fromEntries((profs ?? []).map((p: { id: string; user_id: string | null }) => [p.id, nameByUser[p.user_id ?? ''] ?? 'Driver']));
 
     const lineItems: Record<string, unknown>[] = [];
+    const payoutRows: Record<string, unknown>[] = [];
     let amount = 0;
     for (const a of asgs) {
       const present = presentCount[a.id] ?? 0;
-      const perDay = Number(a.monthly_rate) / CORP_WORKING_DAYS;
-      const base = Math.round(Math.min(present, CORP_WORKING_DAYS) * perDay);
+      const cappedDays = Math.min(present, CORP_WORKING_DAYS);
+      const base = Math.round(cappedDays * (Number(a.monthly_rate) / CORP_WORKING_DAYS));
       const hrs = otHours[a.id] ?? 0;
       const otAmt = Math.round(hrs * Number(a.overtime_hourly_rate));
       const total = base + otAmt;
       if (total <= 0) continue;
       lineItems.push({ assignment_id: a.id, driver: nameByDriver[a.driver_id] ?? 'Driver', present_days: present, base, overtime_hours: hrs, overtime: otAmt, total });
       amount += total;
+
+      // Driver's own payout for the same period (uses driver_monthly_pay;
+      // overtime is pass-through, so the same otAmt the org was billed).
+      const driverBase = Math.round(cappedDays * (Number(a.driver_monthly_pay) / CORP_WORKING_DAYS));
+      payoutRows.push({
+        assignment_id: a.id,
+        driver_id: a.driver_id,
+        organization_id: org.id,
+        period_month: periodMonthIso,
+        present_days: present,
+        base_amount: driverBase,
+        overtime_hours: hrs,
+        overtime_amount: otAmt,
+        total: driverBase + otAmt,
+        currency: a.currency ?? 'NGN',
+        status: 'pending',
+      });
     }
     if (amount <= 0) continue;
 
@@ -266,6 +284,13 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
     if (error || !inv) {
       console.error('[corporate-billing] monthly insert failed', org.id, error);
       continue;
+    }
+
+    // Queue the driver payouts for the same period (idempotent).
+    if (payoutRows.length > 0) {
+      await admin
+        .from('corporate_payouts')
+        .upsert(payoutRows, { onConflict: 'assignment_id,period_month', ignoreDuplicates: true });
     }
 
     const payerEmail = org.billing_email || `org${String(org.id).slice(0, 8)}@customer.avanti.ng`;
