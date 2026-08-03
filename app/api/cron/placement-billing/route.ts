@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { serverEnv } from '@/config/env';
 import { runPlacementBillingCycle } from '@/lib/permanent/billing';
+import { runCorporateMonthlyBilling } from '@/lib/corporate/billing';
 
 /**
- * Daily placement-billing cron.
+ * Daily recurring-billing cron (placements + corporate).
  *
  * Vercel Cron hits this (see vercel.json). When CRON_SECRET is set, Vercel
  * sends `Authorization: Bearer <CRON_SECRET>`; we reject anything else so the
@@ -23,8 +24,10 @@ export async function GET(req: Request) {
 
   try {
     const admin = createServiceRoleClient();
-    const result = await runPlacementBillingCycle(admin, new Date());
-    return NextResponse.json({ ok: true, ...result });
+    const now = new Date();
+    const placement = await runPlacementBillingCycle(admin, now);
+    const corporate = await runCorporateMonthlyBilling(admin, now);
+    return NextResponse.json({ ok: true, placement, corporate });
   } catch (err) {
     console.error('[cron placement-billing]', err);
     return NextResponse.json({ error: 'internal_error' }, { status: 500 });
