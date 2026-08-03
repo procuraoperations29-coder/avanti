@@ -3,6 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { verifyWebhookSignature, verifyTransaction, paystackConfigured } from '@/lib/payments/paystack';
 import { notifyEngagementEvent } from '@/lib/email/engagement-notify';
 import { sendPaymentReceipt } from '@/lib/email/payment-receipt';
+import { notifyCorporateInvoicePaid } from '@/lib/corporate/billing';
 
 function formatNaira(n: number): string {
   return `₦${Math.round(n).toLocaleString('en-NG')}`;
@@ -161,6 +162,39 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ ok: true, placementInvoice: plInvoice.id });
+  }
+
+  // ── Corporate invoices (references start with CORPINV-) ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: corpInv } = await (admin as any)
+    .from('corporate_invoices')
+    .select('id, organization_id, assignment_id, kind, amount, payment_status')
+    .eq('payment_reference', event.data.reference)
+    .maybeSingle();
+
+  if (corpInv) {
+    if (corpInv.payment_status === 'paid') {
+      return NextResponse.json({ ok: true, already: 'paid' });
+    }
+    const nowIso = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any)
+      .from('corporate_invoices')
+      .update({ status: 'paid', payment_status: 'paid', paid_at: nowIso, updated_at: nowIso })
+      .eq('id', corpInv.id);
+
+    // The upfront payment activates the assigned driver.
+    if (corpInv.kind === 'upfront' && corpInv.assignment_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (admin as any)
+        .from('corporate_assignments')
+        .update({ status: 'active', activated_at: nowIso, updated_at: nowIso })
+        .eq('id', corpInv.assignment_id)
+        .eq('status', 'pending');
+    }
+
+    await notifyCorporateInvoicePaid(admin, corpInv);
+    return NextResponse.json({ ok: true, corporateInvoice: corpInv.id });
   }
 
   return NextResponse.json({ ok: true, skipped: 'reference_not_found' });

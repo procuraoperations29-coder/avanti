@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { issueCorporateUpfrontInvoice } from '@/lib/corporate/billing';
 
 const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('review') }),
@@ -11,8 +12,8 @@ const bodySchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('assign'),
     driverId: z.string().uuid(),
-    dailyRate: z.number().positive().max(10_000_000),
-    driverDailyPay: z.number().min(0).max(10_000_000),
+    monthlyRate: z.number().positive().max(100_000_000),
+    driverMonthlyPay: z.number().min(0).max(100_000_000),
     overtimeHourlyRate: z.number().min(0).max(1_000_000).optional().default(0),
     positionTitle: z.string().max(120).nullable().optional(),
     startDate: z.string().min(1),
@@ -66,8 +67,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       return NextResponse.json({ ok: true, status });
     }
 
-    // Assign a driver to this request's org.
-    if (body.driverDailyPay > body.dailyRate) {
+    // Assign a driver to this request's org. Starts 'pending' — the 70%
+    // upfront invoice (below) activates it on payment.
+    if (body.driverMonthlyPay > body.monthlyRate) {
       return NextResponse.json({ error: 'pay_exceeds_rate' }, { status: 400 });
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -77,18 +79,34 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         organization_id: request.organization_id,
         driver_id: body.driverId,
         request_id: id,
-        daily_rate: body.dailyRate,
-        driver_daily_pay: body.driverDailyPay,
+        monthly_rate: body.monthlyRate,
+        driver_monthly_pay: body.driverMonthlyPay,
         overtime_hourly_rate: body.overtimeHourlyRate ?? 0,
         position_title: body.positionTitle ?? null,
         start_date: body.startDate,
-        status: 'active',
+        status: 'pending',
       })
-      .select('id')
+      .select('id, organization_id, monthly_rate, currency')
       .single();
     if (asgErr || !assignment) {
       return NextResponse.json({ error: 'assign_failed', message: asgErr?.message ?? 'unknown' }, { status: 500 });
     }
+
+    // Raise the 70% upfront invoice + email the org (doubles as the assignment
+    // notice). The driver activates when it's paid (Paystack webhook).
+    let driverName = 'your driver';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: dp } = await (admin as any)
+      .from('driver_profiles')
+      .select('user_id')
+      .eq('id', body.driverId)
+      .single();
+    if (dp?.user_id) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: du } = await (admin as any).from('users').select('full_name').eq('id', dp.user_id).single();
+      driverName = du?.full_name ?? 'your driver';
+    }
+    await issueCorporateUpfrontInvoice(admin, assignment, driverName);
 
     // Move the request forward (unless it's already been finalised).
     if (!['fulfilled', 'closed'].includes(request.status)) {

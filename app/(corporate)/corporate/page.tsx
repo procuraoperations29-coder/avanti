@@ -34,6 +34,9 @@ const REQUEST_STATUS: Record<string, string> = {
 function initialsOf(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
 }
+function formatNaira(n: number): string {
+  return `₦${Math.round(n).toLocaleString('en-NG')}`;
+}
 function fmtDate(d: string | null): string {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -82,15 +85,34 @@ export default async function CorporateHomePage() {
     );
   }
 
-  // Active assignments + driver bios
+  // Assignments (active + pending-payment) + driver bios
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: assignmentRows } = await (admin as any)
     .from('corporate_assignments')
-    .select('id, driver_id, daily_rate, currency, position_title, start_date, status')
+    .select('id, driver_id, monthly_rate, currency, position_title, start_date, status')
     .eq('organization_id', orgId)
-    .eq('status', 'active')
+    .in('status', ['active', 'pending'])
     .order('start_date', { ascending: false });
   const assignments = assignmentRows ?? [];
+
+  // Unpaid invoices (e.g. the 70% upfront) keyed by assignment, so pending
+  // drivers get a Pay-now button.
+  const assignmentIds = assignments.map((a: { id: string }) => a.id);
+  let invoiceByAssignment: Record<string, { amount: number; payment_link: string | null; status: string }> = {};
+  if (assignmentIds.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: invs } = await (admin as any)
+      .from('corporate_invoices')
+      .select('assignment_id, amount, payment_link, status, payment_status')
+      .in('assignment_id', assignmentIds)
+      .eq('payment_status', 'unpaid')
+      .in('status', ['pending', 'overdue']);
+    for (const inv of invs ?? []) {
+      if (inv.assignment_id && !invoiceByAssignment[inv.assignment_id]) {
+        invoiceByAssignment[inv.assignment_id] = { amount: Number(inv.amount ?? 0), payment_link: inv.payment_link, status: inv.status };
+      }
+    }
+  }
 
   const driverIds = Array.from(new Set(assignments.map((a: { driver_id: string }) => a.driver_id)));
   let bios: Record<string, { name: string; phone: string | null; tier: TierLevel; years: number | null; classes: string[] }> = {};
@@ -147,10 +169,10 @@ export default async function CorporateHomePage() {
         </Link>
       </div>
 
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <MiniStat label="Active drivers" value={assignments.length} />
+      <div className="mb-8 grid grid-cols-3 gap-3">
+        <MiniStat label="Active drivers" value={assignments.filter((a: { status: string }) => a.status === 'active').length} />
+        <MiniStat label="Awaiting payment" value={assignments.filter((a: { status: string }) => a.status === 'pending').length} />
         <MiniStat label="Open requests" value={openRequests} />
-        <MiniStat label="Total requested" value={requests.reduce((s: number, r: { number_of_drivers: number }) => s + r.number_of_drivers, 0)} />
       </div>
 
       {/* Roster */}
@@ -172,44 +194,71 @@ export default async function CorporateHomePage() {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {assignments.map((a: { id: string; driver_id: string; position_title: string | null; start_date: string }) => {
+            {assignments.map((a: { id: string; driver_id: string; position_title: string | null; start_date: string; status: string }) => {
               const bio = bios[a.driver_id];
+              const inv = invoiceByAssignment[a.id];
               return (
-                <div key={a.id} className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
-                  <div className="flex items-start gap-3">
-                    <Portrait initials={initialsOf(bio?.name ?? 'D')} size="md" tier={bio?.tier ?? 't1'} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="truncate font-display text-lg font-semibold tracking-tight text-admin-text">
-                          {bio?.name ?? 'Driver'}
-                        </h3>
-                        <TierBadge tier={bio?.tier ?? 't1'} size="sm" />
+                <div key={a.id} className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm transition-all hover:-translate-y-0.5 hover:shadow-admin">
+                  <Link href={`/corporate/drivers/${a.id}`} className="block p-5">
+                    <div className="flex items-start gap-3">
+                      <Portrait initials={initialsOf(bio?.name ?? 'D')} size="md" tier={bio?.tier ?? 't1'} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="truncate font-display text-lg font-semibold tracking-tight text-admin-text">
+                            {bio?.name ?? 'Driver'}
+                          </h3>
+                          <TierBadge tier={bio?.tier ?? 't1'} size="sm" />
+                          <span
+                            className={
+                              'inline-flex items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' +
+                              (a.status === 'active' ? 'bg-admin-green-soft text-admin-green-text' : 'bg-admin-amber-soft text-admin-amber-text')
+                            }
+                          >
+                            {a.status === 'active' ? 'Active' : 'Pending'}
+                          </span>
+                        </div>
+                        {a.position_title && (
+                          <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">{a.position_title}</div>
+                        )}
                       </div>
-                      {a.position_title && (
-                        <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">{a.position_title}</div>
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-1.5">
+                      {bio?.phone && (
+                        <span className="inline-flex items-center gap-1 rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
+                          <Phone className="h-3 w-3" strokeWidth={2} /> {bio.phone}
+                        </span>
+                      )}
+                      {(bio?.years ?? 0) > 0 && (
+                        <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
+                          <span className="font-semibold tabular-nums text-admin-text">{bio!.years}</span> yrs
+                        </span>
+                      )}
+                      {(bio?.classes ?? []).length > 0 && (
+                        <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] capitalize text-admin-text-muted">
+                          {(bio!.classes).join(', ')}
+                        </span>
+                      )}
+                      <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
+                        since {fmtDate(a.start_date)}
+                      </span>
+                    </div>
+                  </Link>
+                  {a.status === 'pending' && inv && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-admin-amber/20 bg-admin-amber-soft px-5 py-3">
+                      <div className="font-body text-[13px] text-admin-text">
+                        <span className="font-medium">Upfront (70%) due:</span>{' '}
+                        <span className="font-semibold tabular-nums">{formatNaira(inv.amount)}</span>
+                      </div>
+                      {inv.payment_link && (
+                        <a
+                          href={inv.payment_link}
+                          className="inline-flex items-center rounded-xl bg-admin-green px-3.5 py-2 font-body text-[13px] font-medium text-admin-navy-2 shadow-admin-sm transition-all hover:brightness-95"
+                        >
+                          Pay now
+                        </a>
                       )}
                     </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-1.5">
-                    {bio?.phone && (
-                      <span className="inline-flex items-center gap-1 rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
-                        <Phone className="h-3 w-3" strokeWidth={2} /> {bio.phone}
-                      </span>
-                    )}
-                    {(bio?.years ?? 0) > 0 && (
-                      <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
-                        <span className="font-semibold tabular-nums text-admin-text">{bio!.years}</span> yrs
-                      </span>
-                    )}
-                    {(bio?.classes ?? []).length > 0 && (
-                      <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] capitalize text-admin-text-muted">
-                        {(bio!.classes).join(', ')}
-                      </span>
-                    )}
-                    <span className="rounded-lg bg-admin-bg px-2 py-1 font-body text-[11px] text-admin-text-muted">
-                      since {fmtDate(a.start_date)}
-                    </span>
-                  </div>
+                  )}
                 </div>
               );
             })}

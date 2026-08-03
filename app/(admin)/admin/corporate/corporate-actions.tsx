@@ -24,7 +24,7 @@ export function CorporateActions({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [driverId, setDriverId] = useState('');
-  const [dailyRate, setDailyRate] = useState('');
+  const [monthlyRate, setMonthlyRate] = useState('');
   const [driverPay, setDriverPay] = useState('');
   const [otRate, setOtRate] = useState('');
   const [position, setPosition] = useState('');
@@ -46,7 +46,7 @@ export function CorporateActions({
       toast.success(successMsg);
       if (reset) {
         setDriverId('');
-        setDailyRate('');
+        setMonthlyRate('');
         setDriverPay('');
         setOtRate('');
         setPosition('');
@@ -84,11 +84,11 @@ export function CorporateActions({
             <Field label="Start date">
               <input type="date" className={inputClass} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
             </Field>
-            <Field label="Daily rate — org pays (₦)">
-              <input type="number" min={0} className={`${inputClass} tabular-nums`} value={dailyRate} onChange={(e) => setDailyRate(e.target.value)} placeholder="15000" />
+            <Field label="Monthly rate — org pays (₦)">
+              <input type="number" min={0} className={`${inputClass} tabular-nums`} value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} placeholder="250000" />
             </Field>
-            <Field label="Driver daily pay (₦)">
-              <input type="number" min={0} className={`${inputClass} tabular-nums`} value={driverPay} onChange={(e) => setDriverPay(e.target.value)} placeholder="11000" />
+            <Field label="Driver monthly pay (₦, private)">
+              <input type="number" min={0} className={`${inputClass} tabular-nums`} value={driverPay} onChange={(e) => setDriverPay(e.target.value)} placeholder="200000" />
             </Field>
             <Field label="Overtime / hour (₦, pass-through)">
               <input type="number" min={0} className={`${inputClass} tabular-nums`} value={otRate} onChange={(e) => setOtRate(e.target.value)} placeholder="2000" />
@@ -100,21 +100,21 @@ export function CorporateActions({
               disabled={busy}
               onClick={() => {
                 if (!driverId) return toast.error('Pick a driver.');
-                const dr = Number(dailyRate);
+                const dr = Number(monthlyRate);
                 const dp = Number(driverPay);
-                if (!dr || dr <= 0) return toast.error('Enter the daily rate.');
-                if (dp > dr) return toast.error("Driver pay can't exceed the daily rate.");
+                if (!dr || dr <= 0) return toast.error('Enter the monthly rate.');
+                if (dp > dr) return toast.error("Driver pay can't exceed the monthly rate.");
                 act(
                   {
                     action: 'assign',
                     driverId,
-                    dailyRate: dr,
-                    driverDailyPay: dp || 0,
+                    monthlyRate: dr,
+                    driverMonthlyPay: dp || 0,
                     overtimeHourlyRate: Number(otRate) || 0,
                     positionTitle: position.trim() || null,
                     startDate,
                   },
-                  'Driver assigned',
+                  'Driver assigned — upfront invoice sent',
                   true
                 );
               }}
