@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Users, Plus, ArrowRight, Phone } from 'lucide-react';
+import { Users, Plus, ArrowRight, Phone, ClipboardCheck } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminSectionLabel, MiniStat } from '@/components/avanti/admin/page-header';
@@ -160,13 +160,22 @@ export default async function CorporateHomePage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight text-admin-text">{org.name}</h1>
           <p className="mt-1 font-body text-[13px] text-admin-text-muted">Your dedicated drivers</p>
         </div>
-        <Link
-          href="/corporate/request"
-          className="inline-flex items-center gap-2 rounded-xl bg-admin-navy px-4 py-2.5 font-body text-sm font-medium text-white shadow-admin-sm transition-colors hover:bg-admin-navy-2"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2} />
-          Request drivers
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/corporate/attendance"
+            className="inline-flex items-center gap-2 rounded-xl border border-admin-border bg-admin-card px-4 py-2.5 font-body text-sm font-medium text-admin-text shadow-admin-sm transition-colors hover:bg-admin-bg"
+          >
+            <ClipboardCheck className="h-4 w-4" strokeWidth={2} />
+            Attendance
+          </Link>
+          <Link
+            href="/corporate/request"
+            className="inline-flex items-center gap-2 rounded-xl bg-admin-navy px-4 py-2.5 font-body text-sm font-medium text-white shadow-admin-sm transition-colors hover:bg-admin-navy-2"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2} />
+            Request drivers
+          </Link>
+        </div>
       </div>
 
       <div className="mb-8 grid grid-cols-3 gap-3">

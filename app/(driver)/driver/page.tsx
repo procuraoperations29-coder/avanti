@@ -10,6 +10,7 @@ import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { Portrait } from '@/components/avanti/portrait';
 import { DriverEngagementCard } from '@/components/driver/engagement-card';
 import { AvailabilityToggle } from '@/components/driver/availability-toggle';
+import { CorporateAttendanceCard } from '@/components/driver/corporate-attendance-card';
 import { statusLabel, type EngagementStatus } from '@/lib/engagement/driver-transitions';
 import { monthlySalaryForTier } from '@/lib/permanent/salary';
 
@@ -161,6 +162,32 @@ export default async function DriverHomePage() {
   const active = (activeRows ?? [])[0];
   const upcoming = upcomingRows ?? [];
 
+  // Corporate assignments (active) + today's attendance
+  const todayIso = new Date().toISOString().slice(0, 10);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: corpAssignmentRows } = await (admin as any)
+    .from('corporate_assignments')
+    .select('id, organization_id, position_title, status')
+    .eq('driver_id', profile.id)
+    .eq('status', 'active');
+  const corpAssignments = corpAssignmentRows ?? [];
+  let attendanceToday: Record<string, { sign_in_at: string | null; sign_out_at: string | null }> = {};
+  let corpOrgNames: Record<string, string> = {};
+  if (corpAssignments.length > 0) {
+    const corpIds = corpAssignments.map((a: { id: string }) => a.id);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: att } = await (admin as any)
+      .from('corporate_attendance')
+      .select('assignment_id, sign_in_at, sign_out_at')
+      .in('assignment_id', corpIds)
+      .eq('work_date', todayIso);
+    attendanceToday = Object.fromEntries((att ?? []).map((a: { assignment_id: string; sign_in_at: string | null; sign_out_at: string | null }) => [a.assignment_id, a]));
+    const corpOrgIds = Array.from(new Set(corpAssignments.map((a: { organization_id: string }) => a.organization_id)));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: corpOrgs } = await (admin as any).from('organizations').select('id, name').in('id', corpOrgIds);
+    corpOrgNames = Object.fromEntries((corpOrgs ?? []).map((o: { id: string; name: string }) => [o.id, o.name]));
+  }
+
   return (
     <PageShell>
       <div className="mx-auto max-w-4xl px-4 pt-8 sm:px-6 pb-20">
@@ -193,6 +220,25 @@ export default async function DriverHomePage() {
             monthlySalary={monthlySalary}
           />
         </div>
+
+        {/* Corporate work — daily sign in/out */}
+        {corpAssignments.length > 0 && (
+          <div className="mb-10">
+            <SectionLabel>Corporate work · today</SectionLabel>
+            <div className="mt-3 space-y-3">
+              {corpAssignments.map((a: { id: string; organization_id: string; position_title: string | null }) => (
+                <CorporateAttendanceCard
+                  key={a.id}
+                  assignmentId={a.id}
+                  orgName={corpOrgNames[a.organization_id] ?? 'Company'}
+                  position={a.position_title}
+                  signInAt={attendanceToday[a.id]?.sign_in_at ?? null}
+                  signOutAt={attendanceToday[a.id]?.sign_out_at ?? null}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Permanent placement */}
         {placements.length > 0 && (
