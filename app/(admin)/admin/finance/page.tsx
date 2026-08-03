@@ -200,6 +200,19 @@ export default async function AdminFinancePage() {
     .filter((t: { paid_at: string | null }) => t.paid_at && new Date(t.paid_at) >= monthStart)
     .reduce((s: number, t: { offer_price: number | null }) => s + Number(t.offer_price ?? 0), 0);
 
+  // Corporate invoices that have been paid (upfront + monthly), online or by
+  // manual bank-transfer confirmation.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: paidCorpData } = await (admin as any)
+    .from('corporate_invoices')
+    .select('amount, paid_at, payment_status')
+    .in('payment_status', ['paid', 'manual_paid']);
+  const paidCorp = paidCorpData ?? [];
+  const corpRevenueTotal = paidCorp.reduce((s: number, c: { amount: number | null }) => s + Number(c.amount ?? 0), 0);
+  const corpRevenueThisMonth = paidCorp
+    .filter((c: { paid_at: string | null }) => c.paid_at && new Date(c.paid_at) >= monthStart)
+    .reduce((s: number, c: { amount: number | null }) => s + Number(c.amount ?? 0), 0);
+
   return (
     <>
           <AdminPageHeader
@@ -261,7 +274,7 @@ export default async function AdminFinancePage() {
             </Link>
           </div>
 
-          <div className="mb-8 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="mb-8 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             <StatCard label="Gross this month" value={formatNaira(grossThisMonth)} subtext="Customer payments captured" />
             <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's revenue" />
             <StatCard
@@ -274,6 +287,17 @@ export default async function AdminFinancePage() {
               label="Trip revenue to date"
               value={formatNaira(tripRevenueTotal)}
               subtext={`${paidTrips.length} trip${paidTrips.length === 1 ? '' : 's'} paid`}
+            />
+            <StatCard
+              label="Corporate this month"
+              value={formatNaira(corpRevenueThisMonth)}
+              subtext="Org invoices paid"
+              tone={corpRevenueThisMonth > 0 ? 'accent' : 'default'}
+            />
+            <StatCard
+              label="Corporate to date"
+              value={formatNaira(corpRevenueTotal)}
+              subtext={`${paidCorp.length} invoice${paidCorp.length === 1 ? '' : 's'} paid`}
             />
           </div>
 

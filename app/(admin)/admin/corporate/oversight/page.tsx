@@ -3,6 +3,7 @@ import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader, MiniStat, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { PayoutMarkPaid } from './payout-actions';
+import { InvoiceMarkPaid } from './invoice-actions';
 
 function formatNaira(n: number): string {
   return `₦${Math.round(n).toLocaleString('en-NG')}`;
@@ -104,7 +105,7 @@ export default async function CorporateOversightPage() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
-            {invoices.map((i: { id: string; organization_id: string; kind: string; period_month: string | null; amount: number; status: string }) => (
+            {invoices.map((i: { id: string; organization_id: string; kind: string; period_month: string | null; amount: number; status: string; payment_status: string }) => (
               <div key={i.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-admin-border px-5 py-3.5 last:border-0">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -119,6 +120,7 @@ export default async function CorporateOversightPage() {
                   <span className={'inline-flex items-center rounded-full px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' + (INV_PILL[i.status] ?? 'bg-admin-bg text-admin-text-muted')}>
                     {i.status}
                   </span>
+                  {i.payment_status === 'unpaid' && canPay && <InvoiceMarkPaid invoiceId={i.id} kind={i.kind} />}
                 </div>
               </div>
             ))}
