@@ -168,7 +168,7 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: corpInv } = await (admin as any)
     .from('corporate_invoices')
-    .select('id, organization_id, assignment_id, kind, amount, payment_status')
+    .select('id, organization_id, assignment_ids, kind, amount, payment_status')
     .eq('payment_reference', event.data.reference)
     .maybeSingle();
 
@@ -183,13 +183,13 @@ export async function POST(req: Request) {
       .update({ status: 'paid', payment_status: 'paid', paid_at: nowIso, updated_at: nowIso })
       .eq('id', corpInv.id);
 
-    // The upfront payment activates the assigned driver.
-    if (corpInv.kind === 'upfront' && corpInv.assignment_id) {
+    // The upfront payment activates ALL the drivers this invoice covers.
+    if (corpInv.kind === 'upfront' && (corpInv.assignment_ids?.length ?? 0) > 0) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (admin as any)
         .from('corporate_assignments')
         .update({ status: 'active', activated_at: nowIso, updated_at: nowIso })
-        .eq('id', corpInv.assignment_id)
+        .in('id', corpInv.assignment_ids)
         .eq('status', 'pending');
     }
 

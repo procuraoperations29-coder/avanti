@@ -95,22 +95,26 @@ export default async function CorporateHomePage() {
     .order('start_date', { ascending: false });
   const assignments = assignmentRows ?? [];
 
-  // Unpaid invoices (e.g. the 70% upfront) keyed by assignment, so pending
-  // drivers get a Pay-now button.
-  const assignmentIds = assignments.map((a: { id: string }) => a.id);
-  let invoiceByAssignment: Record<string, { amount: number; payment_link: string | null; status: string }> = {};
-  if (assignmentIds.length > 0) {
+  // One outstanding aggregate invoice for the whole org (one link, all drivers).
+  let outstanding: { amount: number; payment_link: string | null; kind: string; drivers: number } | null = null;
+  {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: invs } = await (admin as any)
       .from('corporate_invoices')
-      .select('assignment_id, amount, payment_link, status, payment_status')
-      .in('assignment_id', assignmentIds)
+      .select('amount, payment_link, kind, status, payment_status, assignment_ids, created_at')
+      .eq('organization_id', orgId)
       .eq('payment_status', 'unpaid')
-      .in('status', ['pending', 'overdue']);
-    for (const inv of invs ?? []) {
-      if (inv.assignment_id && !invoiceByAssignment[inv.assignment_id]) {
-        invoiceByAssignment[inv.assignment_id] = { amount: Number(inv.amount ?? 0), payment_link: inv.payment_link, status: inv.status };
-      }
+      .in('status', ['pending', 'overdue'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const inv = (invs ?? [])[0];
+    if (inv) {
+      outstanding = {
+        amount: Number(inv.amount ?? 0),
+        payment_link: inv.payment_link,
+        kind: inv.kind,
+        drivers: (inv.assignment_ids ?? []).length,
+      };
     }
   }
 
@@ -184,6 +188,31 @@ export default async function CorporateHomePage() {
         <MiniStat label="Open requests" value={openRequests} />
       </div>
 
+      {/* One aggregate invoice for the whole org */}
+      {outstanding && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-admin-amber/30 bg-admin-amber-soft px-5 py-4 shadow-admin-sm">
+          <div>
+            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text">
+              {outstanding.kind === 'upfront' ? 'Upfront payment due' : 'Payment due'}
+            </div>
+            <div className="mt-0.5 font-body text-sm text-admin-text">
+              {outstanding.kind === 'upfront'
+                ? `70% upfront for ${outstanding.drivers} driver${outstanding.drivers === 1 ? '' : 's'}`
+                : 'Monthly invoice'}{' '}
+              · <span className="font-semibold tabular-nums">{formatNaira(outstanding.amount)}</span>
+            </div>
+          </div>
+          {outstanding.payment_link && (
+            <a
+              href={outstanding.payment_link}
+              className="inline-flex items-center rounded-xl bg-admin-green px-4 py-2 font-body text-sm font-medium text-admin-navy-2 shadow-admin-sm transition-all hover:brightness-95"
+            >
+              Pay now
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Roster */}
       <div className="mb-10">
         <AdminSectionLabel>Your drivers</AdminSectionLabel>
@@ -205,7 +234,6 @@ export default async function CorporateHomePage() {
           <div className="grid gap-3 sm:grid-cols-2">
             {assignments.map((a: { id: string; driver_id: string; position_title: string | null; start_date: string; status: string }) => {
               const bio = bios[a.driver_id];
-              const inv = invoiceByAssignment[a.id];
               return (
                 <div key={a.id} className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm transition-all hover:-translate-y-0.5 hover:shadow-admin">
                   <Link href={`/corporate/drivers/${a.id}`} className="block p-5">
@@ -252,22 +280,6 @@ export default async function CorporateHomePage() {
                       </span>
                     </div>
                   </Link>
-                  {a.status === 'pending' && inv && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-admin-amber/20 bg-admin-amber-soft px-5 py-3">
-                      <div className="font-body text-[13px] text-admin-text">
-                        <span className="font-medium">Upfront (70%) due:</span>{' '}
-                        <span className="font-semibold tabular-nums">{formatNaira(inv.amount)}</span>
-                      </div>
-                      {inv.payment_link && (
-                        <a
-                          href={inv.payment_link}
-                          className="inline-flex items-center rounded-xl bg-admin-green px-3.5 py-2 font-body text-[13px] font-medium text-admin-navy-2 shadow-admin-sm transition-all hover:brightness-95"
-                        >
-                          Pay now
-                        </a>
-                      )}
-                    </div>
-                  )}
                 </div>
               );
             })}

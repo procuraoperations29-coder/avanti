@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
-import { issueCorporateUpfrontInvoice } from '@/lib/corporate/billing';
+import { raiseCorporateUpfrontInvoice } from '@/lib/corporate/billing';
 
 const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('review') }),
   z.object({ action: z.literal('decline') }),
   z.object({ action: z.literal('fulfill') }),
   z.object({ action: z.literal('close') }),
+  z.object({ action: z.literal('raise_upfront') }),
   z.object({
     action: z.literal('assign'),
     driverId: z.string().uuid(),
@@ -55,6 +56,22 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
 
+    // Raise ONE aggregate upfront invoice for the org's pending, not-yet-invoiced
+    // drivers — a single link + email, not one per driver.
+    if (body.action === 'raise_upfront') {
+      const result = await raiseCorporateUpfrontInvoice(admin, request.organization_id);
+      if (!result.ok) {
+        const msg =
+          result.reason === 'already_invoiced'
+            ? 'All pending drivers are already on an upfront invoice.'
+            : result.reason === 'no_pending_assignments'
+              ? 'No pending drivers to invoice — assign drivers first.'
+              : 'Could not raise the invoice.';
+        return NextResponse.json({ error: result.reason ?? 'failed', message: msg }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true, drivers: result.drivers });
+    }
+
     if (body.action !== 'assign') {
       const status =
         body.action === 'review' ? 'reviewing' : body.action === 'decline' ? 'declined' : body.action === 'fulfill' ? 'fulfilled' : 'closed';
@@ -86,27 +103,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         start_date: body.startDate,
         status: 'pending',
       })
-      .select('id, organization_id, monthly_rate, currency')
+      .select('id')
       .single();
     if (asgErr || !assignment) {
       return NextResponse.json({ error: 'assign_failed', message: asgErr?.message ?? 'unknown' }, { status: 500 });
     }
 
-    // Raise the 70% upfront invoice + email the org (doubles as the assignment
-    // notice). The driver activates when it's paid (Paystack webhook).
-    let driverName = 'your driver';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: dp } = await (admin as any)
-      .from('driver_profiles')
-      .select('user_id')
-      .eq('id', body.driverId)
-      .single();
-    if (dp?.user_id) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: du } = await (admin as any).from('users').select('full_name').eq('id', dp.user_id).single();
-      driverName = du?.full_name ?? 'your driver';
-    }
-    await issueCorporateUpfrontInvoice(admin, assignment, driverName);
+    // No per-driver invoice here — ops raises ONE aggregate upfront invoice for
+    // all assigned drivers via the 'raise_upfront' action.
 
     // Move the request forward (unless it's already been finalised).
     if (!['fulfilled', 'closed'].includes(request.status)) {

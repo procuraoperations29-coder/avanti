@@ -6,10 +6,13 @@ import { sendEmail } from '@/lib/email/resend';
 import { brandedEmail } from '@/lib/email/templates/branded';
 
 /**
- * Corporate staffing billing. On assignment we raise a 70%-of-monthly upfront
- * invoice; the assignment stays 'pending' until it's paid (webhook activates
- * it). The invoice email doubles as the "driver assigned" notice to the org.
- * Attendance-based monthly invoicing arrives with Phase 2.
+ * Corporate staffing billing — aggregated per ORGANISATION (never per driver).
+ * One invoice + one payment link covers every driver it bills for.
+ *
+ *   Upfront: 70% of the COMBINED monthly rate of all pending, not-yet-invoiced
+ *   assignments. Paying it activates them all (webhook, via assignment_ids).
+ *
+ * Attendance-based monthly aggregate invoicing arrives in the next step.
  */
 export const CORP_UPFRONT_RATE = 0.7;
 
@@ -21,95 +24,82 @@ function fmtDate(d: Date): string {
 }
 
 /**
- * Called from the Paystack webhook when a corporate invoice is paid. Emails the
- * org a receipt (upfront payment activates the driver, handled by the webhook).
+ * Raise ONE upfront invoice for an org covering all pending assignments that
+ * aren't already on an upfront invoice. Emails the org a single link.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function notifyCorporateInvoicePaid(
+export async function raiseCorporateUpfrontInvoice(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   admin: any,
-  invoice: { organization_id: string; assignment_id: string | null; kind: string; amount: number }
-): Promise<void> {
+  orgId: string
+): Promise<{ ok: boolean; reason?: string; invoiceId?: string; drivers?: number }> {
   try {
-    const { data: org } = await admin
-      .from('organizations')
-      .select('name, billing_email')
-      .eq('id', invoice.organization_id)
-      .single();
-    if (!org?.billing_email) return;
+    // Pending assignments for the org.
+    const { data: pending } = await admin
+      .from('corporate_assignments')
+      .select('id, driver_id, monthly_rate, currency')
+      .eq('organization_id', orgId)
+      .eq('status', 'pending');
+    const pendingList = pending ?? [];
+    if (pendingList.length === 0) return { ok: false, reason: 'no_pending_assignments' };
 
-    let driverName = 'your driver';
-    if (invoice.assignment_id) {
-      const { data: asg } = await admin
-        .from('corporate_assignments')
-        .select('driver_id')
-        .eq('id', invoice.assignment_id)
-        .single();
-      if (asg?.driver_id) {
-        const { data: dp } = await admin.from('driver_profiles').select('user_id').eq('id', asg.driver_id).single();
-        if (dp?.user_id) {
-          const { data: du } = await admin.from('users').select('full_name').eq('id', dp.user_id).single();
-          driverName = du?.full_name ?? 'your driver';
-        }
-      }
+    // Which of those are already on an upfront invoice (unpaid or paid)?
+    const { data: existingInvoices } = await admin
+      .from('corporate_invoices')
+      .select('assignment_ids, status')
+      .eq('organization_id', orgId)
+      .eq('kind', 'upfront')
+      .in('status', ['pending', 'paid', 'overdue']);
+    const covered = new Set<string>();
+    for (const inv of existingInvoices ?? []) {
+      for (const aid of (inv.assignment_ids ?? []) as string[]) covered.add(aid);
     }
 
-    await sendEmail({
-      to: org.billing_email,
-      subject: 'Payment received — Avanti',
-      html: brandedEmail({
-        eyebrow: 'Payment received',
-        greeting: `Hi ${org.name},`,
-        headline: invoice.kind === 'upfront' ? `${driverName} is now active` : 'Payment received',
-        paragraphs: [
-          invoice.kind === 'upfront'
-            ? `We've received your upfront payment. ${driverName} is now active on your account.`
-            : "We've received your payment. Thank you.",
-        ],
-        summary: [{ label: 'Amount', value: formatNaira(Number(invoice.amount)) }],
-      }),
-    });
-  } catch (err) {
-    console.error('[corporate-billing] notifyCorporateInvoicePaid failed', invoice.organization_id, err);
-  }
-}
+    const toBill = pendingList.filter((a: { id: string }) => !covered.has(a.id));
+    if (toBill.length === 0) return { ok: false, reason: 'already_invoiced' };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function issueCorporateUpfrontInvoice(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  admin: any,
-  assignment: { id: string; organization_id: string; monthly_rate: number; currency?: string },
-  driverName: string
-): Promise<{ ok: boolean; invoiceId?: string }> {
-  try {
-    const amount = Math.round(Number(assignment.monthly_rate) * CORP_UPFRONT_RATE);
+    // Driver names for the line items.
+    const driverIds = Array.from(new Set(toBill.map((a: { driver_id: string }) => a.driver_id)));
+    const { data: profs } = await admin.from('driver_profiles').select('id, user_id').in('id', driverIds);
+    const uids = (profs ?? []).map((p: { user_id: string | null }) => p.user_id).filter(Boolean);
+    const { data: us } = uids.length ? await admin.from('users').select('id, full_name').in('id', uids) : { data: [] };
+    const nameByUser = Object.fromEntries((us ?? []).map((u: { id: string; full_name: string | null }) => [u.id, u.full_name ?? 'Driver']));
+    const nameByDriver = Object.fromEntries((profs ?? []).map((p: { id: string; user_id: string | null }) => [p.id, nameByUser[p.user_id ?? ''] ?? 'Driver']));
+
+    const currency = toBill[0]?.currency ?? 'NGN';
+    const lineItems = toBill.map((a: { id: string; driver_id: string; monthly_rate: number }) => ({
+      assignment_id: a.id,
+      driver: nameByDriver[a.driver_id] ?? 'Driver',
+      monthly_rate: Number(a.monthly_rate),
+      upfront: Math.round(Number(a.monthly_rate) * CORP_UPFRONT_RATE),
+    }));
+    const amount = lineItems.reduce((s: number, li: { upfront: number }) => s + li.upfront, 0);
+    const assignmentIds = toBill.map((a: { id: string }) => a.id);
     const due = new Date();
 
     const { data: inv, error } = await admin
       .from('corporate_invoices')
       .insert({
-        organization_id: assignment.organization_id,
-        assignment_id: assignment.id,
+        organization_id: orgId,
+        assignment_id: null,
+        assignment_ids: assignmentIds,
         kind: 'upfront',
         amount,
-        currency: assignment.currency ?? 'NGN',
+        currency,
         due_date: due.toISOString().slice(0, 10),
+        line_items: lineItems,
         status: 'pending',
         payment_status: 'unpaid',
       })
       .select('id')
       .single();
     if (error || !inv) {
-      console.error('[corporate-billing] upfront insert failed', assignment.id, error);
-      return { ok: false };
+      console.error('[corporate-billing] aggregate upfront insert failed', orgId, error);
+      return { ok: false, reason: 'insert_failed' };
     }
 
-    const { data: org } = await admin
-      .from('organizations')
-      .select('name, billing_email')
-      .eq('id', assignment.organization_id)
-      .single();
-    const payerEmail = org?.billing_email || `org${assignment.organization_id.slice(0, 8)}@customer.avanti.ng`;
+    const { data: org } = await admin.from('organizations').select('name, billing_email').eq('id', orgId).single();
+    const payerEmail = org?.billing_email || `org${orgId.slice(0, 8)}@customer.avanti.ng`;
 
     const reference = `CORPINV-${inv.id.slice(0, 8)}-${Date.now()}`;
     let payLink = '';
@@ -119,7 +109,7 @@ export async function issueCorporateUpfrontInvoice(
         amountNaira: amount,
         reference,
         callbackUrl: `${publicEnv.NEXT_PUBLIC_APP_URL ?? ''}/corporate`,
-        metadata: { type: 'corporate_invoice', corporateInvoiceId: inv.id, assignmentId: assignment.id },
+        metadata: { type: 'corporate_invoice', corporateInvoiceId: inv.id },
       });
       payLink = init.authorizationUrl;
     } catch (err) {
@@ -129,17 +119,17 @@ export async function issueCorporateUpfrontInvoice(
     if (payLink) {
       await sendEmail({
         to: payerEmail,
-        subject: `Avanti — activate ${driverName} with a 70% upfront payment`,
+        subject: `Avanti — activate ${toBill.length} driver${toBill.length === 1 ? '' : 's'} (70% upfront)`,
         html: brandedEmail({
-          eyebrow: 'Driver assigned',
+          eyebrow: 'Drivers assigned',
           greeting: `Hi ${org?.name ?? 'there'},`,
-          headline: `We've matched ${driverName} to your team`,
+          headline: `${toBill.length} driver${toBill.length === 1 ? '' : 's'} matched to your team`,
           paragraphs: [
-            `To activate ${driverName}, an upfront payment of 70% of the monthly rate is due. Your driver starts once this is received.`,
+            `To activate ${toBill.length === 1 ? 'this driver' : 'these drivers'}, an upfront payment of 70% of the combined monthly rate is due. They start once it's received.`,
           ],
           summary: [
-            { label: 'Driver', value: driverName },
-            { label: 'Upfront (70%)', value: formatNaira(amount) },
+            ...lineItems.map((li: { driver: string; upfront: number }) => ({ label: li.driver, value: formatNaira(li.upfront) })),
+            { label: 'Total upfront (70%)', value: formatNaira(amount) },
             { label: 'Due', value: fmtDate(due) },
           ],
           cta: { label: 'Pay securely online', url: payLink },
@@ -154,9 +144,52 @@ export async function issueCorporateUpfrontInvoice(
       .update({ payment_reference: reference, payment_link: payLink || null, invoice_sent_at: now, updated_at: now })
       .eq('id', inv.id);
 
-    return { ok: true, invoiceId: inv.id };
+    return { ok: true, invoiceId: inv.id, drivers: toBill.length };
   } catch (err) {
-    console.error('[corporate-billing] issueCorporateUpfrontInvoice failed', assignment.id, err);
-    return { ok: false };
+    console.error('[corporate-billing] raiseCorporateUpfrontInvoice failed', orgId, err);
+    return { ok: false, reason: 'exception' };
+  }
+}
+
+/**
+ * Called from the webhook when a corporate invoice is paid — emails the org a
+ * receipt. (Upfront payment also activates the covered drivers; that's done in
+ * the webhook via assignment_ids.)
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function notifyCorporateInvoicePaid(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  admin: any,
+  invoice: { organization_id: string; kind: string; amount: number; assignment_ids: string[] | null }
+): Promise<void> {
+  try {
+    const { data: org } = await admin
+      .from('organizations')
+      .select('name, billing_email')
+      .eq('id', invoice.organization_id)
+      .single();
+    if (!org?.billing_email) return;
+
+    const count = (invoice.assignment_ids ?? []).length;
+    await sendEmail({
+      to: org.billing_email,
+      subject: 'Payment received — Avanti',
+      html: brandedEmail({
+        eyebrow: 'Payment received',
+        greeting: `Hi ${org.name},`,
+        headline:
+          invoice.kind === 'upfront'
+            ? `${count} driver${count === 1 ? '' : 's'} now active`
+            : 'Payment received',
+        paragraphs: [
+          invoice.kind === 'upfront'
+            ? `We've received your upfront payment. ${count === 1 ? 'Your driver is' : 'Your drivers are'} now active on your account.`
+            : "We've received your payment. Thank you.",
+        ],
+        summary: [{ label: 'Amount', value: formatNaira(Number(invoice.amount)) }],
+      }),
+    });
+  } catch (err) {
+    console.error('[corporate-billing] notifyCorporateInvoicePaid failed', invoice.organization_id, err);
   }
 }

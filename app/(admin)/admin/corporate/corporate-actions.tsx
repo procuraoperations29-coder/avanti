@@ -123,6 +123,13 @@ export function CorporateActions({
               {busy ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} /> : <UserPlus className="h-4 w-4" strokeWidth={2} />}
               Assign driver
             </button>
+            <button
+              disabled={busy}
+              onClick={() => act({ action: 'raise_upfront' }, 'Aggregate upfront invoice sent to the org')}
+              className="inline-flex items-center gap-2 rounded-xl bg-admin-navy px-4 py-2 font-body text-sm font-medium text-white shadow-admin-sm transition-colors hover:bg-admin-navy-2 disabled:opacity-60"
+            >
+              Send upfront invoice
+            </button>
             {status === 'new' && (
               <button disabled={busy} onClick={() => act({ action: 'review' }, 'Marked reviewing')} className="font-body text-[12px] font-medium text-admin-text-muted hover:text-admin-text disabled:opacity-50">
                 Mark reviewing

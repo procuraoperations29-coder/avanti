@@ -49,17 +49,6 @@ export default async function CorporateDriverDetailPage({ params }: { params: Pr
   const name = du?.full_name ?? 'Driver';
   const tier = (profile?.verification_tier as TierLevel) ?? 't1';
 
-  // Unpaid invoice for this assignment (the 70% upfront)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: inv } = await (admin as any)
-    .from('corporate_invoices')
-    .select('amount, payment_link, status, payment_status, kind')
-    .eq('assignment_id', assignmentId)
-    .eq('payment_status', 'unpaid')
-    .in('status', ['pending', 'overdue'])
-    .order('created_at', { ascending: true })
-    .maybeSingle();
-
   return (
     <div className="mx-auto max-w-3xl px-4 pt-8 pb-20 sm:px-6">
       <Link
@@ -96,21 +85,19 @@ export default async function CorporateDriverDetailPage({ params }: { params: Pr
         </div>
       </div>
 
-      {/* Pending upfront */}
-      {a.status === 'pending' && inv && (
+      {/* Pending activation */}
+      {a.status === 'pending' && (
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-admin-amber/30 bg-admin-amber-soft px-5 py-4 shadow-admin-sm">
           <div className="font-body text-sm text-admin-text">
-            <span className="font-medium">Upfront (70%) due to activate this driver:</span>{' '}
-            <span className="font-semibold tabular-nums">{formatNaira(inv.amount)}</span>
+            <span className="font-medium">Awaiting activation.</span> This driver starts once the
+            upfront invoice is paid.
           </div>
-          {inv.payment_link && (
-            <a
-              href={inv.payment_link}
-              className="inline-flex items-center rounded-xl bg-admin-green px-4 py-2 font-body text-sm font-medium text-admin-navy-2 shadow-admin-sm transition-all hover:brightness-95"
-            >
-              Pay now
-            </a>
-          )}
+          <Link
+            href="/corporate"
+            className="inline-flex items-center rounded-xl bg-admin-green px-4 py-2 font-body text-sm font-medium text-admin-navy-2 shadow-admin-sm transition-all hover:brightness-95"
+          >
+            Go to payment
+          </Link>
         </div>
       )}
 
