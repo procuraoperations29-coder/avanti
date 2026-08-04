@@ -59,13 +59,17 @@ export async function POST(req: Request) {
       if (existing) {
         if (existing.sign_in_at) return NextResponse.json({ ok: true, already: 'signed_in' });
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (admin as any)
+        const { error: updErr } = await (admin as any)
           .from('corporate_attendance')
           .update({ sign_in_at: now, status: 'signed_in', updated_at: now })
           .eq('id', existing.id);
+        if (updErr) {
+          console.error('[driver corporate attendance] sign_in update failed', updErr);
+          return NextResponse.json({ error: 'write_failed', message: updErr.message }, { status: 500 });
+        }
       } else {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (admin as any).from('corporate_attendance').insert({
+        const { error: insErr } = await (admin as any).from('corporate_attendance').insert({
           assignment_id: body.assignmentId,
           driver_id: profile.id,
           organization_id: assignment.organization_id,
@@ -73,6 +77,10 @@ export async function POST(req: Request) {
           sign_in_at: now,
           status: 'signed_in',
         });
+        if (insErr) {
+          console.error('[driver corporate attendance] sign_in insert failed', insErr);
+          return NextResponse.json({ error: 'write_failed', message: insErr.message }, { status: 500 });
+        }
       }
       return NextResponse.json({ ok: true, status: 'signed_in' });
     }
@@ -83,10 +91,14 @@ export async function POST(req: Request) {
     }
     if (existing.sign_out_at) return NextResponse.json({ ok: true, already: 'signed_out' });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (admin as any)
+    const { error: outErr } = await (admin as any)
       .from('corporate_attendance')
       .update({ sign_out_at: now, status: 'present', updated_at: now })
       .eq('id', existing.id);
+    if (outErr) {
+      console.error('[driver corporate attendance] sign_out update failed', outErr);
+      return NextResponse.json({ error: 'write_failed', message: outErr.message }, { status: 500 });
+    }
     return NextResponse.json({ ok: true, status: 'present' });
   } catch (err) {
     if (err instanceof AuthError) return NextResponse.json({ error: err.code }, { status: err.status });

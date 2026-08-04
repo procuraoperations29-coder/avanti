@@ -156,18 +156,30 @@ export default async function AdminHomePage() {
         0
       );
 
-    // 6-month trend, bucketed by the month each engagement completed in.
+    // 6-month trend across EVERY revenue stream (not just engagements), so the
+    // graph matches the "Revenue this month" headline. Revenue is bucketed by
+    // when the money landed (captured/paid); payouts are what Avanti pays out
+    // (driver engagement payouts + corporate driver payouts).
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
     sixMonthsAgo.setDate(1);
     sixMonthsAgo.setHours(0, 0, 0, 0);
+    const sixIso = sixMonthsAgo.toISOString();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: trendRows } = await (admin as any)
-      .from('engagements')
-      .select('completed_at, customer_price_total, driver_payout_total')
-      .eq('status', 'completed')
-      .gte('completed_at', sixMonthsAgo.toISOString());
+    const [trendPay, trendTrip, trendCorp, trendPlac, trendEng, trendPayout] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('payments').select('gross_amount, captured_at').eq('status', 'captured').gte('captured_at', sixIso),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('trip_requests').select('offer_price, paid_at').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', sixIso),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('corporate_invoices').select('amount, paid_at').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', sixIso),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('placement_invoices').select('amount, paid_at').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', sixIso),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('engagements').select('completed_at, driver_payout_total').eq('status', 'completed').gte('completed_at', sixIso),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('corporate_payouts').select('period_month, total').gte('period_month', sixIso.slice(0, 10)),
+    ]);
 
     const buckets = new Map<string, { revenue: number; payouts: number }>();
     for (let i = 0; i < 6; i++) {
@@ -175,14 +187,18 @@ export default async function AdminHomePage() {
       d.setMonth(d.getMonth() + i);
       buckets.set(`${d.getFullYear()}-${d.getMonth()}`, { revenue: 0, payouts: 0 });
     }
-    for (const row of trendRows ?? []) {
-      const d = new Date(row.completed_at);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
-      const bucket = buckets.get(key);
-      if (!bucket) continue;
-      bucket.revenue += Number(row.customer_price_total ?? 0);
-      bucket.payouts += Number(row.driver_payout_total ?? 0) * 0.95;
-    }
+    const addTo = (dateStr: string | null, field: 'revenue' | 'payouts', amount: number) => {
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      const bucket = buckets.get(`${d.getFullYear()}-${d.getMonth()}`);
+      if (bucket) bucket[field] += amount;
+    };
+    for (const r of trendPay.data ?? []) addTo(r.captured_at, 'revenue', Number(r.gross_amount ?? 0));
+    for (const r of trendTrip.data ?? []) addTo(r.paid_at, 'revenue', Number(r.offer_price ?? 0));
+    for (const r of trendCorp.data ?? []) addTo(r.paid_at, 'revenue', Number(r.amount ?? 0));
+    for (const r of trendPlac.data ?? []) addTo(r.paid_at, 'revenue', Number(r.amount ?? 0));
+    for (const r of trendEng.data ?? []) addTo(r.completed_at, 'payouts', Number(r.driver_payout_total ?? 0) * 0.95);
+    for (const r of trendPayout.data ?? []) addTo(r.period_month, 'payouts', Number(r.total ?? 0));
     chartData = Array.from(buckets.entries()).map(([key, v]) => {
       const [year = 0, month = 0] = key.split('-').map(Number);
       const label = new Date(year, month, 1).toLocaleDateString('en-GB', { month: 'short' });

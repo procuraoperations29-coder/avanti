@@ -81,6 +81,19 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id);
       if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
+
+      // Declining or closing a request pulls its not-yet-paid (pending) drivers
+      // off the org's roster — otherwise a declined request's assigned drivers
+      // keep showing up on the corporate dashboard. Active (already-paid)
+      // drivers are left alone; money changed hands for those.
+      if (body.action === 'decline' || body.action === 'close') {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (admin as any)
+          .from('corporate_assignments')
+          .update({ status: 'ended', end_reason: `request ${status}`, updated_at: new Date().toISOString() })
+          .eq('request_id', id)
+          .eq('status', 'pending');
+      }
       return NextResponse.json({ ok: true, status });
     }
 

@@ -219,12 +219,22 @@ export default async function AdminFinancePage() {
     .from('placement_invoices')
     .select('amount, paid_at, payment_status')
     .in('payment_status', ['paid', 'manual_paid']);
-  const placementRevenueThisMonth = (paidPlacData ?? [])
+  const paidPlac = paidPlacData ?? [];
+  const placementRevenueThisMonth = paidPlac
     .filter((p: { paid_at: string | null }) => p.paid_at && new Date(p.paid_at) >= monthStart)
     .reduce((s: number, p: { amount: number | null }) => s + Number(p.amount ?? 0), 0);
+  const placementRevenueTotal = paidPlac.reduce((s: number, p: { amount: number | null }) => s + Number(p.amount ?? 0), 0);
 
   // The true headline: everything captured this month.
   const totalRevenueThisMonth = grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth + placementRevenueThisMonth;
+
+  // All-time revenue: every captured engagement payment + every paid trip,
+  // corporate, and placement invoice, across all time.
+  const grossTotal = captured.reduce(
+    (sum: number, p: { gross_amount: number | null }) => sum + Number(p.gross_amount ?? 0),
+    0
+  );
+  const totalRevenueAllTime = grossTotal + tripRevenueTotal + corpRevenueTotal + placementRevenueTotal;
 
   return (
     <>
@@ -293,6 +303,11 @@ export default async function AdminFinancePage() {
               value={formatNaira(totalRevenueThisMonth)}
               subtext="Everything captured — all streams"
               tone={totalRevenueThisMonth > 0 ? 'accent' : 'default'}
+            />
+            <StatCard
+              label="Total revenue (all time)"
+              value={formatNaira(totalRevenueAllTime)}
+              subtext="Every stream, since launch"
             />
             <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's margin on engagements" />
             <StatCard label="Engagements this month" value={formatNaira(grossThisMonth)} subtext="On-demand payments captured" />
