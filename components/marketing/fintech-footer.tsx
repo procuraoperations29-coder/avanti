@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Mail, Phone, Instagram } from 'lucide-react';
 import { Logo } from '@/components/brand/logo';
 
 export interface FintechFooterProps {
@@ -18,6 +19,20 @@ export function FintechFooter({ columns = [] }: FintechFooterProps) {
             <p className="mt-4 max-w-xs font-body text-sm leading-relaxed text-admin-text-muted">
               Nigeria&apos;s curated marketplace for professionally verified drivers. Book by the hour, day, or year.
             </p>
+            <div className="mt-5 space-y-2.5">
+              <a href="mailto:hello@avanti.com.ng" className="flex items-center gap-2.5 font-body text-sm text-admin-text transition-colors hover:text-admin-green-text">
+                <Mail className="h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
+                hello@avanti.com.ng
+              </a>
+              <a href="tel:+2348105122729" className="flex items-center gap-2.5 font-body text-sm text-admin-text transition-colors hover:text-admin-green-text">
+                <Phone className="h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
+                +234 810 512 2729
+              </a>
+              <a href="https://instagram.com/avanti_nigeria" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 font-body text-sm text-admin-text transition-colors hover:text-admin-green-text">
+                <Instagram className="h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
+                @avanti_nigeria
+              </a>
+            </div>
           </div>
           {columns.map((col) => (
             <div key={col.heading}>

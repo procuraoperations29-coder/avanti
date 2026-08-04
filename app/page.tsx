@@ -73,15 +73,7 @@ export default async function LandingPage() {
         <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 py-20 sm:px-6 md:grid-cols-2 md:py-28">
           {/* Copy */}
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-admin-border bg-admin-card px-3 py-1.5 shadow-admin-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-admin-green opacity-60" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-admin-green" />
-              </span>
-              <span className="font-body text-[12px] font-medium text-admin-text-muted">Verified drivers · live in Lagos</span>
-            </div>
-
-            <h1 className="mt-6 font-display text-5xl font-semibold leading-[1.05] tracking-tight text-admin-text md:text-6xl">
+            <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight text-admin-text md:text-6xl">
               Professional drivers,{' '}
               <span className="bg-gradient-to-r from-admin-green to-admin-green-text bg-clip-text text-transparent">personally verified.</span>
             </h1>
