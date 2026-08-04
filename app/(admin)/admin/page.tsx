@@ -93,17 +93,28 @@ export default async function AdminHomePage() {
   let chartData: { label: string; revenue: number; payouts: number; net: number }[] = [];
 
   if (canFinance) {
+    // Total revenue captured this month, across EVERY stream — engagement
+    // payments, out-of-state trips, corporate, and permanent placements. (The
+    // old figure only counted completed engagements, so a paid booking or any
+    // trip/corporate payment showed as ₦0.)
+    const since = monthStart.toISOString();
+    const [cap, trps, corp, plac] = await Promise.all([
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('payments').select('gross_amount').eq('status', 'captured').gte('captured_at', since),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('trip_requests').select('offer_price').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', since),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('corporate_invoices').select('amount').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', since),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (admin as any).from('placement_invoices').select('amount').in('payment_status', ['paid', 'manual_paid']).gte('paid_at', since),
+    ]);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: monthEngagements } = await (admin as any)
-      .from('engagements')
-      .select('customer_price_total')
-      .eq('status', 'completed')
-      .gte('completed_at', monthStart.toISOString());
-    revenueThisMonth = (monthEngagements ?? []).reduce(
-      (sum: number, e: { customer_price_total: number | null }) =>
-        sum + Number(e.customer_price_total ?? 0),
-      0
-    );
+    const sumRows = (rows: any[] | null, key: string) => (rows ?? []).reduce((s: number, r: Record<string, unknown>) => s + Number(r[key] ?? 0), 0);
+    revenueThisMonth =
+      sumRows(cap.data, 'gross_amount') +
+      sumRows(trps.data, 'offer_price') +
+      sumRows(corp.data, 'amount') +
+      sumRows(plac.data, 'amount');
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: unpaid } = await (admin as any)
@@ -247,7 +258,7 @@ export default async function AdminHomePage() {
             <>
               <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <KpiCard
-                  label="Gross revenue this month"
+                  label="Revenue this month"
                   value={formatNaira(revenueThisMonth)}
                   Icon={TrendingUp}
                   tone="green"

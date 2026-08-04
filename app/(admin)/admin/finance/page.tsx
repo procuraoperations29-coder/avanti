@@ -213,6 +213,19 @@ export default async function AdminFinancePage() {
     .filter((c: { paid_at: string | null }) => c.paid_at && new Date(c.paid_at) >= monthStart)
     .reduce((s: number, c: { amount: number | null }) => s + Number(c.amount ?? 0), 0);
 
+  // Permanent-placement invoices paid this month.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: paidPlacData } = await (admin as any)
+    .from('placement_invoices')
+    .select('amount, paid_at, payment_status')
+    .in('payment_status', ['paid', 'manual_paid']);
+  const placementRevenueThisMonth = (paidPlacData ?? [])
+    .filter((p: { paid_at: string | null }) => p.paid_at && new Date(p.paid_at) >= monthStart)
+    .reduce((s: number, p: { amount: number | null }) => s + Number(p.amount ?? 0), 0);
+
+  // The true headline: everything captured this month.
+  const totalRevenueThisMonth = grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth + placementRevenueThisMonth;
+
   return (
     <>
           <AdminPageHeader
@@ -275,30 +288,17 @@ export default async function AdminFinancePage() {
           </div>
 
           <div className="mb-8 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <StatCard label="Gross this month" value={formatNaira(grossThisMonth)} subtext="Customer payments captured" />
-            <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's revenue" />
             <StatCard
-              label="Trip revenue this month"
-              value={formatNaira(tripRevenueThisMonth)}
-              subtext="Out-of-state trips paid"
-              tone={tripRevenueThisMonth > 0 ? 'accent' : 'default'}
+              label="Total revenue this month"
+              value={formatNaira(totalRevenueThisMonth)}
+              subtext="Everything captured — all streams"
+              tone={totalRevenueThisMonth > 0 ? 'accent' : 'default'}
             />
-            <StatCard
-              label="Trip revenue to date"
-              value={formatNaira(tripRevenueTotal)}
-              subtext={`${paidTrips.length} trip${paidTrips.length === 1 ? '' : 's'} paid`}
-            />
-            <StatCard
-              label="Corporate this month"
-              value={formatNaira(corpRevenueThisMonth)}
-              subtext="Org invoices paid"
-              tone={corpRevenueThisMonth > 0 ? 'accent' : 'default'}
-            />
-            <StatCard
-              label="Corporate to date"
-              value={formatNaira(corpRevenueTotal)}
-              subtext={`${paidCorp.length} invoice${paidCorp.length === 1 ? '' : 's'} paid`}
-            />
+            <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's margin on engagements" />
+            <StatCard label="Engagements this month" value={formatNaira(grossThisMonth)} subtext="On-demand payments captured" />
+            <StatCard label="Trips this month" value={formatNaira(tripRevenueThisMonth)} subtext="Out-of-state trips paid" />
+            <StatCard label="Corporate this month" value={formatNaira(corpRevenueThisMonth)} subtext="Org invoices paid" />
+            <StatCard label="Placements this month" value={formatNaira(placementRevenueThisMonth)} subtext="Permanent placement invoices" />
           </div>
 
           <div>
