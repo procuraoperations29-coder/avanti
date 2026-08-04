@@ -111,7 +111,7 @@ export default async function LandingPage() {
               {[
                 { k: '4 tiers', v: 'Earned, not claimed' },
                 { k: '100%', v: 'Manually verified' },
-                { k: '15–20%', v: 'Fair commission' },
+                { k: 'Hourly', v: 'Or daily & yearly' },
               ].map((s) => (
                 <div key={s.k}>
                   <div className="font-display text-2xl font-semibold tracking-tight text-admin-text">{s.k}</div>
