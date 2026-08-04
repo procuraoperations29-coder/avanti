@@ -26,9 +26,12 @@ import { FintechFooter } from '@/components/marketing/fintech-footer';
  * Photos are Unsplash CDN URLs, centralised here so they're trivial to swap.
  */
 const PHOTOS = {
-  individuals: 'https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1100&q=70',
-  business: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=1100&q=70',
-  drivers: 'https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?auto=format&fit=crop&w=1100&q=70',
+  // Family enjoying time together — warm, family-oriented
+  individuals: 'https://images.unsplash.com/photo-1661490665324-7d67c67be2a3?auto=format&fit=crop&w=1100&q=70',
+  // Black executive in the office
+  business: 'https://images.unsplash.com/photo-1661962849568-792fc7c8542b?auto=format&fit=crop&w=1100&q=70',
+  // Young African professional in his car
+  drivers: 'https://images.unsplash.com/photo-1661420112855-6e2a805b5c9e?auto=format&fit=crop&w=1100&q=70',
   standards: 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1400&q=70',
 };
 
