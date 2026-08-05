@@ -197,7 +197,7 @@ export default async function AdminHomePage() {
     for (const r of trendTrip.data ?? []) addTo(r.paid_at, 'revenue', Number(r.offer_price ?? 0));
     for (const r of trendCorp.data ?? []) addTo(r.paid_at, 'revenue', Number(r.amount ?? 0));
     for (const r of trendPlac.data ?? []) addTo(r.paid_at, 'revenue', Number(r.amount ?? 0));
-    for (const r of trendEng.data ?? []) addTo(r.completed_at, 'payouts', Number(r.driver_payout_total ?? 0) * 0.95);
+    for (const r of trendEng.data ?? []) addTo(r.completed_at, 'payouts', Number(r.driver_payout_total ?? 0));
     for (const r of trendPayout.data ?? []) addTo(r.period_month, 'payouts', Number(r.total ?? 0));
     chartData = Array.from(buckets.entries()).map(([key, v]) => {
       const [year = 0, month = 0] = key.split('-').map(Number);

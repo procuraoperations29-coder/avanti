@@ -53,8 +53,8 @@ export default async function AvailabilityStepPage() {
             About the pay
           </div>
           <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
-            For on-demand work, you&apos;re paid weekly for the hours you drive
-            (5% withholding tax deducted). For permanent placement, we set your
+            For on-demand work, you&apos;re paid weekly for the hours you drive.
+            For permanent placement, we set your
             monthly salary based on your verified tier — between ₦175,000 and
             ₦325,000 depending on experience and background checks. Salary is
             fixed by us, not proposed by the customer.

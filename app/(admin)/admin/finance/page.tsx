@@ -236,6 +236,18 @@ export default async function AdminFinancePage() {
   );
   const totalRevenueAllTime = grossTotal + tripRevenueTotal + corpRevenueTotal + placementRevenueTotal;
 
+  // VAT (7.5%). All customer charges are treated as VAT-inclusive, so the VAT
+  // portion is the tax fraction of the gross amount — money Avanti collects on
+  // FIRS's behalf and must remit, NOT revenue. `vatOf` extracts it from a
+  // VAT-inclusive total.
+  const VAT_RATE = 0.075;
+  const vatOf = (grossInclusive: number) => Math.round((grossInclusive * VAT_RATE) / (1 + VAT_RATE));
+  const vatCollectedThisMonth = vatOf(totalRevenueThisMonth);
+  const vatCollectedAllTime = vatOf(totalRevenueAllTime);
+  // Commission shown ex-VAT: the engagement commission_total still bundles VAT,
+  // so strip the VAT portion of engagement gross out of it.
+  const commissionExVatThisMonth = commissionThisMonth - vatOf(grossThisMonth);
+
   return (
     <>
           <AdminPageHeader
@@ -309,7 +321,13 @@ export default async function AdminFinancePage() {
               value={formatNaira(totalRevenueAllTime)}
               subtext="Every stream, since launch"
             />
-            <StatCard label="Commission this month" value={formatNaira(commissionThisMonth)} subtext="Avanti's margin on engagements" />
+            <StatCard
+              label="VAT collected (to remit)"
+              value={formatNaira(vatCollectedThisMonth)}
+              subtext={`7.5%, all streams · ${formatNaira(vatCollectedAllTime)} all-time`}
+              tone={vatCollectedThisMonth > 0 ? 'accent' : 'default'}
+            />
+            <StatCard label="Commission this month" value={formatNaira(commissionExVatThisMonth)} subtext="Ex-VAT · on-demand engagements" />
             <StatCard label="Engagements this month" value={formatNaira(grossThisMonth)} subtext="On-demand payments captured" />
             <StatCard label="Trips this month" value={formatNaira(tripRevenueThisMonth)} subtext="Out-of-state trips paid" />
             <StatCard label="Corporate this month" value={formatNaira(corpRevenueThisMonth)} subtext="Org invoices paid" />
@@ -333,6 +351,7 @@ export default async function AdminFinancePage() {
                       <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Driver</th>
                       <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Customer</th>
                       <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Gross</th>
+                      <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">VAT (7.5%)</th>
                       <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Payout</th>
                       <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Commission</th>
                     </tr>
@@ -368,11 +387,14 @@ export default async function AdminFinancePage() {
                         <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                           {formatNaira(Number(e.customer_price_total ?? 0))}
                         </td>
+                        <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text-muted">
+                          {formatNaira(vatOf(Number(e.customer_price_total ?? 0)))}
+                        </td>
                         <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
                           {formatNaira(Number(e.driver_payout_total ?? 0))}
                         </td>
                         <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
-                          {formatNaira(Number(e.commission_total ?? 0))}
+                          {formatNaira(Number(e.commission_total ?? 0) - vatOf(Number(e.customer_price_total ?? 0)))}
                         </td>
                       </tr>
                     ))}

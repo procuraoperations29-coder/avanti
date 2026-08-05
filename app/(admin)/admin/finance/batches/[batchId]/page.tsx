@@ -119,27 +119,10 @@ export default async function PayoutBatchDetailPage({
         />
 
         {/* Totals */}
-        <div className="mb-10 grid gap-4 md:grid-cols-4">
-          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
-            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
-              Gross
-            </div>
-            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
-              {formatNaira(Number(batch.total_gross ?? 0))}
-            </div>
-          </div>
-          <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
-            <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
-              WHT (5%)
-            </div>
-            <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
-              {formatNaira(Number(batch.total_tax_withheld ?? 0))}
-            </div>
-            <div className="mt-1 font-body text-[11px] text-admin-text-muted">To remit to FIRS</div>
-          </div>
+        <div className="mb-10 grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-admin-green/30 bg-admin-green-soft p-5 shadow-admin-sm">
             <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">
-              Net paid to drivers
+              Paid to drivers
             </div>
             <div className="mt-2 font-display text-2xl font-semibold leading-none tabular-nums tracking-tight text-admin-text">
               {formatNaira(Number(batch.total_net ?? 0))}
@@ -204,16 +187,10 @@ export default async function PayoutBatchDetailPage({
                       Status
                     </th>
                     <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
-                      Gross
-                    </th>
-                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
-                      WHT
-                    </th>
-                    <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Penalties
                     </th>
                     <th className="px-4 py-3 text-right font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
-                      Net
+                      Amount
                     </th>
                     <th className="px-4 py-3 text-left font-body text-[11px] uppercase tracking-wide text-admin-text-muted">
                       Engagement
@@ -247,12 +224,6 @@ export default async function PayoutBatchDetailPage({
                         >
                           {item.status}
                         </span>
-                      </td>
-                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text">
-                        {formatNaira(Number(item.gross_payout))}
-                      </td>
-                      <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text-muted">
-                        {formatNaira(Number(item.tax_withheld_total))}
                       </td>
                       <td className="px-4 py-3 text-right font-body text-sm tabular-nums text-admin-text-muted">
                         {formatNaira(Number(item.penalties_deducted ?? 0))}

@@ -125,7 +125,7 @@ export default async function PayoutBatchesPage() {
               <div className="mt-3 font-body text-[12px] text-admin-text-muted">
                 {ready.length} engagement{ready.length === 1 ? '' : 's'} across{' '}
                 {readyDrivers} driver{readyDrivers === 1 ? '' : 's'}
-                {' · '}Gross, before 5% WHT
+                {' · '}Total paid to drivers
               </div>
             </div>
             <CreateBatchButton disabled={ready.length === 0} />

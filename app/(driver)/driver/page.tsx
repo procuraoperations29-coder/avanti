@@ -86,7 +86,7 @@ export default async function DriverHomePage() {
     (sum: number, e: { driver_payout_total: number | null }) =>
       sum + Number(e.driver_payout_total ?? 0),
     0
-  ) * 0.95;
+  );
   const totalPendingNet = pendingBatchedNet + unbatchedNet;
 
   const monthStart = new Date();
@@ -314,7 +314,7 @@ export default async function DriverHomePage() {
               <div className="mt-2 font-display text-3xl leading-none text-ink">
                 {formatNaira(thisMonthPaidNet)}
               </div>
-              <div className="mt-2 font-mono text-xs text-ink-muted">Net after tax</div>
+              <div className="mt-2 font-mono text-xs text-ink-muted">Paid to your bank</div>
             </div>
             <div>
               <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-brass">
@@ -327,7 +327,7 @@ export default async function DriverHomePage() {
             </div>
           </div>
           <div className="mt-6 border-t border-line pt-4 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            Amounts shown are net (after 5% withholding tax)
+            Amounts shown are paid in full to your bank
           </div>
         </div>
 

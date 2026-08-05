@@ -198,7 +198,7 @@ export default async function PermanentDossierPage({
                 'Placement fee paid once, at contract start',
                 "Replacement guarantee if the fit isn't right",
                 'Direct working relationship with the driver',
-                'Withholding tax handled by Avanti',
+                'Payroll and compliance handled by Avanti',
                 'You brief them, they work for you',
               ].map((line) => (
                 <li key={line} className="flex items-start gap-2">

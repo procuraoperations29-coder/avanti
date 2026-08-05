@@ -85,7 +85,7 @@ export default async function DriverEarningsPage() {
       sum + Number(e.driver_payout_total ?? 0),
     0
   );
-  const unbatchedNet = unbatchedGross * 0.95;
+  const unbatchedNet = unbatchedGross;
 
   // Batch info to backfill completed_at for older payouts
   const batchIds = Array.from(
@@ -123,7 +123,7 @@ export default async function DriverEarningsPage() {
         </h1>
 
         {/* Top-line stats */}
-        <div className="mb-10 grid gap-6 md:grid-cols-3">
+        <div className="mb-10 grid gap-6 md:grid-cols-2">
           <div className="border-2 border-green bg-green-soft p-6">
             <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-green">
               Paid to date
@@ -145,17 +145,6 @@ export default async function DriverEarningsPage() {
             <div className="mt-3 font-mono text-xs text-ink-muted">
               {pendingPayouts.length + unbatched.length} engagement
               {pendingPayouts.length + unbatched.length === 1 ? '' : 's'} awaiting payout
-            </div>
-          </div>
-          <div className="border border-line bg-paper-2 p-6">
-            <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-              Tax withheld
-            </div>
-            <div className="mt-3 font-display text-3xl leading-none text-ink">
-              {formatNaira(totalWht)}
-            </div>
-            <div className="mt-3 font-mono text-xs text-ink-muted">
-              5% WHT remitted to FIRS
             </div>
           </div>
         </div>
@@ -182,13 +171,7 @@ export default async function DriverEarningsPage() {
                       Status
                     </th>
                     <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Gross
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      WHT
-                    </th>
-                    <th className="px-4 py-3 text-right font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">
-                      Net
+                      Amount
                     </th>
                   </tr>
                 </thead>
@@ -231,12 +214,6 @@ export default async function DriverEarningsPage() {
                             {p.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-sm text-ink">
-                          {formatNaira(Number(p.gross_payout))}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-sm text-ink-muted">
-                          {formatNaira(Number(p.tax_withheld_total))}
-                        </td>
                         <td className="px-4 py-3 text-right font-mono text-sm font-semibold text-ink">
                           {formatNaira(Number(p.net_amount))}
                         </td>
@@ -254,9 +231,9 @@ export default async function DriverEarningsPage() {
             How payouts work
           </div>
           <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
-            Every completed engagement gets rolled into a weekly payout batch. We deduct
-            5% withholding tax (remitted to FIRS on your behalf) and transfer the net
-            amount to your bank account. Batches are typically released Fridays.
+            Every completed engagement gets rolled into a weekly payout batch and
+            transferred in full to your bank account. Batches are typically released
+            Fridays.
           </p>
         </div>
       </div>

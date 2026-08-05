@@ -188,7 +188,7 @@ export default async function DriverEngagementDetailPage({
             : `${engagement.currency} ${engagement.driver_payout_total ?? 0}`}
         </div>
         <div className="mt-2 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-          Gross, before withholding tax. Paid on next payout batch after completion.
+          Paid in full on the next payout batch after completion.
         </div>
       </div>
     </div>
