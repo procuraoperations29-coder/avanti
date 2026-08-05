@@ -19,10 +19,12 @@ import { placementInvoiceEmail } from '@/lib/email/templates/placement-invoice';
  */
 
 export const UPFRONT_RATE = 0.7;
+export const VAT_RATE = 0.075; // 7.5% VAT charged on the placement fee (the monthly salary is VAT-free)
 const REMIND_DAYS_BEFORE = 2;
 
+/** Upfront placement fee (70% of a month's salary) with 7.5% VAT on top. */
 export function computeUpfront(monthlySalary: number): number {
-  return Math.round(monthlySalary * UPFRONT_RATE);
+  return Math.round(monthlySalary * UPFRONT_RATE * (1 + VAT_RATE));
 }
 
 export function deriveBillingDay(startISO: string): number {

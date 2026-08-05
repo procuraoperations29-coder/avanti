@@ -57,7 +57,7 @@ export function placementInvoiceEmail(input: PlacementInvoiceEmailInput): { subj
               <td style="padding:20px;">
                 <div style="font-family:sans-serif;font-size:13px;color:#475569;">${esc(what)}</div>
                 <div style="font-family:sans-serif;font-size:32px;font-weight:700;color:#0f1629;margin-top:8px;letter-spacing:-.02em;">${esc(input.amountFormatted)}</div>
-                <div style="font-family:sans-serif;font-size:12px;color:#94a3b8;margin-top:4px;">Due ${esc(input.dueDateFormatted)} · paid to Avanti</div>
+                <div style="font-family:sans-serif;font-size:12px;color:#94a3b8;margin-top:4px;">Due ${esc(input.dueDateFormatted)} · paid to Avanti${input.kind === 'upfront' ? ' · incl. 7.5% VAT' : ''}</div>
               </td>
             </tr>
           </table>

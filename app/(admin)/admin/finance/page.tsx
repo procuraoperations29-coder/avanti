@@ -213,11 +213,13 @@ export default async function AdminFinancePage() {
     .filter((c: { paid_at: string | null }) => c.paid_at && new Date(c.paid_at) >= monthStart)
     .reduce((s: number, c: { amount: number | null }) => s + Number(c.amount ?? 0), 0);
 
-  // Permanent-placement invoices paid. Placements are VAT-free to the customer:
-  // upfront = 70% fee (all Avanti revenue); monthly = the driver's salary, from
-  // which Avanti keeps a 15% commission (driver gets 85%). So Avanti's real take
-  // is the full upfront fee plus 15% of each monthly salary — NOT the salary
-  // pass-through.
+  // VAT helper (7.5%, extracted from a VAT-inclusive total).
+  const VAT_RATE = 0.075;
+  const vatOf = (grossInclusive: number) => Math.round((grossInclusive * VAT_RATE) / (1 + VAT_RATE));
+
+  // Permanent-placement invoices paid. The monthly salary is VAT-free (a salary
+  // pass-through), but the upfront FEE carries 7.5% VAT. Avanti's real take is
+  // the ex-VAT fee (upfront) plus 15% of each monthly salary (driver keeps 85%).
   const PLACEMENT_COMMISSION = 0.15;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: paidPlacData } = await (admin as any)
@@ -226,11 +228,16 @@ export default async function AdminFinancePage() {
     .in('payment_status', ['paid', 'manual_paid']);
   const paidPlac = paidPlacData ?? [];
   const placementTake = (p: { amount: number | null; kind: string }) =>
-    p.kind === 'upfront' ? Number(p.amount ?? 0) : Math.round(Number(p.amount ?? 0) * PLACEMENT_COMMISSION);
-  const placementRevenueThisMonth = paidPlac
-    .filter((p: { paid_at: string | null }) => p.paid_at && new Date(p.paid_at) >= monthStart)
-    .reduce((s: number, p: { amount: number | null; kind: string }) => s + placementTake(p), 0);
+    p.kind === 'upfront'
+      ? Number(p.amount ?? 0) - vatOf(Number(p.amount ?? 0)) // ex-VAT fee
+      : Math.round(Number(p.amount ?? 0) * PLACEMENT_COMMISSION); // 15% of salary
+  const placementVat = (p: { amount: number | null; kind: string }) =>
+    p.kind === 'upfront' ? vatOf(Number(p.amount ?? 0)) : 0;
+  const inMonth = (p: { paid_at: string | null }) => Boolean(p.paid_at && new Date(p.paid_at) >= monthStart);
+  const placementRevenueThisMonth = paidPlac.filter(inMonth).reduce((s: number, p: { amount: number | null; kind: string }) => s + placementTake(p), 0);
   const placementRevenueTotal = paidPlac.reduce((s: number, p: { amount: number | null; kind: string }) => s + placementTake(p), 0);
+  const placementVatThisMonth = paidPlac.filter(inMonth).reduce((s: number, p: { amount: number | null; kind: string }) => s + placementVat(p), 0);
+  const placementVatTotal = paidPlac.reduce((s: number, p: { amount: number | null; kind: string }) => s + placementVat(p), 0);
 
   // The true headline: everything captured this month.
   const totalRevenueThisMonth = grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth + placementRevenueThisMonth;
@@ -243,16 +250,11 @@ export default async function AdminFinancePage() {
   );
   const totalRevenueAllTime = grossTotal + tripRevenueTotal + corpRevenueTotal + placementRevenueTotal;
 
-  // VAT (7.5%). All customer charges are treated as VAT-inclusive, so the VAT
-  // portion is the tax fraction of the gross amount — money Avanti collects on
-  // FIRS's behalf and must remit, NOT revenue. `vatOf` extracts it from a
-  // VAT-inclusive total.
-  const VAT_RATE = 0.075;
-  const vatOf = (grossInclusive: number) => Math.round((grossInclusive * VAT_RATE) / (1 + VAT_RATE));
-  // VAT applies to engagements, trips, and corporate invoices (all VAT-inclusive).
-  // Placements are excluded — the salary pass-through is not a VATable supply.
-  const vatCollectedThisMonth = vatOf(grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth);
-  const vatCollectedAllTime = vatOf(grossTotal + tripRevenueTotal + corpRevenueTotal);
+  // VAT collected (to remit): engagements, trips, and corporate invoices (all
+  // VAT-inclusive) plus the placement FEE's VAT. The monthly placement salary is
+  // excluded — a salary pass-through is not a VATable supply.
+  const vatCollectedThisMonth = vatOf(grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth) + placementVatThisMonth;
+  const vatCollectedAllTime = vatOf(grossTotal + tripRevenueTotal + corpRevenueTotal) + placementVatTotal;
   // Commission shown ex-VAT: the engagement commission_total still bundles VAT,
   // so strip the VAT portion of engagement gross out of it.
   const commissionExVatThisMonth = commissionThisMonth - vatOf(grossThisMonth);
@@ -340,7 +342,7 @@ export default async function AdminFinancePage() {
             <StatCard label="Engagements this month" value={formatNaira(grossThisMonth)} subtext="On-demand payments captured" />
             <StatCard label="Trips this month" value={formatNaira(tripRevenueThisMonth)} subtext="Out-of-state trips paid" />
             <StatCard label="Corporate this month" value={formatNaira(corpRevenueThisMonth)} subtext="Org invoices paid" />
-            <StatCard label="Placements this month" value={formatNaira(placementRevenueThisMonth)} subtext="Fee + 15% commission · no VAT" />
+            <StatCard label="Placements this month" value={formatNaira(placementRevenueThisMonth)} subtext="Fee (ex-VAT) + 15% of salary" />
           </div>
 
           <div>

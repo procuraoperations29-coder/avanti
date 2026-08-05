@@ -121,7 +121,7 @@ export default async function PermanentDossierPage({
                 <span className="font-medium tabular-nums text-admin-text">
                   {formatNaira(placementFee)}
                 </span>{' '}
-                at contract start
+                (incl. VAT) at contract start
               </div>
             </div>
           </div>
