@@ -20,13 +20,15 @@ export const MONTHLY_SALARY_BY_TIER: Record<TierLevel, number> = {
   t4: 325_000,
 };
 
+// Placement fee = 70% of a month's salary, paid once at contract start.
+// Kept in sync with UPFRONT_RATE in lib/permanent/billing.ts.
+export const PLACEMENT_FEE_RATE = 0.7;
 export const PLACEMENT_FEE_BY_TIER: Record<TierLevel, number> = {
-  // Placement fee = 1x monthly salary, paid at contract start
   t0: 0,
-  t1: 150_000,
-  t2: 175_000,
-  t3: 225_000,
-  t4: 325_000,
+  t1: Math.round(150_000 * PLACEMENT_FEE_RATE),
+  t2: Math.round(175_000 * PLACEMENT_FEE_RATE),
+  t3: Math.round(225_000 * PLACEMENT_FEE_RATE),
+  t4: Math.round(325_000 * PLACEMENT_FEE_RATE),
 };
 
 const POSITION_NAMES: Record<TierLevel, string> = {

@@ -213,17 +213,24 @@ export default async function AdminFinancePage() {
     .filter((c: { paid_at: string | null }) => c.paid_at && new Date(c.paid_at) >= monthStart)
     .reduce((s: number, c: { amount: number | null }) => s + Number(c.amount ?? 0), 0);
 
-  // Permanent-placement invoices paid this month.
+  // Permanent-placement invoices paid. Placements are VAT-free to the customer:
+  // upfront = 70% fee (all Avanti revenue); monthly = the driver's salary, from
+  // which Avanti keeps a 15% commission (driver gets 85%). So Avanti's real take
+  // is the full upfront fee plus 15% of each monthly salary — NOT the salary
+  // pass-through.
+  const PLACEMENT_COMMISSION = 0.15;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: paidPlacData } = await (admin as any)
     .from('placement_invoices')
-    .select('amount, paid_at, payment_status')
+    .select('amount, kind, paid_at, payment_status')
     .in('payment_status', ['paid', 'manual_paid']);
   const paidPlac = paidPlacData ?? [];
+  const placementTake = (p: { amount: number | null; kind: string }) =>
+    p.kind === 'upfront' ? Number(p.amount ?? 0) : Math.round(Number(p.amount ?? 0) * PLACEMENT_COMMISSION);
   const placementRevenueThisMonth = paidPlac
     .filter((p: { paid_at: string | null }) => p.paid_at && new Date(p.paid_at) >= monthStart)
-    .reduce((s: number, p: { amount: number | null }) => s + Number(p.amount ?? 0), 0);
-  const placementRevenueTotal = paidPlac.reduce((s: number, p: { amount: number | null }) => s + Number(p.amount ?? 0), 0);
+    .reduce((s: number, p: { amount: number | null; kind: string }) => s + placementTake(p), 0);
+  const placementRevenueTotal = paidPlac.reduce((s: number, p: { amount: number | null; kind: string }) => s + placementTake(p), 0);
 
   // The true headline: everything captured this month.
   const totalRevenueThisMonth = grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth + placementRevenueThisMonth;
@@ -242,8 +249,10 @@ export default async function AdminFinancePage() {
   // VAT-inclusive total.
   const VAT_RATE = 0.075;
   const vatOf = (grossInclusive: number) => Math.round((grossInclusive * VAT_RATE) / (1 + VAT_RATE));
-  const vatCollectedThisMonth = vatOf(totalRevenueThisMonth);
-  const vatCollectedAllTime = vatOf(totalRevenueAllTime);
+  // VAT applies to engagements, trips, and corporate invoices (all VAT-inclusive).
+  // Placements are excluded — the salary pass-through is not a VATable supply.
+  const vatCollectedThisMonth = vatOf(grossThisMonth + tripRevenueThisMonth + corpRevenueThisMonth);
+  const vatCollectedAllTime = vatOf(grossTotal + tripRevenueTotal + corpRevenueTotal);
   // Commission shown ex-VAT: the engagement commission_total still bundles VAT,
   // so strip the VAT portion of engagement gross out of it.
   const commissionExVatThisMonth = commissionThisMonth - vatOf(grossThisMonth);
@@ -331,7 +340,7 @@ export default async function AdminFinancePage() {
             <StatCard label="Engagements this month" value={formatNaira(grossThisMonth)} subtext="On-demand payments captured" />
             <StatCard label="Trips this month" value={formatNaira(tripRevenueThisMonth)} subtext="Out-of-state trips paid" />
             <StatCard label="Corporate this month" value={formatNaira(corpRevenueThisMonth)} subtext="Org invoices paid" />
-            <StatCard label="Placements this month" value={formatNaira(placementRevenueThisMonth)} subtext="Permanent placement invoices" />
+            <StatCard label="Placements this month" value={formatNaira(placementRevenueThisMonth)} subtext="Fee + 15% commission · no VAT" />
           </div>
 
           <div>
