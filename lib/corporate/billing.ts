@@ -15,6 +15,7 @@ import { brandedEmail } from '@/lib/email/templates/branded';
  * Attendance-based monthly aggregate invoicing arrives in the next step.
  */
 export const CORP_UPFRONT_RATE = 0.7;
+export const CORP_VAT_RATE = 0.075; // 7.5% VAT added on top of corporate invoices
 // A full working month for salary proration (Mon–Fri). Present days beyond this
 // are capped at the monthly rate; extra pay only comes via approved overtime.
 export const CORP_WORKING_DAYS = 22;
@@ -76,7 +77,9 @@ export async function raiseCorporateUpfrontInvoice(
       monthly_rate: Number(a.monthly_rate),
       upfront: Math.round(Number(a.monthly_rate) * CORP_UPFRONT_RATE),
     }));
-    const amount = lineItems.reduce((s: number, li: { upfront: number }) => s + li.upfront, 0);
+    const baseTotal = lineItems.reduce((s: number, li: { upfront: number }) => s + li.upfront, 0);
+    const vat = Math.round(baseTotal * CORP_VAT_RATE);
+    const amount = baseTotal + vat; // VAT-inclusive total the org pays
     const assignmentIds = toBill.map((a: { id: string }) => a.id);
     const due = new Date();
 
@@ -132,7 +135,9 @@ export async function raiseCorporateUpfrontInvoice(
           ],
           summary: [
             ...lineItems.map((li: { driver: string; upfront: number }) => ({ label: li.driver, value: formatNaira(li.upfront) })),
-            { label: 'Total upfront (70%)', value: formatNaira(amount) },
+            { label: 'Subtotal (70% upfront)', value: formatNaira(baseTotal) },
+            { label: 'VAT (7.5%)', value: formatNaira(vat) },
+            { label: 'Total due', value: formatNaira(amount) },
             { label: 'Due', value: fmtDate(due) },
           ],
           cta: { label: 'Pay securely online', url: payLink },
@@ -263,6 +268,11 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
     }
     if (amount <= 0) continue;
 
+    // VAT (7.5%) on top of the attendance-based subtotal.
+    const monthlyBase = amount;
+    const monthlyVat = Math.round(monthlyBase * CORP_VAT_RATE);
+    amount = monthlyBase + monthlyVat; // VAT-inclusive total the org pays
+
     const currency = asgs[0]?.currency ?? 'NGN';
     const { data: inv, error } = await admin
       .from('corporate_invoices')
@@ -325,6 +335,8 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
               label: `${li.driver} (${li.present_days}d${(li.overtime_hours as number) > 0 ? ` +${li.overtime_hours}h OT` : ''})`,
               value: formatNaira(li.total as number),
             })),
+            { label: 'Subtotal', value: formatNaira(monthlyBase) },
+            { label: 'VAT (7.5%)', value: formatNaira(monthlyVat) },
             { label: 'Total', value: formatNaira(amount) },
           ],
           cta: { label: 'Pay securely online', url: payLink },
