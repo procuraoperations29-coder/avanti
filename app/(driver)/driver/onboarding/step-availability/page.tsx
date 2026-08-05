@@ -54,10 +54,10 @@ export default async function AvailabilityStepPage() {
           </div>
           <p className="mt-2 max-w-2xl font-body text-sm leading-relaxed text-ink">
             For on-demand work, you&apos;re paid weekly for the hours you drive.
-            For permanent placement, we set your
-            monthly salary based on your verified tier — between ₦175,000 and
-            ₦325,000 depending on experience and background checks. Salary is
-            fixed by us, not proposed by the customer.
+            For permanent placement, we set the salary by your verified tier and
+            keep a 15% placement commission — so your take-home is between
+            ₦148,750 and ₦276,250 a month depending on experience and background
+            checks. Salary is fixed by us, not proposed by the customer.
           </p>
         </div>
 

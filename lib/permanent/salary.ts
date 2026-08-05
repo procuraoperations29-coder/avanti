@@ -39,8 +39,22 @@ const POSITION_NAMES: Record<TierLevel, string> = {
   t4: 'Executive',
 };
 
+// Avanti keeps a 15% commission out of the monthly salary the customer pays;
+// the driver receives the remaining 85%.
+export const PLACEMENT_COMMISSION_RATE = 0.15;
+
 export function monthlySalaryForTier(tier: TierLevel): number {
   return MONTHLY_SALARY_BY_TIER[tier] ?? 0;
+}
+
+/** The driver's take-home from a gross monthly salary, after the 15% commission. */
+export function driverTakeHome(grossSalary: number): number {
+  return Math.round(grossSalary * (1 - PLACEMENT_COMMISSION_RATE));
+}
+
+/** The driver's take-home monthly salary for a tier, after the 15% commission. */
+export function driverNetSalaryForTier(tier: TierLevel): number {
+  return driverTakeHome(monthlySalaryForTier(tier));
 }
 
 export function placementFeeForTier(tier: TierLevel): number {

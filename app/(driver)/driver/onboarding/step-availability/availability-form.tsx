@@ -147,7 +147,7 @@ export function AvailabilityStepForm({
           </p>
 
           <div className="mt-auto border-t border-brass/40 pt-4 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            ₦175,000–₦325,000/month · By tier
+            ₦148,750–₦276,250/month · take-home after 15%
           </div>
         </button>
       </div>

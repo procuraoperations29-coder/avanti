@@ -112,7 +112,7 @@ export function AvailabilityToggle({
           <div className="flex-1">
             <div className="font-body text-base text-ink">Permanent placement</div>
             <div className="mt-1 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-              {formatNaira(monthlySalary)}/month
+              {formatNaira(monthlySalary)}/month · take-home after 15%
             </div>
           </div>
         </button>
