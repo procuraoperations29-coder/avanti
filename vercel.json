@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/placement-billing",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/sanctions-recheck",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/compliance-report",
+      "schedule": "0 6 1 * *"
     }
   ]
 }

@@ -94,6 +94,8 @@ export default async function AdminCompliancePage() {
             {[
               { href: '/admin/compliance/disputes', title: 'Disputes', body: 'Triage, investigate, and resolve cases' },
               { href: '/admin/compliance/data-requests', title: 'Data requests', body: 'NDPR / GDPR access, portability, erasure' },
+              { href: '/admin/compliance/sanctions', title: 'Sanctions screening', body: 'Watchlist checks & re-check scheduling' },
+              { href: '/admin/compliance/reports', title: 'Reports', body: 'Compliance summary, emailed monthly' },
               { href: '/admin/audit', title: 'Audit log', body: 'Search & filter every recorded action' },
             ].map((t) => (
               <Link key={t.href} href={t.href} className="group rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm transition-shadow hover:shadow-admin">
