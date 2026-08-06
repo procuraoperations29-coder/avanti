@@ -90,6 +90,20 @@ export default async function AdminCompliancePage() {
             />
           </div>
 
+          <div className="mb-10 grid gap-3 sm:grid-cols-3">
+            {[
+              { href: '/admin/compliance/disputes', title: 'Disputes', body: 'Triage, investigate, and resolve cases' },
+              { href: '/admin/compliance/data-requests', title: 'Data requests', body: 'NDPR / GDPR access, portability, erasure' },
+              { href: '/admin/audit', title: 'Audit log', body: 'Search & filter every recorded action' },
+            ].map((t) => (
+              <Link key={t.href} href={t.href} className="group rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm transition-shadow hover:shadow-admin">
+                <div className="font-display text-[15px] font-semibold text-admin-text">{t.title}</div>
+                <p className="mt-1 font-body text-[13px] leading-relaxed text-admin-text-muted">{t.body}</p>
+                <span className="mt-3 inline-flex items-center gap-1 font-body text-[12px] font-medium text-admin-green-text transition-transform group-hover:translate-x-0.5">Open →</span>
+              </Link>
+            ))}
+          </div>
+
           <div className="mb-10">
             <AdminSectionLabel>Recent verification decisions</AdminSectionLabel>
             {decisionRows.length === 0 ? (
@@ -206,11 +220,11 @@ export default async function AdminCompliancePage() {
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-admin-text-muted" strokeWidth={1.75} />
             <div>
               <div className="font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
-                Coming
+                Next up
               </div>
               <p className="mt-1.5 max-w-2xl font-body text-sm leading-relaxed text-admin-text">
-                Full audit search and filtering. Dispute resolution workflow. Data-request
-                handling (GDPR/NDPR). Automated compliance reports. Sanctions re-check
+                Audit search, the dispute workflow, and NDPR/GDPR data requests are live
+                above. Still to come: automated compliance reports and sanctions re-check
                 scheduling.
               </p>
             </div>
