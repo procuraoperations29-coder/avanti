@@ -42,6 +42,13 @@ export default async function AdminHomePage() {
   const canSupport = user.roles.includes('admin_support') || isSuper;
   const canFinance = user.roles.includes('admin_finance') || isSuper;
   const canCompliance = user.roles.includes('admin_compliance') || isSuper;
+  const roleLabel = isSuper
+    ? 'Super admin'
+    : user.roles.includes('admin_finance') ? 'Finance'
+    : user.roles.includes('admin_compliance') ? 'Compliance'
+    : user.roles.includes('admin_verifier') ? 'Verification'
+    : user.roles.includes('admin_support') ? 'Support'
+    : 'Admin';
   const canPlacements = canSupport || canVerify;
 
   const supabase = await createClient();
@@ -215,11 +222,16 @@ export default async function AdminHomePage() {
     <>
           <div className="mb-7 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="font-display text-2xl font-semibold tracking-tight text-admin-text">
-                {greeting}, {user.email?.split('@')[0] ?? 'there'}
-              </h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="font-display text-2xl font-semibold tracking-tight text-admin-text">
+                  {greeting}, {user.email?.split('@')[0] ?? 'there'}
+                </h1>
+                <span className="inline-flex items-center rounded-full bg-admin-green-soft px-2.5 py-0.5 font-body text-[11px] font-semibold uppercase tracking-wide text-admin-green-text">
+                  {roleLabel}
+                </span>
+              </div>
               <p className="mt-1 font-body text-[13px] text-admin-text-muted">
-                Here&apos;s how Avanti is doing today.
+                Signed in as {roleLabel} · here&apos;s how Avanti is doing today.
               </p>
             </div>
             <div className="flex items-center gap-2">

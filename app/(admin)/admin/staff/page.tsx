@@ -52,6 +52,23 @@ export default async function AdminStaffPage() {
     );
   }
 
+  // Which staff have actually signed in at least once (activated the invite)?
+  // Until they do, they're "Invited", not "Active".
+  const activatedIds = new Set<string>();
+  let activationKnown = false;
+  try {
+    for (let page = 1; page <= 10; page++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (admin as any).auth.admin.listUsers({ page, perPage: 200 });
+      if (error || !data?.users?.length) break;
+      activationKnown = true;
+      for (const u of data.users) if (u.last_sign_in_at) activatedIds.add(u.id);
+      if (data.users.length < 200) break;
+    }
+  } catch {
+    activationKnown = false;
+  }
+
   // Anyone currently active in any admin role is a valid approver choice.
   const approvers = rows
     .filter((r: { revoked_at: string | null }) => !r.revoked_at)
@@ -132,6 +149,14 @@ export default async function AdminStaffPage() {
                         >
                           <span className="h-1.5 w-1.5 rounded-full bg-admin-amber" />
                           Suspended
+                        </span>
+                      ) : activationKnown && !activatedIds.has(r.user_id) ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-admin-amber-soft px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-amber-text"
+                          title="Invited — hasn't signed in yet"
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-admin-amber" />
+                          Invited
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-admin-green-soft px-2 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide text-admin-green-text">

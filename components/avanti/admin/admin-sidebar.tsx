@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,7 +16,10 @@ import {
   Tags,
   ScrollText,
   UsersRound,
+  Settings,
+  LogOut,
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from './theme-toggle';
 
 export type AdminNavKey =
@@ -41,6 +44,9 @@ interface AdminSidebarProps {
   canFinance: boolean;
   canCompliance: boolean;
   isSuper: boolean;
+  userName: string;
+  userEmail: string;
+  roleLabel: string;
 }
 
 type NavItem = { key: AdminNavKey; href: string; label: string; Icon: typeof LayoutDashboard };
@@ -82,8 +88,20 @@ export function AdminSidebar({
   canFinance,
   canCompliance,
   isSuper,
+  userName,
+  userEmail,
+  roleLabel,
 }: AdminSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function signOut() {
+    await fetch('/api/auth/signout', { method: 'POST' });
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  }
 
   const visible: Record<AdminNavKey, boolean> = {
     dashboard: true,
@@ -136,9 +154,30 @@ export function AdminSidebar({
         )}
       </div>
 
-      {/* Theme */}
+      {/* Account */}
       <div className="border-t border-white/5 p-3">
-        <ThemeToggle />
+        <div className="mb-1 px-3 py-1.5">
+          <div className="truncate font-body text-[13px] font-medium text-white">{userName}</div>
+          <div className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-admin-green">{roleLabel}</div>
+          <div className="truncate font-body text-[11px] text-admin-nav-text">{userEmail}</div>
+        </div>
+        <Link
+          href="/settings"
+          className="flex items-center gap-2.5 rounded-lg px-3 py-2 font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white"
+        >
+          <Settings className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
+          Settings
+        </Link>
+        <button
+          onClick={signOut}
+          className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white"
+        >
+          <LogOut className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
+          Sign out
+        </button>
+        <div className="mt-1">
+          <ThemeToggle />
+        </div>
       </div>
     </aside>
   );
