@@ -52,6 +52,15 @@ export default async function AdminUsersPage({
   const { q } = await searchParams;
   const admin = createServiceRoleClient();
 
+  // Internal staff are managed under Staff — never list them here.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: staffRows } = await (admin as any)
+    .from('user_roles')
+    .select('user_id')
+    .in('role', ['admin_verifier', 'admin_support', 'admin_finance', 'admin_compliance', 'super_admin'])
+    .is('revoked_at', null);
+  const staffIds = Array.from(new Set((staffRows ?? []).map((r: { user_id: string }) => r.user_id)));
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let query = (admin as any)
     .from('users')
@@ -63,6 +72,7 @@ export default async function AdminUsersPage({
     const term = q.trim().replace(/[%,]/g, '');
     query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
   }
+  if (staffIds.length > 0) query = query.not('id', 'in', `(${staffIds.join(',')})`);
 
   const { data: usersData } = await query;
   const users = usersData ?? [];

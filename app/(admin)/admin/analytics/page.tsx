@@ -30,8 +30,11 @@ export default async function AnalyticsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const A = admin as any;
 
+  // Exclude internal staff — analytics is about platform users, not employees.
+  const { data: staffRows } = await A.from('user_roles').select('user_id').in('role', ['admin_verifier', 'admin_support', 'admin_finance', 'admin_compliance', 'super_admin']).is('revoked_at', null);
+  const staffSet = new Set((staffRows ?? []).map((r: { user_id: string }) => r.user_id));
   const { data: usersData } = await A.from('users').select('id, created_at, country_code, deleted_at');
-  const users: { id: string; created_at: string; country_code: string | null; deleted_at: string | null }[] = usersData ?? [];
+  const users: { id: string; created_at: string; country_code: string | null; deleted_at: string | null }[] = (usersData ?? []).filter((u: { id: string }) => !staffSet.has(u.id));
 
   // ── User growth: last 12 weeks (new + cumulative) ──
   const now = new Date();

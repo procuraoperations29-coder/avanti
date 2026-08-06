@@ -13,10 +13,11 @@ const STATUS_PILL: Record<string, string> = {
   deleted: 'bg-red-500/12 text-red-600',
 };
 const ROLE_FILTERS = [
-  ['', 'All roles'], ['driver', 'Drivers'], ['individual_customer', 'Customers'],
-  ['corporate_admin', 'Corp admins'], ['admin_support', 'Support'], ['admin_finance', 'Finance'],
-  ['admin_verifier', 'Verifiers'], ['admin_compliance', 'Compliance'], ['super_admin', 'Super admins'],
+  ['', 'All'], ['driver', 'Drivers'], ['individual_customer', 'Customers'],
+  ['corporate_admin', 'Corp admins'], ['corporate_member', 'Corp members'],
 ] as const;
+// Internal staff (managed under Staff) are never listed here.
+const STAFF_ROLES = ['admin_verifier', 'admin_support', 'admin_finance', 'admin_compliance', 'super_admin'];
 const PAGE_SIZE = 50;
 
 function fmtDate(d: string | null): string {
@@ -40,6 +41,10 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const A = admin as any;
 
+  // Internal staff are excluded — they live under Staff, not Users.
+  const { data: staffRows } = await A.from('user_roles').select('user_id').in('role', STAFF_ROLES).is('revoked_at', null);
+  const staffIds = Array.from(new Set((staffRows ?? []).map((r: { user_id: string }) => r.user_id)));
+
   // If filtering by role, resolve matching user_ids first.
   let roleUserIds: string[] | null = null;
   if (roleFilter) {
@@ -54,6 +59,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
   if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%,phone.ilike.%${q}%`);
   if (statusFilter) query = query.eq('status', statusFilter);
   if (roleUserIds) query = query.in('id', roleUserIds);
+  if (staffIds.length > 0) query = query.not('id', 'in', `(${staffIds.join(',')})`);
   query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
   const { data: usersData, count } = await query;
   const users = usersData ?? [];
@@ -78,7 +84,7 @@ export default async function UsersAdminPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <AdminPageHeader backHref="/admin" backLabel="Admin" title="User management" subtitle="Search, grant roles, suspend, or remove users" />
+      <AdminPageHeader backHref="/admin" backLabel="Admin" title="User management" subtitle="Customers, drivers & organisations — staff are managed under Staff" />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MiniStat label="Matching users" value={total} />
