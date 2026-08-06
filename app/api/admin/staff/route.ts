@@ -2,6 +2,18 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sendEmail } from '@/lib/email/resend';
+import { brandedEmail } from '@/lib/email/templates/branded';
+
+/** What each department gets to see in the console — used in the invite email. */
+const ROLE_INFO: Record<string, { dept: string; access: string }> = {
+  admin_verifier: { dept: 'Verification', access: 'the driver verification queue — reviewing and approving driver applications.' },
+  admin_support: { dept: 'Support', access: 'users, trips, corporate accounts, and placements.' },
+  admin_finance: { dept: 'Finance', access: 'finance, payout batches, and rate-card / pricing management.' },
+  admin_compliance: { dept: 'Compliance', access: 'disputes, NDPR/GDPR data requests, sanctions screening, audit log, and compliance reports.' },
+  super_admin: { dept: 'Super admin', access: 'the entire admin console, including staff and user management.' },
+};
+const SIGN_IN_URL = 'https://www.avanti.com.ng/sign-in';
 
 /**
  * POST /api/admin/staff
@@ -116,7 +128,36 @@ export async function POST(req: Request) {
       );
     }
 
-    return NextResponse.json({ ok: true, userId: targetUserId });
+    // Invite email — tell them they've been added, what they can access, and how
+    // to sign in (passwordless: they enter this email and get a one-time code).
+    const info = ROLE_INFO[body.role] ?? { dept: body.role, access: 'the admin console.' };
+    let emailed = false;
+    try {
+      await sendEmail({
+        to: body.email,
+        subject: `You've been added to the Avanti admin console — ${info.dept}`,
+        html: brandedEmail({
+          eyebrow: 'Admin access',
+          greeting: `Hi ${body.fullName.split(' ')[0] || 'there'},`,
+          headline: `You're set up as ${info.dept}`,
+          paragraphs: [
+            `You've been added to the Avanti admin console as <strong>${info.dept}</strong>. Your role gives you access to ${info.access}`,
+            'To get in, click below and sign in with this email address — we’ll send you a one-time code. No password to set up.',
+          ],
+          summary: [
+            { label: 'Department', value: info.dept },
+            { label: 'Sign in with', value: body.email },
+          ],
+          cta: { label: 'Sign in to the console', url: SIGN_IN_URL },
+          footerNote: 'If you weren’t expecting this, you can ignore this email.',
+        }),
+      });
+      emailed = true;
+    } catch (err) {
+      console.error('[staff POST] invite email failed', err);
+    }
+
+    return NextResponse.json({ ok: true, userId: targetUserId, emailed });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.status });

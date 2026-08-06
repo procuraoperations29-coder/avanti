@@ -55,7 +55,7 @@ export function CreateStaffPanel({ approvers }: { approvers: Approver[] }) {
         toast.error(data.message ?? data.error ?? 'Could not create staff member');
         return;
       }
-      toast.success(`${fullName} added`);
+      toast.success(data.emailed ? `${fullName} added — invite sent to ${email}` : `${fullName} added (invite email failed — send them the sign-in link manually)`);
       setFullName('');
       setEmail('');
       setOpen(false);
