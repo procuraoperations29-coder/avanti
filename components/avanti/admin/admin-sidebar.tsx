@@ -13,6 +13,9 @@ import {
   UserCog,
   Route,
   Building2,
+  Tags,
+  ScrollText,
+  UsersRound,
 } from 'lucide-react';
 import { ThemeToggle } from './theme-toggle';
 
@@ -24,8 +27,11 @@ export type AdminNavKey =
   | 'corporate'
   | 'support'
   | 'finance'
+  | 'pricing'
   | 'compliance'
+  | 'audit'
   | 'system'
+  | 'users'
   | 'staff';
 
 interface AdminSidebarProps {
@@ -50,10 +56,13 @@ const OPERATIONS: NavItem[] = [
   { key: 'trips', href: '/admin/trips', label: 'Trips', Icon: Route },
   { key: 'corporate', href: '/admin/corporate', label: 'Corporate', Icon: Building2 },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
+  { key: 'pricing', href: '/admin/pricing', label: 'Pricing', Icon: Tags },
   { key: 'compliance', href: '/admin/compliance', label: 'Compliance', Icon: ShieldAlert },
+  { key: 'audit', href: '/admin/audit', label: 'Audit log', Icon: ScrollText },
 ];
 
 const SUPER: NavItem[] = [
+  { key: 'users', href: '/admin/users', label: 'User admin', Icon: UsersRound },
   { key: 'system', href: '/admin/system', label: 'System', Icon: LayoutGrid },
   { key: 'staff', href: '/admin/staff', label: 'Staff', Icon: UserCog },
 ];
@@ -84,8 +93,11 @@ export function AdminSidebar({
     corporate: canSupport || canVerify || canFinance,
     support: canSupport,
     finance: canFinance,
+    pricing: canFinance,
     compliance: canCompliance,
+    audit: canCompliance,
     system: isSuper,
+    users: isSuper,
     staff: isSuper,
   };
 
