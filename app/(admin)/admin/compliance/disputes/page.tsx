@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader, MiniStat } from '@/components/avanti/admin/page-header';
+import { RaiseDispute } from './raise-dispute';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,9 +41,35 @@ export default async function DisputesPage({ searchParams }: { searchParams: Pro
 
   const { count: openCount } = await A.from('disputes').select('id', { count: 'exact', head: true }).not('status', 'in', `(${RESOLVED.join(',')})`);
 
+  // Support raises cases; build a recent-engagements picker for the intake form.
+  const canRaise = user.roles.includes('admin_support') || user.roles.includes('super_admin');
+  let engagementOptions: { id: string; label: string }[] = [];
+  if (canRaise) {
+    const { data: engs } = await A.from('engagements')
+      .select('id, customer_user_id, driver_id, engagement_type, created_at')
+      .order('created_at', { ascending: false }).limit(40);
+    const custIds = Array.from(new Set((engs ?? []).map((e: { customer_user_id: string | null }) => e.customer_user_id).filter(Boolean)));
+    const drvIds = Array.from(new Set((engs ?? []).map((e: { driver_id: string | null }) => e.driver_id).filter(Boolean)));
+    const { data: custs } = custIds.length ? await A.from('users').select('id, full_name').in('id', custIds) : { data: [] };
+    const custName: Record<string, string> = Object.fromEntries((custs ?? []).map((u: { id: string; full_name: string | null }) => [u.id, u.full_name ?? 'Customer']));
+    const { data: dps } = drvIds.length ? await A.from('driver_profiles').select('id, user_id').in('id', drvIds) : { data: [] };
+    const dpUser: Record<string, string> = Object.fromEntries((dps ?? []).map((d: { id: string; user_id: string | null }) => [d.id, d.user_id]).filter((x: [string, string | null]) => x[1]));
+    const drvUserIds = Object.values(dpUser);
+    const { data: drvUsers } = drvUserIds.length ? await A.from('users').select('id, full_name').in('id', drvUserIds) : { data: [] };
+    const drvNameByUser: Record<string, string> = Object.fromEntries((drvUsers ?? []).map((u: { id: string; full_name: string | null }) => [u.id, u.full_name ?? 'Driver']));
+    engagementOptions = (engs ?? []).map((e: { id: string; customer_user_id: string | null; driver_id: string | null; engagement_type: string | null; created_at: string }) => {
+      const c = e.customer_user_id ? custName[e.customer_user_id] ?? 'Customer' : 'Org';
+      const d = e.driver_id ? drvNameByUser[dpUser[e.driver_id] ?? ''] ?? 'Driver' : '—';
+      const dt = new Date(e.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return { id: e.id, label: `${c} ↔ ${d} · ${(e.engagement_type ?? '').replace(/_/g, ' ')} · ${dt}` };
+    });
+  }
+
   return (
     <>
-      <AdminPageHeader backHref="/admin/compliance" backLabel="Compliance" title="Disputes" subtitle="Triage, investigate, and resolve cases" />
+      <AdminPageHeader backHref="/admin/compliance" backLabel="Compliance" title="Disputes" subtitle="Support raises cases; Compliance resolves them" />
+
+      {canRaise && <div className="mb-5"><RaiseDispute engagements={engagementOptions} /></div>}
 
       <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MiniStat label="Open cases" value={openCount ?? 0} />

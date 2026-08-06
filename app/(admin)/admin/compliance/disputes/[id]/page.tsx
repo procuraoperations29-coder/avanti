@@ -83,7 +83,7 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
 
-        <DisputeActions disputeId={id} currentStatus={d.status} parties={parties} />
+        <DisputeActions disputeId={id} currentStatus={d.status} parties={parties} canResolve={user.roles.includes('admin_compliance') || user.roles.includes('super_admin')} />
       </div>
     </>
   );

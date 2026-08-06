@@ -11,7 +11,7 @@ const RESOLVED = ['resolved_by_agreement', 'resolved_by_decision', 'withdrawn'];
 
 interface Party { id: string; name: string; label: string }
 
-export function DisputeActions({ disputeId, currentStatus, parties }: { disputeId: string; currentStatus: string; parties: Party[] }) {
+export function DisputeActions({ disputeId, currentStatus, parties, canResolve }: { disputeId: string; currentStatus: string; parties: Party[]; canResolve: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState('');
   const [status, setStatus] = useState(currentStatus);
@@ -43,7 +43,14 @@ export function DisputeActions({ disputeId, currentStatus, parties }: { disputeI
 
   return (
     <div className="space-y-4">
+      {!canResolve && (
+        <div className="rounded-2xl border border-admin-border bg-admin-bg px-5 py-3 font-body text-[13px] text-admin-text-muted">
+          You can add case notes here. <span className="text-admin-text">Compliance</span> changes status and records the outcome.
+        </div>
+      )}
+
       {/* Status */}
+      {canResolve && (
       <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
         <div className="mb-3 font-body text-[13px] font-semibold text-admin-text">Workflow status</div>
         <div className="flex flex-wrap items-end gap-3">
@@ -58,6 +65,7 @@ export function DisputeActions({ disputeId, currentStatus, parties }: { disputeI
           </button>
         </div>
       </div>
+      )}
 
       {/* Internal note / message */}
       <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
@@ -71,6 +79,7 @@ export function DisputeActions({ disputeId, currentStatus, parties }: { disputeI
       </div>
 
       {/* Outcome */}
+      {canResolve && (
       <div className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
         <div className="mb-3 font-body text-[13px] font-semibold text-admin-text">Record outcome &amp; resolve</div>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -106,6 +115,7 @@ export function DisputeActions({ disputeId, currentStatus, parties }: { disputeI
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

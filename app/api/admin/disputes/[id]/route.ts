@@ -20,14 +20,18 @@ const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('record_outcome'), kind: z.enum(OUTCOMES), amount: z.number().min(0).max(100_000_000).nullable().optional(), notes: z.string().max(2000).optional(), targetUserId: z.string().uuid().nullable().optional() }),
 ]);
 
-function canAct(roles: string[]): boolean {
+function canView(roles: string[]): boolean {
   return roles.includes('admin_compliance') || roles.includes('admin_support') || roles.includes('super_admin');
+}
+function canResolve(roles: string[]): boolean {
+  // Compliance adjudicates; support raises + adds context only.
+  return roles.includes('admin_compliance') || roles.includes('super_admin');
 }
 
 export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const user = await requireAuthUser();
-    if (!canAct(user.roles)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    if (!canView(user.roles)) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     const { id } = await ctx.params;
 
     let body: z.infer<typeof bodySchema>;
@@ -35,6 +39,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       body = bodySchema.parse(await req.json());
     } catch (err) {
       return NextResponse.json({ error: 'invalid_body', details: String(err) }, { status: 400 });
+    }
+
+    // Status changes and outcomes are Compliance-only; notes are open to support too.
+    if ((body.action === 'set_status' || body.action === 'record_outcome') && !canResolve(user.roles)) {
+      return NextResponse.json({ error: 'forbidden', message: 'Only Compliance can change status or record an outcome.' }, { status: 403 });
     }
 
     const admin = createServiceRoleClient();
