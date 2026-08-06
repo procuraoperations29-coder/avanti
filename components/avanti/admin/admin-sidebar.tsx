@@ -18,12 +18,14 @@ import {
   UsersRound,
   Settings,
   LogOut,
+  TrendingUp,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { ThemeToggle } from './theme-toggle';
 
 export type AdminNavKey =
   | 'dashboard'
+  | 'analytics'
   | 'verification'
   | 'placements'
   | 'trips'
@@ -53,6 +55,7 @@ type NavItem = { key: AdminNavKey; href: string; label: string; Icon: typeof Lay
 
 const OVERVIEW: NavItem[] = [
   { key: 'dashboard', href: '/admin', label: 'Dashboard', Icon: LayoutDashboard },
+  { key: 'analytics', href: '/admin/analytics', label: 'Analytics', Icon: TrendingUp },
   { key: 'verification', href: '/admin/verification', label: 'Verification', Icon: ClipboardList },
   { key: 'placements', href: '/admin/placements', label: 'Placements', Icon: UserCheck },
 ];
@@ -105,6 +108,7 @@ export function AdminSidebar({
 
   const visible: Record<AdminNavKey, boolean> = {
     dashboard: true,
+    analytics: canFinance || canSupport || isSuper,
     verification: canVerify,
     placements: canPlacements,
     trips: canSupport || canVerify || canFinance,

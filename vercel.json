@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/compliance-report",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/anomaly-alerts",
+      "schedule": "30 7 * * *"
     }
   ]
 }
