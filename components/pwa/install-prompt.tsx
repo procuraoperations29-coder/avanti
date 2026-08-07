@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { X, Download, Share } from 'lucide-react';
+import { getDeviceId, detectPlatform } from './install-tracker';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -49,6 +50,12 @@ export function InstallPrompt() {
     const onInstalled = () => {
       setShow(false);
       try { localStorage.setItem(DISMISS_KEY, '1'); } catch { /* ignore */ }
+      // Record the install moment.
+      fetch('/api/pwa/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: getDeviceId(), platform: detectPlatform(), source: 'appinstalled', standalone: true }),
+      }).catch(() => {});
     };
     window.addEventListener('beforeinstallprompt', onPrompt);
     window.addEventListener('appinstalled', onInstalled);

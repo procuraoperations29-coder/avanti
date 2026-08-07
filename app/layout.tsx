@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/sonner';
 import { RegisterSW } from '@/components/pwa/register-sw';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
+import { InstallTracker } from '@/components/pwa/install-tracker';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,8 +14,11 @@ export const metadata: Metadata = {
   manifest: '/manifest.webmanifest',
   appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Avanti' },
   icons: {
-    icon: '/icon-192.png',
-    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -51,6 +55,7 @@ export default function RootLayout({
         <Toaster />
         <RegisterSW />
         <InstallPrompt />
+        <InstallTracker />
       </body>
     </html>
   );

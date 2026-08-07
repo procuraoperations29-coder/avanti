@@ -89,6 +89,35 @@ export default async function AnalyticsPage() {
   const totalUsers = users.filter((u) => !u.deleted_at).length;
   const last30 = users.filter((u) => new Date(u.created_at).getTime() >= now.getTime() - 30 * 86400000).length;
 
+  // PWA installs (table is added by a migration — degrade gracefully if absent).
+  const installs = { total: 0, ios: 0, android: 0, desktop: 0, other: 0, last30: 0 };
+  let installsKnown = true;
+  let recentInstalls: { name: string; platform: string; when: string }[] = [];
+  try {
+    const { data: rows, error } = await A.from('app_installs').select('user_id, platform, installed_at').not('installed_at', 'is', null);
+    if (error) { installsKnown = false; }
+    else {
+      const list: { user_id: string | null; platform: string | null; installed_at: string }[] = rows ?? [];
+      installs.total = list.length;
+      for (const r of list) {
+        const p = r.platform ?? 'other';
+        if (p === 'ios') installs.ios++;
+        else if (p === 'android') installs.android++;
+        else if (p === 'desktop') installs.desktop++;
+        else installs.other++;
+        if (new Date(r.installed_at).getTime() >= now.getTime() - 30 * 86400000) installs.last30++;
+      }
+      const withUser = list.filter((r) => r.user_id).sort((a, b) => b.installed_at.localeCompare(a.installed_at)).slice(0, 8);
+      const uids = Array.from(new Set(withUser.map((r) => r.user_id))) as string[];
+      let names: Record<string, string> = {};
+      if (uids.length) {
+        const { data: us } = await A.from('users').select('id, full_name, email').in('id', uids);
+        names = Object.fromEntries((us ?? []).map((u: { id: string; full_name: string | null; email: string | null }) => [u.id, u.full_name || u.email || 'User']));
+      }
+      recentInstalls = withUser.map((r) => ({ name: names[r.user_id as string] ?? 'User', platform: r.platform ?? '—', when: r.installed_at }));
+    }
+  } catch { installsKnown = false; }
+
   return (
     <>
       <AdminPageHeader backHref="/admin" backLabel="Admin" title="Analytics" subtitle="Growth, retention, geography, and anomaly alerts" />
@@ -120,6 +149,38 @@ export default async function AnalyticsPage() {
       <div className="mb-8 rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
         <AdminSectionLabel>User growth · last 12 weeks</AdminSectionLabel>
         <div className="mt-3"><GrowthChart data={weeks.map((w) => ({ label: w.label, value: w.value, cumulative: w.cumulative }))} /></div>
+      </div>
+
+      {/* App installs */}
+      <div className="mb-8">
+        <AdminSectionLabel>App installs (PWA)</AdminSectionLabel>
+        {!installsKnown ? (
+          <div className="mt-2 rounded-2xl border border-admin-amber-soft bg-admin-amber-soft/40 px-6 py-5 font-body text-sm text-admin-amber-text shadow-admin-sm">
+            Install tracking is ready but the <code>app_installs</code> table isn&apos;t in the database yet — apply migration <b>20260831000000_app_installs.sql</b> (<code>npm run db:push</code> or the SQL editor), then reload.
+          </div>
+        ) : (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-5">
+              <MiniStat label="Total installs" value={installs.total} />
+              <MiniStat label="New (30 days)" value={installs.last30} />
+              <MiniStat label="iPhone" value={installs.ios} />
+              <MiniStat label="Android" value={installs.android} />
+              <MiniStat label="Desktop" value={installs.desktop} />
+            </div>
+            {recentInstalls.length > 0 && (
+              <div className="mt-3 overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
+                <div className="border-b border-admin-border bg-admin-bg px-5 py-2.5 font-body text-[11px] uppercase tracking-wide text-admin-text-muted">Recent installers</div>
+                {recentInstalls.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between border-b border-admin-border px-5 py-3 last:border-0">
+                    <span className="font-body text-sm text-admin-text">{r.name}</span>
+                    <span className="font-body text-[12px] capitalize text-admin-text-muted">{r.platform} · {new Date(r.when).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="mt-3 font-body text-[12px] text-admin-text-muted">Counts devices running the installed app (home-screen / standalone). Signed-in installers are named; anonymous ones are still counted.</p>
+          </>
+        )}
       </div>
 
       {/* Retention */}
