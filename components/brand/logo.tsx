@@ -49,7 +49,13 @@ export function Logo({ variant = 'full', size = 'md', tone = 'auto', className }
 }
 
 function LogoMark({ size, tone }: { size: number; tone: 'auto' | 'light' }) {
+  // NOTE: colours are applied via inline `style` (CSS property), NOT the `fill`
+  // attribute. Safari/WebKit doesn't resolve `var()` inside SVG presentation
+  // attributes (fill="rgb(var(--ink))" silently fails on iPhone), but it does
+  // resolve it in the CSS fill/stroke property.
   const navy = tone === 'light' ? '#FFFFFF' : 'rgb(var(--ink))';
+  const paper = tone === 'light' ? 'rgba(255,255,255,0.9)' : 'rgb(var(--paper))';
+  const badge = tone === 'light' ? 'rgba(255,255,255,0.16)' : 'rgb(var(--paper))';
 
   return (
     <svg
@@ -63,23 +69,22 @@ function LogoMark({ size, tone }: { size: number; tone: 'auto' | 'light' }) {
       className="shrink-0"
     >
       {/* Left leg of the A */}
-      <path d="M50 8 L14 90 L32 90 L50 46 L68 90 L86 90 Z" fill={navy} />
+      <path d="M50 8 L14 90 L32 90 L50 46 L68 90 L86 90 Z" style={{ fill: navy }} />
       {/* Green accent filling the right descender, cut by the road */}
-      <path d="M58 66 L68 90 L86 90 L69 50 Z" fill="rgb(var(--green))" />
+      <path d="M58 66 L68 90 L86 90 L69 50 Z" style={{ fill: 'rgb(var(--green))' }} />
       {/* Road curving up through the crossbar, exiting bottom-left */}
       <path
         d="M20 90 C 34 62, 40 46, 50 34 C 58 24, 66 20, 78 16"
-        stroke={tone === 'light' ? 'rgba(255,255,255,0.9)' : 'rgb(var(--paper))'}
+        style={{ stroke: paper, fill: 'none' }}
         strokeWidth="6"
         strokeLinecap="round"
-        fill="none"
       />
       {/* Driver badge */}
-      <circle cx="66" cy="70" r="11" fill={tone === 'light' ? 'rgba(255,255,255,0.16)' : 'rgb(var(--paper))'} />
-      <circle cx="66" cy="66.5" r="3.1" fill={navy} />
+      <circle cx="66" cy="70" r="11" style={{ fill: badge }} />
+      <circle cx="66" cy="66.5" r="3.1" style={{ fill: navy }} />
       <path
         d="M58.5 76 C 58.5 70.8, 61.8 68, 66 68 C 70.2 68, 73.5 70.8, 73.5 76"
-        fill={navy}
+        style={{ fill: navy }}
       />
     </svg>
   );

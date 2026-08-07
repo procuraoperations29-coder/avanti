@@ -16,10 +16,9 @@ function formatCompactNaira(n: number): string {
 /**
  * RevenueChart — plain SVG bar + line combo, no charting library.
  *
- * Fintech skin: gradient-filled rounded revenue/payout bars, a soft area under
- * the net line, and a glowing net stroke. Pure presentational (no hooks), so
- * it renders fine as a Server Component child. All colours resolve from the
- * `--admin-*` tokens, so it re-themes with the console (incl. dark mode).
+ * Colours come from `--admin-*` tokens and are applied via inline `style` (the
+ * CSS fill/stroke/stop-color property), NOT presentation attributes — Safari
+ * doesn't resolve `var()` inside SVG attributes.
  */
 export function RevenueChart({ data }: { data: MonthPoint[] }) {
   const width = 620;
@@ -43,15 +42,11 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
   const barW = Math.min(18, groupW * 0.26);
   const barGap = 5;
 
-  const netPts = data.map((d, i) => ({
-    x: padLeft + groupW * i + groupW / 2,
-    yv: y(d.net),
-  }));
+  const netPts = data.map((d, i) => ({ x: padLeft + groupW * i + groupW / 2, yv: y(d.net) }));
   const linePoints = netPts.map((p) => `${p.x},${p.yv}`).join(' ');
   const first = netPts[0];
   const last = netPts[netPts.length - 1];
-  const areaPoints =
-    first && last ? `${first.x},${zeroY} ${linePoints} ${last.x},${zeroY}` : '';
+  const areaPoints = first && last ? `${first.x},${zeroY} ${linePoints} ${last.x},${zeroY}` : '';
 
   const yTicks = [domainMin, domainMin + span / 2, domainMax];
 
@@ -66,40 +61,24 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
       <title>Revenue vs payouts, last 6 months</title>
       <defs>
         <linearGradient id="rev-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgb(var(--admin-green))" stopOpacity="1" />
-          <stop offset="100%" stopColor="rgb(var(--admin-green))" stopOpacity="0.55" />
+          <stop offset="0%" style={{ stopColor: 'rgb(var(--admin-green))', stopOpacity: 1 }} />
+          <stop offset="100%" style={{ stopColor: 'rgb(var(--admin-green))', stopOpacity: 0.55 }} />
         </linearGradient>
         <linearGradient id="pay-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgb(var(--admin-amber))" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="rgb(var(--admin-amber))" stopOpacity="0.5" />
+          <stop offset="0%" style={{ stopColor: 'rgb(var(--admin-amber))', stopOpacity: 0.95 }} />
+          <stop offset="100%" style={{ stopColor: 'rgb(var(--admin-amber))', stopOpacity: 0.5 }} />
         </linearGradient>
         <linearGradient id="net-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgb(var(--admin-text))" stopOpacity="0.12" />
-          <stop offset="100%" stopColor="rgb(var(--admin-text))" stopOpacity="0" />
+          <stop offset="0%" style={{ stopColor: 'rgb(var(--admin-text))', stopOpacity: 0.12 }} />
+          <stop offset="100%" style={{ stopColor: 'rgb(var(--admin-text))', stopOpacity: 0 }} />
         </linearGradient>
       </defs>
 
       {/* Gridlines */}
       {yTicks.map((t, i) => (
         <g key={i}>
-          <line
-            x1={padLeft}
-            x2={width - padRight}
-            y1={y(t)}
-            y2={y(t)}
-            stroke="rgb(var(--admin-border))"
-            strokeWidth={1}
-            strokeDasharray={i === 0 ? '0' : '3 4'}
-          />
-          <text
-            x={padLeft - 10}
-            y={y(t)}
-            textAnchor="end"
-            dominantBaseline="middle"
-            fontSize={10}
-            fontWeight={500}
-            fill="rgb(var(--admin-text-muted))"
-          >
+          <line x1={padLeft} x2={width - padRight} y1={y(t)} y2={y(t)} style={{ stroke: 'rgb(var(--admin-border))' }} strokeWidth={1} strokeDasharray={i === 0 ? '0' : '3 4'} />
+          <text x={padLeft - 10} y={y(t)} textAnchor="end" dominantBaseline="middle" fontSize={10} fontWeight={500} style={{ fill: 'rgb(var(--admin-text-muted))' }}>
             {formatCompactNaira(t)}
           </text>
         </g>
@@ -112,30 +91,9 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
         const payH = Math.abs(y(d.payouts) - zeroY);
         return (
           <g key={d.label}>
-            <rect
-              x={cx - barW - barGap / 2}
-              y={Math.min(y(d.revenue), zeroY)}
-              width={barW}
-              height={revH}
-              rx={4}
-              fill="url(#rev-grad)"
-            />
-            <rect
-              x={cx + barGap / 2}
-              y={Math.min(y(d.payouts), zeroY)}
-              width={barW}
-              height={payH}
-              rx={4}
-              fill="url(#pay-grad)"
-            />
-            <text
-              x={cx}
-              y={height - 8}
-              textAnchor="middle"
-              fontSize={10}
-              fontWeight={500}
-              fill="rgb(var(--admin-text-muted))"
-            >
+            <rect x={cx - barW - barGap / 2} y={Math.min(y(d.revenue), zeroY)} width={barW} height={revH} rx={4} fill="url(#rev-grad)" />
+            <rect x={cx + barGap / 2} y={Math.min(y(d.payouts), zeroY)} width={barW} height={payH} rx={4} fill="url(#pay-grad)" />
+            <text x={cx} y={height - 8} textAnchor="middle" fontSize={10} fontWeight={500} style={{ fill: 'rgb(var(--admin-text-muted))' }}>
               {d.label}
             </text>
           </g>
@@ -144,25 +102,11 @@ export function RevenueChart({ data }: { data: MonthPoint[] }) {
 
       {/* Net line + soft area */}
       {areaPoints && <polygon points={areaPoints} fill="url(#net-area)" />}
-      <polyline
-        points={linePoints}
-        fill="none"
-        stroke="rgb(var(--admin-text))"
-        strokeWidth={2.5}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
+      <polyline points={linePoints} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" style={{ fill: 'none', stroke: 'rgb(var(--admin-text))' }} />
       {netPts.map((p, i) => (
         <g key={i}>
-          <circle cx={p.x} cy={p.yv} r={4.5} fill="rgb(var(--admin-card))" />
-          <circle
-            cx={p.x}
-            cy={p.yv}
-            r={3}
-            fill="rgb(var(--admin-text))"
-            stroke="rgb(var(--admin-card))"
-            strokeWidth={1}
-          />
+          <circle cx={p.x} cy={p.yv} r={4.5} style={{ fill: 'rgb(var(--admin-card))' }} />
+          <circle cx={p.x} cy={p.yv} r={3} strokeWidth={1} style={{ fill: 'rgb(var(--admin-text))', stroke: 'rgb(var(--admin-card))' }} />
         </g>
       ))}
     </svg>

@@ -31,26 +31,26 @@ export function GrowthChart({ data }: { data: Point[] }) {
     <div className="overflow-x-auto">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" preserveAspectRatio="xMidYMid meet" role="img" aria-label="User growth over time" className="min-w-[520px]">
         {/* baseline */}
-        <line x1={padX} y1={padTop + plotH} x2={W - padX} y2={padTop + plotH} stroke="rgb(var(--admin-border))" strokeWidth="1" />
+        <line x1={padX} y1={padTop + plotH} x2={W - padX} y2={padTop + plotH} strokeWidth="1" style={{ stroke: 'rgb(var(--admin-border))' }} />
         {/* bars */}
         {data.map((d, i) => {
           const h = padTop + plotH - barY(d.value);
           return (
             <g key={d.label}>
-              <rect x={cx(i) - barW / 2} y={barY(d.value)} width={barW} height={Math.max(0, h)} rx="5" fill="rgb(var(--admin-green))" opacity="0.85" />
+              <rect x={cx(i) - barW / 2} y={barY(d.value)} width={barW} height={Math.max(0, h)} rx="5" opacity="0.85" style={{ fill: 'rgb(var(--admin-green))' }} />
               {d.value > 0 && (
-                <text x={cx(i)} y={barY(d.value) - 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="rgb(var(--admin-text))">{d.value}</text>
+                <text x={cx(i)} y={barY(d.value) - 5} textAnchor="middle" fontSize="11" fontWeight="600" style={{ fill: 'rgb(var(--admin-text))' }}>{d.value}</text>
               )}
-              <text x={cx(i)} y={H - 9} textAnchor="middle" fontSize="10.5" fill="rgb(var(--admin-text-muted))">{d.label}</text>
+              <text x={cx(i)} y={H - 9} textAnchor="middle" fontSize="10.5" style={{ fill: 'rgb(var(--admin-text-muted))' }}>{d.label}</text>
             </g>
           );
         })}
         {/* cumulative line */}
         {data.length > 1 && (
-          <polyline points={linePts} fill="none" stroke="rgb(var(--admin-navy))" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" />
+          <polyline points={linePts} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity="0.55" style={{ fill: 'none', stroke: 'rgb(var(--admin-navy))' }} />
         )}
         {data.map((d, i) => (
-          <circle key={`c${d.label}`} cx={cx(i)} cy={cumY(d.cumulative)} r="2.5" fill="rgb(var(--admin-navy))" opacity="0.7" />
+          <circle key={`c${d.label}`} cx={cx(i)} cy={cumY(d.cumulative)} r="2.5" opacity="0.7" style={{ fill: 'rgb(var(--admin-navy))' }} />
         ))}
       </svg>
       <div className="mt-2 flex items-center gap-4 font-body text-[11px] text-admin-text-muted">
