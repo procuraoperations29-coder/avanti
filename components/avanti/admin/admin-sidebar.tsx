@@ -22,6 +22,7 @@ import {
   TrendingUp,
   PanelLeftClose,
   PanelLeftOpen,
+  Megaphone,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/cn';
@@ -35,6 +36,7 @@ export type AdminNavKey =
   | 'trips'
   | 'corporate'
   | 'support'
+  | 'notifications'
   | 'finance'
   | 'pricing'
   | 'compliance'
@@ -68,6 +70,7 @@ const OPERATIONS: NavItem[] = [
   { key: 'support', href: '/admin/support', label: 'Users', Icon: Users },
   { key: 'trips', href: '/admin/trips', label: 'Trips', Icon: Route },
   { key: 'corporate', href: '/admin/corporate', label: 'Corporate', Icon: Building2 },
+  { key: 'notifications', href: '/admin/notifications', label: 'Notifications', Icon: Megaphone },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
   { key: 'pricing', href: '/admin/pricing', label: 'Pricing', Icon: Tags },
   { key: 'compliance', href: '/admin/compliance', label: 'Compliance', Icon: ShieldAlert },
@@ -129,6 +132,7 @@ export function AdminSidebar({
     trips: canSupport || canVerify || canFinance,
     corporate: canSupport || canVerify || canFinance,
     support: canSupport,
+    notifications: canSupport,
     finance: canFinance,
     pricing: canFinance,
     compliance: canCompliance,

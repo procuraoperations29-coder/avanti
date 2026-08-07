@@ -5,6 +5,7 @@ import { PageShell } from '@/components/shell/page-shell';
 import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { ProfileForm } from '@/components/account/profile-form';
 import { NotificationPrefs } from '@/components/account/notification-prefs';
+import { PushToggle } from '@/components/pwa/push-toggle';
 import { SignOutButton } from '@/components/account/sign-out-button';
 
 export const dynamic = 'force-dynamic';
@@ -128,6 +129,7 @@ export default async function SettingsPage() {
       {/* Notifications */}
       <div className="mb-10">
         <AdminSectionLabel>Notifications</AdminSectionLabel>
+        <div className="mb-3"><PushToggle /></div>
         <NotificationPrefs initial={prefs} />
       </div>
 
