@@ -4,6 +4,7 @@ import { COMPANY } from '@/config/company';
 import { sendEmail } from '@/lib/email/resend';
 import { sendSMS } from '@/lib/notify/sms';
 import { brandedEmail } from '@/lib/email/templates/branded';
+import { sendPushToUser, type PushPayload } from '@/lib/push/send';
 
 /**
  * Lifecycle email notifications for on-demand engagements. One entry point —
@@ -43,9 +44,11 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
 
     let driverName = 'your driver';
     let driverPhone: string | null = null;
+    let driverUserId: string | null = null;
     if (eng.driver_id) {
       const { data: dp } = await admin.from('driver_profiles').select('user_id').eq('id', eng.driver_id).single();
       if (dp?.user_id) {
+        driverUserId = dp.user_id;
         const { data: du } = await admin.from('users').select('full_name, phone').eq('id', dp.user_id).single();
         driverName = du?.full_name ?? 'your driver';
         driverPhone = du?.phone ?? null;
@@ -80,6 +83,8 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
     let customerHtml = '';
     let opsSubject: string | null = null;
     let opsHtml = '';
+    let customerPush: PushPayload | null = null;
+    let driverPush: PushPayload | null = null;
 
     switch (event) {
       case 'payment_confirmed':
@@ -102,6 +107,8 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
           paragraphs: ['A customer payment was confirmed and the engagement is now confirmed.'],
           summary: [...opsSummary, { label: 'Total', value: total }],
         });
+        customerPush = { title: 'Booking confirmed', body: `Your booking with ${driverName} is confirmed for ${when}.`, url: link };
+        driverPush = { title: 'New booking', body: `${type} on ${when}. Open Avanti for details.`, url: '/driver' };
         break;
 
       case 'driver_on_way':
@@ -121,6 +128,7 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
           paragraphs: [`${driverName} has started the engagement.`],
           summary: opsSummary,
         });
+        customerPush = { title: `${driverName} is on the way`, body: 'Arriving at your start time.', url: link };
         break;
 
       case 'driver_completed':
@@ -143,6 +151,7 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
           paragraphs: ['Awaiting the customer to confirm on their end.'],
           summary: opsSummary,
         });
+        customerPush = { title: 'Engagement complete', body: 'Tap to confirm everything went well.', url: link };
         break;
 
       case 'customer_confirmed':
@@ -178,6 +187,10 @@ export async function notifyEngagementEvent(admin: any, engagementId: string, ev
         message: `Avanti: you have a new booking — ${type} on ${when}. Open the Avanti app to see the details.`,
       });
     }
+
+    // Push to whoever installed the app (no-op if push isn't configured).
+    if (customerPush && eng.customer_user_id) await sendPushToUser(admin, eng.customer_user_id, customerPush);
+    if (driverPush && driverUserId) await sendPushToUser(admin, driverUserId, driverPush);
   } catch (err) {
     console.error('[engagement-notify] failed', engagementId, event, err);
   }

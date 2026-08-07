@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError, serviceRoleWrite } from '@/lib/auth';
+import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sendPushToUser } from '@/lib/push/send';
 
 /**
  * POST /api/admin/verification/[driverId]/decide
@@ -82,6 +84,24 @@ export async function POST(
         if (error) throw new Error(`event insert failed: ${error.message}`);
       },
     });
+
+    // Notify the driver of the decision (best-effort; no-op if push unset).
+    try {
+      const admin = createServiceRoleClient();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: dp } = await (admin as any).from('driver_profiles').select('user_id').eq('id', driverId).single();
+      if (dp?.user_id) {
+        const msg =
+          body.decision === 'approve'
+            ? { title: 'You’re verified 🎉', body: `Approved at tier ${String(body.tier).toUpperCase()} — you can now take bookings.`, url: '/driver' }
+            : body.decision === 'reject'
+              ? { title: 'Verification update', body: 'Your application needs attention — open Avanti for details.', url: '/driver' }
+              : { title: 'More info needed', body: 'We need a bit more to verify you — open Avanti to continue.', url: '/driver' };
+        await sendPushToUser(admin, dp.user_id, msg);
+      }
+    } catch (e) {
+      console.error('[verification/decide] push failed', e);
+    }
 
     return NextResponse.json({ ok: true, decision: body.decision });
   } catch (err) {
