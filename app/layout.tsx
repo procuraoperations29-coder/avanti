@@ -1,12 +1,28 @@
 export const dynamic = 'force-dynamic';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Toaster } from '@/components/ui/sonner';
+import { RegisterSW } from '@/components/pwa/register-sw';
+import { InstallPrompt } from '@/components/pwa/install-prompt';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Avanti',
   description:
     'The driver is the hire. Not the ride. Book verified professional drivers by the hour, day, or long-term.',
+  applicationName: 'Avanti',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, statusBarStyle: 'default', title: 'Avanti' },
+  icons: {
+    icon: '/icon-192.png',
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#0d1122',
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({
@@ -33,6 +49,8 @@ export default function RootLayout({
       <body>
         {children}
         <Toaster />
+        <RegisterSW />
+        <InstallPrompt />
       </body>
     </html>
   );
