@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { sendPushToUser, type PushPayload } from '@/lib/push/send';
 
 /**
  * PATCH /api/admin/disputes/[id] — dispute resolution workflow.
@@ -50,8 +51,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const A = admin as any;
     const now = new Date().toISOString();
-    const { data: dispute } = await A.from('disputes').select('id, status').eq('id', id).single();
+    const { data: dispute } = await A.from('disputes').select('id, status, case_number, raised_by_user_id, respondent_user_id').eq('id', id).single();
     if (!dispute) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+
+    const notifyParties = async (payload: PushPayload) => {
+      const ids = [dispute.raised_by_user_id, dispute.respondent_user_id].filter(Boolean) as string[];
+      for (const uid of Array.from(new Set(ids))) await sendPushToUser(A, uid, payload);
+    };
 
     let auditAction = 'update';
 
@@ -61,6 +67,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       if (RESOLVED.includes(body.status)) { upd.resolved_at = now; upd.resolved_by = user.id; if (body.note) upd.resolution_summary = body.note; }
       const { error } = await A.from('disputes').update(upd).eq('id', id);
       if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
+      await notifyParties({
+        title: `Dispute ${dispute.case_number}`,
+        body: RESOLVED.includes(body.status) ? 'Your case has been resolved.' : `Status update: ${body.status.replace(/_/g, ' ')}.`,
+        url: '/',
+      });
     } else if (body.action === 'add_message') {
       const { error } = await A.from('dispute_messages').insert({ dispute_id: id, sender_user_id: user.id, sender_role: 'avanti', body: body.body });
       if (error) return NextResponse.json({ error: 'message_failed', message: error.message }, { status: 500 });
@@ -77,6 +88,11 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         await A.from('users').update({ status: 'suspended', sessions_revoked_at: now, updated_at: now }).eq('id', body.targetUserId);
       }
       auditAction = body.kind.includes('ban') ? 'delete' : 'update';
+      await notifyParties({
+        title: `Dispute ${dispute.case_number} resolved`,
+        body: `Outcome: ${body.kind.replace(/_/g, ' ')}.`,
+        url: '/',
+      });
     }
 
     try {

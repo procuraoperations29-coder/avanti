@@ -67,10 +67,14 @@ async function deliver(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function activeSubs(admin: any, filter?: (q: any) => any): Promise<SubRow[]> {
-  let q = admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').is('revoked_at', null);
-  if (filter) q = filter(q);
-  const { data } = await q;
-  return data ?? [];
+  try {
+    let q = admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').is('revoked_at', null);
+    if (filter) q = filter(q);
+    const { data } = await q;
+    return data ?? [];
+  } catch {
+    return []; // table not migrated yet, etc. — never throw from a notification path
+  }
 }
 
 /** Send a push to every active subscription belonging to one user. */

@@ -6,6 +6,7 @@ import { publicEnv } from '@/config/env';
 import { initTransaction } from '@/lib/payments/paystack';
 import { sendEmail } from '@/lib/email/resend';
 import { tripInvoiceEmail } from '@/lib/email/templates/trip-invoice';
+import { sendPushToUser } from '@/lib/push/send';
 
 const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('review') }),
@@ -69,6 +70,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id);
       if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
+      if (body.action === 'decline' && trip.customer_user_id) {
+        await sendPushToUser(admin, trip.customer_user_id, { title: 'Trip request update', body: 'We couldn’t take this trip request — open Avanti for details.', url: '/customer' });
+      }
       return NextResponse.json({ ok: true, status });
     }
 
@@ -85,6 +89,9 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         })
         .eq('id', id);
       if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
+      if (trip.customer_user_id) {
+        await sendPushToUser(admin, trip.customer_user_id, { title: 'Trip confirmed', body: 'Payment received — your out-of-state trip is confirmed.', url: '/customer' });
+      }
       return NextResponse.json({ ok: true, status: 'paid' });
     }
 
@@ -166,6 +173,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       .eq('id', id);
     if (updErr) {
       return NextResponse.json({ error: 'update_failed', message: updErr.message }, { status: 500 });
+    }
+
+    if (trip.customer_user_id) {
+      await sendPushToUser(admin, trip.customer_user_id, {
+        title: 'Your trip quote is ready',
+        body: `${formatNaira(body.price)} for ${route}. Tap to pay and confirm.`,
+        url: '/customer',
+      });
     }
 
     return NextResponse.json({ ok: true, status: 'quoted', emailSent: emailResult.sent, emailMock: emailResult.mock, payLink });

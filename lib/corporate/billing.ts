@@ -3,6 +3,7 @@ import { publicEnv } from '@/config/env';
 import { BANK_ACCOUNT } from '@/config/company';
 import { initTransaction } from '@/lib/payments/paystack';
 import { sendEmail } from '@/lib/email/resend';
+import { sendPushToUser } from '@/lib/push/send';
 import { brandedEmail } from '@/lib/email/templates/branded';
 
 /**
@@ -373,27 +374,39 @@ export async function notifyCorporateInvoicePaid(
       .select('name, billing_email')
       .eq('id', invoice.organization_id)
       .single();
-    if (!org?.billing_email) return;
+    if (!org) return;
 
     const count = (invoice.assignment_ids ?? []).length;
-    await sendEmail({
-      to: org.billing_email,
-      subject: 'Payment received — Avanti',
-      html: brandedEmail({
-        eyebrow: 'Payment received',
-        greeting: `Hi ${org.name},`,
-        headline:
-          invoice.kind === 'upfront'
-            ? `${count} driver${count === 1 ? '' : 's'} now active`
-            : 'Payment received',
-        paragraphs: [
-          invoice.kind === 'upfront'
-            ? `We've received your upfront payment. ${count === 1 ? 'Your driver is' : 'Your drivers are'} now active on your account.`
-            : "We've received your payment. Thank you.",
-        ],
-        summary: [{ label: 'Amount', value: formatNaira(Number(invoice.amount)) }],
-      }),
-    });
+    const headline = invoice.kind === 'upfront' ? `${count} driver${count === 1 ? '' : 's'} now active` : 'Payment received';
+    const body = invoice.kind === 'upfront'
+      ? `We've received your upfront payment. ${count === 1 ? 'Your driver is' : 'Your drivers are'} now active on your account.`
+      : "We've received your payment. Thank you.";
+
+    if (org.billing_email) {
+      await sendEmail({
+        to: org.billing_email,
+        subject: 'Payment received — Avanti',
+        html: brandedEmail({
+          eyebrow: 'Payment received',
+          greeting: `Hi ${org.name},`,
+          headline,
+          paragraphs: [body],
+          summary: [{ label: 'Amount', value: formatNaira(Number(invoice.amount)) }],
+        }),
+      });
+    }
+
+    // Push the org's admins/members (no-op if push isn't configured).
+    const { data: members } = await admin
+      .from('user_roles')
+      .select('user_id')
+      .eq('organization_id', invoice.organization_id)
+      .in('role', ['corporate_admin', 'corporate_member'])
+      .is('revoked_at', null);
+    const memberIds = Array.from(new Set((members ?? []).map((m: { user_id: string }) => m.user_id).filter(Boolean)));
+    for (const uid of memberIds) {
+      await sendPushToUser(admin, uid as string, { title: headline, body, url: '/corporate' });
+    }
   } catch (err) {
     console.error('[corporate-billing] notifyCorporateInvoicePaid failed', invoice.organization_id, err);
   }

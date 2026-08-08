@@ -2,6 +2,7 @@ import 'server-only';
 import { COMPANY } from '@/config/company';
 import { sendEmail } from '@/lib/email/resend';
 import { brandedEmail } from '@/lib/email/templates/branded';
+import { sendPushToUser } from '@/lib/push/send';
 
 /**
  * "Payment received" confirmation for the flows that aren't on-demand
@@ -23,6 +24,7 @@ export async function sendPaymentReceipt(
     customerParagraphs: string[];
     opsHeadline: string;
     summary: { label: string; value: string }[];
+    pushUrl?: string;
   }
 ): Promise<void> {
   try {
@@ -56,6 +58,13 @@ export async function sendPaymentReceipt(
         paragraphs: ['A customer payment has been confirmed.'],
         summary: [{ label: 'Customer', value: customerName }, ...input.summary],
       }),
+    });
+
+    // Push to the customer (no-op if push isn't configured).
+    await sendPushToUser(admin, input.customerUserId, {
+      title: input.customerHeadline,
+      body: input.customerParagraphs[0] ?? 'Payment received.',
+      url: input.pushUrl ?? '/customer/engagements',
     });
   } catch (err) {
     console.error('[payment-receipt] failed', input.customerUserId, err);
