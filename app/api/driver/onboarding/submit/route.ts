@@ -171,18 +171,22 @@ export async function POST() {
     }
 
     // ---- Payout method ----
+    // Columns must match the real schema: account_number_last4 (for display) +
+    // account_holder_name + bank_code. The full number is NOT stored plainly —
+    // there is no bank_name/account_number/is_verified column. Getting this
+    // wrong is why payout methods silently never appeared (see the finance
+    // backfill route).
+    const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
       .from('driver_payout_methods')
       .insert({
         driver_id: profile.id,
         method_type: 'bank_account',
-        bank_name: payout.bank_name,
-        bank_code: payout.bank_code,
-        account_number: payout.account_number,
-        account_holder_name: payout.account_holder_name,
+        bank_code: typeof payout.bank_code === 'string' ? payout.bank_code : null,
+        account_number_last4: accountNumber.slice(-4) || null,
+        account_holder_name: typeof payout.account_holder_name === 'string' ? payout.account_holder_name : '',
         is_default: true,
-        is_verified: false,
       });
     if (payoutMethodErr && !payoutMethodErr.message?.toLowerCase().includes('duplicate')) {
       console.error('[submit] driver_payout_methods insert:', payoutMethodErr);
