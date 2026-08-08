@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, Star, ArrowRight, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrl } from '@/lib/storage/upload';
 import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
@@ -53,6 +54,7 @@ export default async function DriverDossierPage({
   const tier = (driver.verification_tier ?? 't1') as TierLevel;
   const initials = initialsOf(driver.full_name ?? 'Driver');
   const firstName = (driver.full_name ?? 'Driver').split(' ')[0];
+  const selfieUrl = driver.user_id ? await getDriverSelfieUrl(driver.user_id) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
@@ -72,6 +74,8 @@ export default async function DriverDossierPage({
             <div className="flex justify-center md:block">
               <Portrait
                 initials={initials}
+                imageUrl={selfieUrl}
+                imageAlt={driver.full_name ?? 'Driver'}
                 size="xxl"
                 tier={tier}
                 variant="square"

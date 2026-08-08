@@ -1,19 +1,17 @@
 import { NextResponse } from 'next/server';
 import { requireAuthUser, AuthError } from '@/lib/auth';
-import { createServiceRoleClient } from '@/lib/supabase/server';
+import { uploadDriverDocument, signedDocumentUrl } from '@/lib/storage/upload';
 
 /**
  * POST /api/driver/onboarding/upload
  *
  * Multipart form data:
  *   - file: the file
- *   - documentType: e.g. 'licence_front', 'utility_bill', 'id_front'
+ *   - documentType: e.g. 'licence_front', 'utility_bill', 'id_front', 'selfie'
  *
- * Stores the file in the driver-documents bucket at path:
- *   {user_id}/{documentType}/{timestamp}-{safe_filename}
- *
- * Returns the storage path (not a signed URL — we generate signed URLs
- * on-demand when rendering previews or in admin review).
+ * Uploads to the driver-documents bucket AND creates the matching `documents`
+ * row (so the admin verification queue can see and download it). Returns the
+ * storage path plus a signed preview URL for the onboarding UI.
  */
 
 const ALLOWED_TYPES = new Set([
@@ -34,12 +32,9 @@ const ALLOWED_DOCUMENT_TYPES = new Set([
   'licence_back',
   'utility_bill',
   'address_proof',
+  'selfie',
   'other',
 ]);
-
-function safeFilename(name: string): string {
-  return name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-}
 
 export async function POST(req: Request) {
   try {
@@ -72,44 +67,32 @@ export async function POST(req: Request) {
       );
     }
 
-    const timestamp = Date.now();
-    const path = `${user.id}/${documentType}/${timestamp}-${safeFilename(file.name)}`;
+    // Uploads to storage AND inserts the documents row (retiring any previous
+    // active upload of the same kind). This is what makes it visible to admins.
+    const result = await uploadDriverDocument({
+      userId: user.id,
+      kind: documentType,
+      file,
+      filename: file.name,
+      mimeType: file.type,
+    });
 
-    const admin = createServiceRoleClient();
-
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: uploadErr } = await (admin as any).storage
-      .from('driver-documents')
-      .upload(path, buffer, {
-        contentType: file.type,
-        upsert: false,
-      });
-
-    if (uploadErr) {
-      console.error('[upload] Supabase storage error:', uploadErr);
-      return NextResponse.json(
-        { error: 'upload_failed', message: uploadErr.message },
-        { status: 500 }
-      );
-    }
-
-    // Generate a 1-year signed URL for immediate preview
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: signed } = await (admin as any).storage
-      .from('driver-documents')
-      .createSignedUrl(path, 60 * 60 * 24 * 365);
+    // 1-year preview URL — stored in onboarding_state for the driver's own view.
+    const url = await signedDocumentUrl(result.storageBucket, result.storagePath, 60 * 60 * 24 * 365);
 
     return NextResponse.json({
-      path,
-      url: signed?.signedUrl ?? null,
+      path: result.storagePath,
+      documentId: result.documentId,
+      url,
     });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.status });
     }
     console.error('[upload]', err);
-    return NextResponse.json({ error: 'internal_error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'upload_failed', message: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
   }
 }

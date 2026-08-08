@@ -25,13 +25,15 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
   const [idNumber, setIdNumber] = useState(initialData.id_number ?? '');
   const [idFrontPath, setIdFrontPath] = useState(initialData.id_front_path ?? '');
   const [idBackPath, setIdBackPath] = useState(initialData.id_back_path ?? '');
+  const [selfiePath, setSelfiePath] = useState(initialData.selfie_path ?? '');
 
   const canContinue =
     legalName.trim().length >= 2 &&
     dateOfBirth.length === 10 &&
     idType &&
     idNumber.trim().length >= 5 &&
-    idFrontPath.length > 0;
+    idFrontPath.length > 0 &&
+    selfiePath.length > 0;
 
   const saveAndContinue = async () => {
     if (!canContinue) {
@@ -53,6 +55,7 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
             id_number: idNumber.trim(),
             id_front_path: idFrontPath,
             id_back_path: idBackPath || null,
+            selfie_path: selfiePath,
           },
         }),
       });
@@ -204,6 +207,14 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
           initialUrl={idBackPath}
           onUploaded={setIdBackPath}
           helperText="If your ID has details on the back"
+        />
+
+        <DocumentUpload
+          documentType="selfie"
+          label="Selfie · Your profile photo"
+          initialUrl={selfiePath}
+          onUploaded={setSelfiePath}
+          helperText="A clear, front-facing photo of your face. This becomes your profile picture — customers see it when choosing a driver."
         />
       </div>
 

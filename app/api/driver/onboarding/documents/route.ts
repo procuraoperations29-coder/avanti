@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       mimeType: file.type,
     });
 
-    const previewUrl = await signedDocumentUrl(result.storagePath);
+    const previewUrl = await signedDocumentUrl(result.storageBucket, result.storagePath);
 
     return NextResponse.json({
       documentId: result.documentId,
@@ -119,18 +119,19 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('documents')
-      .select('id, kind, filename, mime_type, size_bytes, storage_path, uploaded_at')
+      .select('id, document_type, mime_type, file_size_bytes, storage_bucket, storage_path, metadata, created_at')
       .eq('owner_user_id', user.id)
       .eq('is_active', true)
-      .order('uploaded_at', { ascending: false });
+      .order('created_at', { ascending: false });
     if (error) {
       return NextResponse.json({ error: 'list_failed' }, { status: 500 });
     }
 
     const withUrls = await Promise.all(
-      (data ?? []).map(async (d: { storage_path: string } & Record<string, unknown>) => ({
+      (data ?? []).map(async (d: { storage_bucket: string; storage_path: string; metadata?: { filename?: string } } & Record<string, unknown>) => ({
         ...d,
-        previewUrl: await signedDocumentUrl(d.storage_path),
+        filename: d.metadata?.filename ?? null,
+        previewUrl: await signedDocumentUrl(d.storage_bucket, d.storage_path),
       }))
     );
 

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrls } from '@/lib/storage/upload';
 import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { Portrait } from '@/components/avanti/portrait';
@@ -71,6 +72,8 @@ export default async function PermanentBrowsePage() {
     );
   }
 
+  const selfieByUser = await getDriverSelfieUrls(userIds);
+
   return (
     <div className="mx-auto max-w-6xl px-6 pt-8 pb-20">
         <Link
@@ -122,6 +125,8 @@ export default async function PermanentBrowsePage() {
                   <div className="shrink-0">
                     <Portrait
                       initials={initialsOf(name)}
+                      imageUrl={selfieByUser[p.user_id] ?? null}
+                      imageAlt={name}
                       size="lg"
                       tier={tier}
                     />

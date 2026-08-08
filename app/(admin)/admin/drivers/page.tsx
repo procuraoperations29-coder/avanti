@@ -2,8 +2,15 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrls } from '@/lib/storage/upload';
 import { AdminPageHeader, MiniStat } from '@/components/avanti/admin/page-header';
+import { Portrait } from '@/components/avanti/portrait';
+import type { TierLevel } from '@/components/avanti/tier-badge';
 import { DriverActions } from './driver-actions';
+
+function initialsOf(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -71,6 +78,8 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
     usersById = Object.fromEntries((us ?? []).map((u: { id: string; full_name: string; email: string | null; phone: string | null }) => [u.id, u]));
   }
 
+  const selfieByUser = await getDriverSelfieUrls(ids);
+
   // Headline counts (independent of the current filter/page).
   const { count: totalDrivers } = await A.from('driver_profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null);
   const { count: approvedDrivers } = await A.from('driver_profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('verification_status', 'approved');
@@ -132,7 +141,17 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
             const u = usersById[d.user_id];
             return (
               <div key={d.id} className="flex flex-col gap-3 border-b border-admin-border px-5 py-4 last:border-0 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="shrink-0">
+                    <Portrait
+                      initials={initialsOf(u?.full_name ?? '—')}
+                      imageUrl={selfieByUser[d.user_id] ?? null}
+                      imageAlt={u?.full_name ?? 'Driver'}
+                      size="md"
+                      tier={String(d.verification_tier) as TierLevel}
+                    />
+                  </div>
+                  <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="truncate font-body text-sm font-semibold text-admin-text">{u?.full_name ?? '—'}</span>
                     <span className="inline-flex items-center rounded-md bg-admin-navy px-1.5 py-0.5 font-mono text-[10px] font-bold text-white">{String(d.verification_tier).toUpperCase()}</span>
@@ -144,6 +163,7 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
                     {(d.average_rating ?? 0) > 0 && ` · ★ ${Number(d.average_rating).toFixed(2)} (${d.total_ratings})`}
                     {' · '}{[d.available_on_demand ? 'on-demand' : null, d.available_permanent ? 'permanent' : null].filter(Boolean).join(', ') || 'unavailable'}
                     {' · joined '}{fmtDate(d.created_at)}
+                  </div>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">

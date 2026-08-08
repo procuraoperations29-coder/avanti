@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, Check } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrl } from '@/lib/storage/upload';
 import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
@@ -70,6 +71,7 @@ export default async function PermanentDossierPage({
     .eq('id', user.id)
     .single();
 
+  const selfieUrl = await getDriverSelfieUrl(profile.user_id);
   const tier = profile.verification_tier as TierLevel;
   const name = driverUser?.full_name ?? 'Driver';
   const firstName = name.split(' ')[0];
@@ -90,7 +92,7 @@ export default async function PermanentDossierPage({
         <div className="mb-12 grid gap-10 md:grid-cols-5 md:gap-12">
           <div className="md:col-span-2">
             <div className="flex justify-center md:block">
-              <Portrait initials={initialsOf(name)} size="xxl" tier={tier} variant="square" />
+              <Portrait initials={initialsOf(name)} imageUrl={selfieUrl} imageAlt={name} size="xxl" tier={tier} variant="square" />
             </div>
           </div>
 

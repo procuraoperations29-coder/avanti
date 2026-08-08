@@ -20,14 +20,26 @@ const ID_TYPE_TO_DOC: Record<string, string> = {
   drivers_licence: 'driver_licence_front',
 };
 
-interface DocumentInsert {
-  owner_user_id: string;
-  document_type: string;
-  storage_bucket: string;
-  storage_path: string;
-  reference_number?: string | null;
-  expiry_date?: string | null;
-  metadata?: Record<string, unknown>;
+/**
+ * Reduce a stored reference to a real storage path. Older onboarding flows
+ * saved a full signed URL (which broke admin previews). Accepts a plain path,
+ * a "bucket/path", or a Supabase signed/public URL and returns just the path.
+ */
+function toStoragePath(value: unknown, bucket: string): string | null {
+  if (typeof value !== 'string' || !value) return null;
+  for (const marker of [`/object/sign/${bucket}/`, `/object/public/${bucket}/`]) {
+    const i = value.indexOf(marker);
+    if (i >= 0) {
+      let p = value.slice(i + marker.length);
+      const q = p.indexOf('?');
+      if (q >= 0) p = p.slice(0, q);
+      try { return decodeURIComponent(p); } catch { return p; }
+    }
+  }
+  if (value.startsWith(`${bucket}/`)) return value.slice(bucket.length + 1);
+  // A bare http URL we can't parse is unusable as a storage path.
+  if (value.startsWith('http')) return null;
+  return value;
 }
 
 export async function POST() {
@@ -95,82 +107,67 @@ export async function POST() {
     }
 
     // ---- Documents ----
-    const documents: DocumentInsert[] = [];
-
+    // Files are uploaded via /api/driver/onboarding/upload, which ALSO creates
+    // the `documents` row (correct storage_path + metadata.kind). Here we
+    // reconcile: enrich each existing row with the reference/expiry captured in
+    // the form, and self-heal any row that is missing (e.g. an older upload that
+    // predates row creation) by reconstructing the real storage path.
     const idType = typeof identity.id_type === 'string' ? identity.id_type : null;
     const idDocType = idType ? ID_TYPE_TO_DOC[idType] : null;
-    const idFrontPath = typeof identity.id_front_path === 'string' ? identity.id_front_path : null;
-    const idBackPath = typeof identity.id_back_path === 'string' ? identity.id_back_path : null;
     const idNumber = typeof identity.id_number === 'string' ? identity.id_number : null;
-
-    if (idDocType && idFrontPath) {
-      documents.push({
-        owner_user_id: user.id,
-        document_type: idDocType,
-        storage_bucket: BUCKET,
-        storage_path: idFrontPath,
-        reference_number: idNumber,
-        metadata: { side: 'front', source: 'onboarding' },
-      });
-    }
-    if (idDocType && idBackPath) {
-      documents.push({
-        owner_user_id: user.id,
-        document_type: idDocType,
-        storage_bucket: BUCKET,
-        storage_path: idBackPath,
-        reference_number: idNumber,
-        metadata: { side: 'back', source: 'onboarding' },
-      });
-    }
-
-    const licenceFrontPath = typeof licence.licence_front_path === 'string' ? licence.licence_front_path : null;
-    const licenceBackPath = typeof licence.licence_back_path === 'string' ? licence.licence_back_path : null;
     const licenceNumber = typeof licence.licence_number === 'string' ? licence.licence_number : null;
     const licenceExpiry = typeof licence.expiry_date === 'string' ? licence.expiry_date : null;
 
-    if (licenceFrontPath) {
-      documents.push({
-        owner_user_id: user.id,
-        document_type: 'driver_licence_front',
-        storage_bucket: BUCKET,
-        storage_path: licenceFrontPath,
-        reference_number: licenceNumber,
-        expiry_date: licenceExpiry,
-        metadata: { source: 'onboarding', licence_class: licence.licence_class },
-      });
-    }
-    if (licenceBackPath) {
-      documents.push({
-        owner_user_id: user.id,
-        document_type: 'driver_licence_back',
-        storage_bucket: BUCKET,
-        storage_path: licenceBackPath,
-        reference_number: licenceNumber,
-        expiry_date: licenceExpiry,
-        metadata: { source: 'onboarding', licence_class: licence.licence_class },
-      });
-    }
+    type ExpectedDoc = {
+      kind: string;
+      documentType: string;
+      stored: unknown;
+      reference?: string | null;
+      expiry?: string | null;
+      metadata?: Record<string, unknown>;
+    };
+    const expected: ExpectedDoc[] = [
+      { kind: 'id_front', documentType: idDocType ?? 'national_id', stored: identity.id_front_path, reference: idNumber, metadata: { side: 'front', source: 'onboarding' } },
+      { kind: 'id_back', documentType: idDocType ?? 'national_id', stored: identity.id_back_path, reference: idNumber, metadata: { side: 'back', source: 'onboarding' } },
+      { kind: 'licence_front', documentType: 'driver_licence_front', stored: licence.licence_front_path, reference: licenceNumber, expiry: licenceExpiry, metadata: { source: 'onboarding', licence_class: licence.licence_class } },
+      { kind: 'licence_back', documentType: 'driver_licence_back', stored: licence.licence_back_path, reference: licenceNumber, expiry: licenceExpiry, metadata: { source: 'onboarding', licence_class: licence.licence_class } },
+      { kind: 'utility_bill', documentType: 'utility_bill', stored: address.utility_bill_path, metadata: { source: 'onboarding' } },
+      { kind: 'selfie', documentType: 'selfie', stored: identity.selfie_path, metadata: { source: 'onboarding' } },
+    ];
 
-    const utilityBillPath = typeof address.utility_bill_path === 'string' ? address.utility_bill_path : null;
-    if (utilityBillPath) {
-      documents.push({
-        owner_user_id: user.id,
-        document_type: 'utility_bill',
-        storage_bucket: BUCKET,
-        storage_path: utilityBillPath,
-        metadata: { source: 'onboarding' },
-      });
-    }
+    for (const doc of expected) {
+      if (typeof doc.stored !== 'string' || !doc.stored) continue;
+      const enrich: Record<string, unknown> = {};
+      if (doc.reference != null) enrich.reference_number = doc.reference;
+      if (doc.expiry != null) enrich.expiry_date = doc.expiry;
 
-    if (documents.length > 0) {
+      // Try to enrich the row the upload route already created for this kind.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: docsErr } = await (admin as any)
+      const { data: existing } = await (admin as any)
         .from('documents')
-        .insert(documents);
-      if (docsErr) {
-        console.error('[submit] documents insert failed:', docsErr);
-      }
+        .update({ ...enrich })
+        .eq('owner_user_id', user.id)
+        .eq('is_active', true)
+        .eq('metadata->>kind', doc.kind)
+        .select('id');
+
+      if (existing && existing.length > 0) continue;
+
+      // No row yet — reconstruct the real storage path and insert one.
+      const storagePath = toStoragePath(doc.stored, BUCKET);
+      if (!storagePath) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: insErr } = await (admin as any).from('documents').insert({
+        owner_user_id: user.id,
+        document_type: doc.documentType,
+        storage_bucket: BUCKET,
+        storage_path: storagePath,
+        reference_number: doc.reference ?? null,
+        expiry_date: doc.expiry ?? null,
+        metadata: { ...(doc.metadata ?? {}), kind: doc.kind },
+        is_active: true,
+      });
+      if (insErr) console.error('[submit] documents self-heal insert failed:', doc.kind, insErr);
     }
 
     // ---- Payout method ----
@@ -235,7 +232,6 @@ export async function POST() {
 
     return NextResponse.json({
       submitted: true,
-      documentsInserted: documents.length,
     });
   } catch (err) {
     if (err instanceof AuthError) {

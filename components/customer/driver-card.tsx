@@ -22,6 +22,7 @@ export interface DriverCardProps {
   languages: string[] | null;
   vehicleClassExperience: string[] | null;
   bio: string | null;
+  photoUrl?: string | null;
   className?: string;
 }
 
@@ -62,6 +63,7 @@ export function DriverCard({
   languages,
   vehicleClassExperience,
   bio,
+  photoUrl,
   className,
 }: DriverCardProps) {
   return (
@@ -73,7 +75,7 @@ export function DriverCard({
       )}
     >
       <div className="flex items-start gap-4">
-        <Portrait initials={initialsOf(fullName)} size="lg" tier={tier} />
+        <Portrait initials={initialsOf(fullName)} imageUrl={photoUrl} imageAlt={fullName} size="lg" tier={tier} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">

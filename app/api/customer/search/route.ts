@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrls } from '@/lib/storage/upload';
 
 /**
  * GET /api/customer/search
@@ -52,7 +53,15 @@ export async function GET(req: Request) {
         )
       : (data ?? []);
 
-    return NextResponse.json({ drivers: results });
+    // Attach each driver's selfie (signed URL) for the card portrait.
+    const userIds = results.map((d) => d.user_id).filter((id): id is string => Boolean(id));
+    const selfieByUser = await getDriverSelfieUrls(userIds);
+    const withPhotos = results.map((d) => ({
+      ...d,
+      selfie_url: d.user_id ? selfieByUser[d.user_id] ?? null : null,
+    }));
+
+    return NextResponse.json({ drivers: withPhotos });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.status });

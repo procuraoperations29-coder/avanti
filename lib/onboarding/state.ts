@@ -55,6 +55,7 @@ export interface IdentityData {
   id_number?: string;
   id_front_path?: string;
   id_back_path?: string;
+  selfie_path?: string;
 }
 
 export interface LicenceData {

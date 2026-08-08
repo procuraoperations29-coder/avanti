@@ -22,6 +22,7 @@ interface DriverRow {
   average_rating: number | null;
   total_ratings: number | null;
   completed_jobs: number | null;
+  selfie_url: string | null;
 }
 
 export default function SearchPage() {
@@ -170,6 +171,7 @@ export default function SearchPage() {
               languages={d.languages}
               vehicleClassExperience={d.vehicle_class_experience}
               bio={d.bio}
+              photoUrl={d.selfie_url}
             />
           ))}
         </div>
