@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth, requirePermissions } from '@/lib/auth';
-import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
+import { signedDocumentUrl, cleanStoragePath } from '@/lib/storage/upload';
 
 /**
  * GET /api/admin/verification/queue
@@ -29,7 +30,6 @@ export const GET = withAuth(requirePermissions('verification.queue.read'), async
  */
 export async function fetchDriverForReview(driverId: string) {
   const supabase = await createClient();
-  const admin = createServiceRoleClient();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (supabase as any)
@@ -66,18 +66,14 @@ export async function fetchDriverForReview(driverId: string) {
       metadata: Record<string, unknown>;
       created_at: string;
     }) => {
-      let previewUrl: string | null = null;
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: signed } = await (admin as any).storage
-          .from(d.storage_bucket || 'driver-documents')
-          .createSignedUrl(d.storage_path, 60 * 60); // 1 hour
-        previewUrl = signed?.signedUrl ?? null;
-      } catch (err) {
-        console.error('[fetchDriverForReview] signed url failed for', d.storage_path, err);
-      }
+      const bucket = d.storage_bucket || 'driver-documents';
+      // signedDocumentUrl repairs legacy rows where storage_path is a full
+      // signed URL (drivers onboarded before the fix) before signing.
+      const previewUrl = await signedDocumentUrl(bucket, d.storage_path, 60 * 60);
 
-      const filename = d.storage_path.split('/').pop() ?? d.storage_path;
+      const metaFilename = (d.metadata as { filename?: string } | null)?.filename;
+      const cleanPath = cleanStoragePath(d.storage_path, bucket);
+      const filename = metaFilename ?? cleanPath?.split('/').pop() ?? d.storage_path;
 
       return {
         id: d.id,

@@ -179,6 +179,29 @@ export async function getDriverSelfieUrls(
 }
 
 /**
+ * Reduce a stored reference to a real storage path (no bucket, no host).
+ * Tolerates legacy rows that stored a full Supabase signed/public URL or a
+ * "bucket/path" value in storage_path — that mismatch is why documents for
+ * drivers onboarded before the fix wouldn't render. Returns null for an
+ * unparseable http URL.
+ */
+export function cleanStoragePath(value: string, bucket: string): string | null {
+  if (!value) return null;
+  for (const marker of [`/object/sign/${bucket}/`, `/object/public/${bucket}/`]) {
+    const i = value.indexOf(marker);
+    if (i >= 0) {
+      let p = value.slice(i + marker.length);
+      const q = p.indexOf('?');
+      if (q >= 0) p = p.slice(0, q);
+      try { return decodeURIComponent(p); } catch { return p; }
+    }
+  }
+  if (value.startsWith(`${bucket}/`)) return value.slice(bucket.length + 1);
+  if (value.startsWith('http')) return null;
+  return value;
+}
+
+/**
  * Short-lived signed URL for viewing/downloading a document. Pass the stored
  * storage_bucket + storage_path.
  */
@@ -189,8 +212,8 @@ export async function signedDocumentUrl(
 ): Promise<string | null> {
   const admin = createServiceRoleClient();
   const b = bucket || BUCKET;
-  // Tolerate legacy rows that stored "bucket/path" in storage_path.
-  const cleanPath = path.startsWith(`${b}/`) ? path.slice(b.length + 1) : path;
+  const cleanPath = cleanStoragePath(path, b);
+  if (!cleanPath) return null;
   const { data, error } = await admin.storage.from(b).createSignedUrl(cleanPath, expiresInSeconds);
   if (error || !data) return null;
   return data.signedUrl;
