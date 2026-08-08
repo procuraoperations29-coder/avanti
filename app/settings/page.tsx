@@ -1,12 +1,18 @@
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getDriverSelfieUrl } from '@/lib/storage/upload';
 import { PageShell } from '@/components/shell/page-shell';
 import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { ProfileForm } from '@/components/account/profile-form';
 import { NotificationPrefs } from '@/components/account/notification-prefs';
+import { SelfieUpload } from '@/components/account/selfie-upload';
 import { PushToggle } from '@/components/pwa/push-toggle';
 import { SignOutButton } from '@/components/account/sign-out-button';
+
+function initialsOf(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—';
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -76,9 +82,12 @@ export default async function SettingsPage() {
 
   // Role-specific: driver payout method / corporate org
   let driverPayout: { bank: string | null; last4: string | null; holder: string | null; kyc: string } | null = null;
+  let driverSelfieUrl: string | null = null;
   let org: { name: string; billing_email: string; status: string } | null = null;
 
-  if (user.roles.includes('driver')) {
+  const isDriver = user.roles.includes('driver');
+  if (isDriver) {
+    driverSelfieUrl = await getDriverSelfieUrl(user.id);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: dp } = await (admin as any)
       .from('driver_profiles')
@@ -125,6 +134,14 @@ export default async function SettingsPage() {
           preferredCurrency={profile?.preferred_currency ?? null}
         />
       </div>
+
+      {/* Driver profile photo */}
+      {isDriver && (
+        <div className="mb-10">
+          <AdminSectionLabel>Profile photo</AdminSectionLabel>
+          <SelfieUpload currentUrl={driverSelfieUrl} initials={initialsOf(profile?.full_name ?? '')} />
+        </div>
+      )}
 
       {/* Notifications */}
       <div className="mb-10">
