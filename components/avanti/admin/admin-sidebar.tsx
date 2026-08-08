@@ -23,6 +23,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Megaphone,
+  Car,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/cn';
@@ -32,6 +33,7 @@ export type AdminNavKey =
   | 'dashboard'
   | 'analytics'
   | 'verification'
+  | 'drivers'
   | 'placements'
   | 'trips'
   | 'corporate'
@@ -63,6 +65,7 @@ const OVERVIEW: NavItem[] = [
   { key: 'dashboard', href: '/admin', label: 'Dashboard', Icon: LayoutDashboard },
   { key: 'analytics', href: '/admin/analytics', label: 'Analytics', Icon: TrendingUp },
   { key: 'verification', href: '/admin/verification', label: 'Verification', Icon: ClipboardList },
+  { key: 'drivers', href: '/admin/drivers', label: 'Drivers', Icon: Car },
   { key: 'placements', href: '/admin/placements', label: 'Placements', Icon: UserCheck },
 ];
 
@@ -128,6 +131,7 @@ export function AdminSidebar({
     dashboard: true,
     analytics: canFinance || canSupport || isSuper,
     verification: canVerify,
+    drivers: canVerify || canSupport || isSuper,
     placements: canPlacements,
     trips: canSupport || canVerify || canFinance,
     corporate: canSupport || canVerify || canFinance,
