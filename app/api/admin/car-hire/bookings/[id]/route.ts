@@ -4,6 +4,9 @@ import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { initTransaction } from '@/lib/payments/paystack';
 import { publicEnv } from '@/config/env';
+import { sendEmail } from '@/lib/email/resend';
+import { sendPushToUser } from '@/lib/push/send';
+import { formatNaira } from '@/lib/permanent/salary';
 import { computeCarHireQuote, daysBetween } from '@/lib/carhire/quote';
 import { canManageCarHire } from '../../partners/route';
 
@@ -136,6 +139,23 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         updated_at: now,
       })
       .eq('id', id);
+
+    // Notify the customer that their quote is ready to pay (best-effort).
+    try {
+      await sendPushToUser(admin, booking.customer_user_id, {
+        title: 'Your car hire quote is ready',
+        body: `${formatNaira(offerTotal)} for ${days} day${days === 1 ? '' : 's'} — tap to pay and confirm.`,
+        url: '/customer/car-hire/bookings',
+      });
+    } catch { /* best-effort */ }
+    try {
+      const firstName = (customer?.full_name ?? 'there').split(' ')[0];
+      await sendEmail({
+        to: customerEmail,
+        subject: 'Your Avanti car hire quote',
+        html: `<p>Hi ${firstName},</p><p>Your car and driver are ready to confirm. The total is <strong>${formatNaira(offerTotal)}</strong> for ${days} day${days === 1 ? '' : 's'}.</p><p><a href="${payLink}">Pay now to confirm your booking</a></p>${body.offerConditions ? `<p>${body.offerConditions}</p>` : ''}<p>— Avanti</p>`,
+      });
+    } catch { /* best-effort */ }
 
     return NextResponse.json({ ok: true, paymentLink: payLink, offerTotal });
   } catch (err) {
