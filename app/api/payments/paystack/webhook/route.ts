@@ -116,6 +116,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, trip: trip.id });
   }
 
+  // ── Car hire invoices (references start with CARHIRE-) ──
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: carHire } = await (admin as any)
+    .from('car_hire_bookings')
+    .select('id, payment_status, customer_user_id, offer_total, city, start_date, end_date')
+    .eq('payment_reference', event.data.reference)
+    .maybeSingle();
+
+  if (carHire) {
+    if (carHire.payment_status === 'paid') {
+      return NextResponse.json({ ok: true, already: 'paid' });
+    }
+    const nowIso = new Date().toISOString();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (admin as any)
+      .from('car_hire_bookings')
+      .update({ status: 'paid', payment_status: 'paid', paid_at: nowIso, updated_at: nowIso })
+      .eq('id', carHire.id);
+
+    await sendPaymentReceipt(admin, {
+      customerUserId: carHire.customer_user_id,
+      eyebrow: 'Car hire confirmed',
+      customerHeadline: 'Payment received — your car and driver are confirmed',
+      customerParagraphs: [
+        'We\'ve received your payment. Your car and driver are booked, and we\'ll be in touch with the pickup details.',
+      ],
+      opsHeadline: 'Car hire paid',
+      summary: [
+        { label: 'Dates', value: `${carHire.start_date} → ${carHire.end_date}` },
+        { label: 'Total', value: formatNaira(Number(carHire.offer_total ?? 0)) },
+      ],
+    });
+
+    return NextResponse.json({ ok: true, carHire: carHire.id });
+  }
+
   // ── Permanent placement invoices (references start with PLINV-) ──
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: plInvoice } = await (admin as any)

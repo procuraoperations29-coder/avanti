@@ -24,6 +24,7 @@ import {
   PanelLeftOpen,
   Megaphone,
   Car,
+  CarFront,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/cn';
@@ -36,6 +37,7 @@ export type AdminNavKey =
   | 'drivers'
   | 'placements'
   | 'trips'
+  | 'carhire'
   | 'corporate'
   | 'support'
   | 'notifications'
@@ -72,6 +74,7 @@ const OVERVIEW: NavItem[] = [
 const OPERATIONS: NavItem[] = [
   { key: 'support', href: '/admin/support', label: 'Users', Icon: Users },
   { key: 'trips', href: '/admin/trips', label: 'Trips', Icon: Route },
+  { key: 'carhire', href: '/admin/car-hire', label: 'Car hire', Icon: CarFront },
   { key: 'corporate', href: '/admin/corporate', label: 'Corporate', Icon: Building2 },
   { key: 'notifications', href: '/admin/notifications', label: 'Notifications', Icon: Megaphone },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
@@ -134,6 +137,7 @@ export function AdminSidebar({
     drivers: canVerify || canSupport || isSuper,
     placements: canPlacements,
     trips: canSupport || canVerify || canFinance,
+    carhire: canSupport || canFinance,
     corporate: canSupport || canVerify || canFinance,
     support: canSupport,
     notifications: canSupport,
