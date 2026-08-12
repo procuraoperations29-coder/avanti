@@ -142,7 +142,7 @@ export async function POST(req: Request) {
           headline: `You're set up as ${info.dept}`,
           paragraphs: [
             `You've been added to the Avanti admin console as <strong>${info.dept}</strong>. Your role gives you access to ${info.access}`,
-            'To get in, click below and sign in with this email address — we’ll send you a one-time code. No password to set up.',
+            'To get in the first time, click below and sign in with this email address — we’ll send you a one-time code. You’ll then be invited to set a password for faster sign-in (or do it any time from Settings).',
           ],
           summary: [
             { label: 'Department', value: info.dept },
