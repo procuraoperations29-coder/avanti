@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 
 /**
  * POST /api/auth/otp/verify
@@ -66,10 +66,21 @@ export async function POST(req: Request) {
   const roles = Array.isArray(app.roles) ? (app.roles as string[]) : [];
   const activeRole = typeof app.active_role === 'string' ? app.active_role : null;
 
+  // Does this user have a password yet? Existing OTP-only users don't — the UI
+  // uses this to prompt them to set one.
+  let hasPassword = false;
+  try {
+    const admin = createServiceRoleClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: row } = await (admin as any).from('users').select('has_password').eq('id', data.user.id).maybeSingle();
+    hasPassword = Boolean(row?.has_password);
+  } catch { /* default false */ }
+
   return NextResponse.json({
     userId: data.user.id,
     activeRole,
     needsCompletion: roles.length === 0,
+    hasPassword,
     redirectTo: resolveRedirect(roles, activeRole),
   });
 }

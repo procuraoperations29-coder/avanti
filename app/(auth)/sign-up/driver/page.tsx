@@ -20,11 +20,14 @@ export default function DriverSignUpPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [phoneValid, setPhoneValid] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
   const [busy, setBusy] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const emailValid = /.+@.+\..+/.test(email.trim());
-  const canContinue = fullName.trim().length >= 2 && emailValid && phoneValid;
+  const passwordValid = password.length >= 8 && password === confirmPw;
+  const canContinue = fullName.trim().length >= 2 && emailValid && phoneValid && passwordValid;
 
   async function sendOtp() {
     setBusy(true);
@@ -76,6 +79,15 @@ export default function DriverSignUpPage() {
         const body = await completeRes.json().catch(() => ({}));
         throw new Error(body.message ?? 'Could not complete signup');
       }
+
+      // Set the password chosen at signup (best-effort).
+      try {
+        await fetch('/api/auth/password/set', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+      } catch { /* non-fatal */ }
 
       // Refresh session so the JWT picks up the new driver role
       const supabase = createClient();
@@ -149,6 +161,32 @@ export default function DriverSignUpPage() {
             </div>
             <p className="mt-2 font-mono text-[10px] text-ink-muted">
               For dispatch and customer contact
+            </p>
+          </div>
+
+          <div className="mb-4">
+            <SectionLabel>Choose a password</SectionLabel>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="At least 8 characters"
+              className={field}
+            />
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={confirmPw}
+              onChange={(e) => setConfirmPw(e.target.value)}
+              placeholder="Confirm password"
+              className={field}
+            />
+            {confirmPw.length > 0 && password !== confirmPw && (
+              <p className="mt-2 font-mono text-[10px] text-oxblood">Passwords don&apos;t match</p>
+            )}
+            <p className="mt-2 font-mono text-[10px] text-ink-muted">
+              You&apos;ll sign in with this from now on
             </p>
           </div>
 

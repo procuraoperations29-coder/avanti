@@ -7,6 +7,7 @@ import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/pa
 import { ProfileForm } from '@/components/account/profile-form';
 import { NotificationPrefs } from '@/components/account/notification-prefs';
 import { SelfieUpload } from '@/components/account/selfie-upload';
+import { PasswordSettings } from '@/components/account/password-settings';
 import { PushToggle } from '@/components/pwa/push-toggle';
 import { SignOutButton } from '@/components/account/sign-out-button';
 
@@ -64,7 +65,7 @@ export default async function SettingsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profile } = await (admin as any)
     .from('users')
-    .select('full_name, display_name, email, phone, preferred_language, preferred_currency, created_at, status')
+    .select('full_name, display_name, email, phone, preferred_language, preferred_currency, created_at, status, has_password')
     .eq('id', user.id)
     .single();
 
@@ -182,6 +183,12 @@ export default async function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* Password */}
+      <div className="mb-10">
+        <AdminSectionLabel>Password</AdminSectionLabel>
+        <PasswordSettings hasPassword={Boolean(profile?.has_password)} />
+      </div>
 
       {/* Account */}
       <div>
