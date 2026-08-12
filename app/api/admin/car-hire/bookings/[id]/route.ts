@@ -10,6 +10,16 @@ import { formatNaira } from '@/lib/permanent/salary';
 import { computeCarHireQuote, daysBetween } from '@/lib/carhire/quote';
 import { canManageCarHire } from '../../partners/route';
 
+/** Push the assigned driver (driver_profiles.id → user_id), best-effort. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function notifyAssignedDriver(A: any, driverProfileId: string | null | undefined, msg: { title: string; body: string }) {
+  if (!driverProfileId) return;
+  try {
+    const { data: dp } = await A.from('driver_profiles').select('user_id').eq('id', driverProfileId).single();
+    if (dp?.user_id) await sendPushToUser(A, dp.user_id, { ...msg, url: '/driver/car-hire' });
+  } catch { /* best-effort */ }
+}
+
 const bodySchema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('review') }),
   z.object({ action: z.literal('decline'), reason: z.string().max(500).optional() }),
@@ -72,6 +82,10 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
       await A.from('car_hire_bookings')
         .update({ payment_status: 'manual_paid', status: 'paid', paid_at: now, updated_at: now })
         .eq('id', id);
+      await notifyAssignedDriver(A, booking.assigned_driver_id, {
+        title: 'Car hire confirmed',
+        body: 'A car-hire job you\'re assigned to is now confirmed — check the details.',
+      });
       return NextResponse.json({ ok: true });
     }
 
@@ -156,6 +170,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         html: `<p>Hi ${firstName},</p><p>Your car and driver are ready to confirm. The total is <strong>${formatNaira(offerTotal)}</strong> for ${days} day${days === 1 ? '' : 's'}.</p><p><a href="${payLink}">Pay now to confirm your booking</a></p>${body.offerConditions ? `<p>${body.offerConditions}</p>` : ''}<p>— Avanti</p>`,
       });
     } catch { /* best-effort */ }
+
+    // Line up the assigned driver.
+    await notifyAssignedDriver(A, body.assignedDriverId ?? booking.assigned_driver_id, {
+      title: 'You\'ve been lined up for a car hire',
+      body: 'You\'re the assigned driver on a car hire pending customer payment.',
+    });
 
     return NextResponse.json({ ok: true, paymentLink: payLink, offerTotal });
   } catch (err) {

@@ -4,6 +4,7 @@ import { verifyWebhookSignature, verifyTransaction, paystackConfigured } from '@
 import { notifyEngagementEvent } from '@/lib/email/engagement-notify';
 import { sendPaymentReceipt } from '@/lib/email/payment-receipt';
 import { notifyCorporateInvoicePaid } from '@/lib/corporate/billing';
+import { sendPushToUser } from '@/lib/push/send';
 
 function formatNaira(n: number): string {
   return `₦${Math.round(n).toLocaleString('en-NG')}`;
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: carHire } = await (admin as any)
     .from('car_hire_bookings')
-    .select('id, payment_status, customer_user_id, offer_total, city, start_date, end_date')
+    .select('id, payment_status, customer_user_id, offer_total, city, start_date, end_date, assigned_driver_id')
     .eq('payment_reference', event.data.reference)
     .maybeSingle();
 
@@ -148,6 +149,15 @@ export async function POST(req: Request) {
         { label: 'Total', value: formatNaira(Number(carHire.offer_total ?? 0)) },
       ],
     });
+
+    // Notify the assigned driver their job is confirmed (best-effort).
+    if (carHire.assigned_driver_id) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: dp } = await (admin as any).from('driver_profiles').select('user_id').eq('id', carHire.assigned_driver_id).single();
+        if (dp?.user_id) await sendPushToUser(admin, dp.user_id, { title: 'Car hire confirmed', body: 'A car-hire job you\'re assigned to is now confirmed.', url: '/driver/car-hire' });
+      } catch { /* best-effort */ }
+    }
 
     return NextResponse.json({ ok: true, carHire: carHire.id });
   }

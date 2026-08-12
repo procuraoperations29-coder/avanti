@@ -425,6 +425,13 @@ export default async function DriverHomePage() {
         >
           View all engagements (including completed) <ArrowRight className="h-4 w-4" />
         </Link>
+
+        <Link
+          href="/driver/car-hire"
+          className="mt-3 flex items-center justify-between border border-line bg-paper-2 px-4 py-3 font-body text-sm text-ink transition-colors hover:bg-paper-3"
+        >
+          Your car-hire jobs <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     </PageShell>
   );

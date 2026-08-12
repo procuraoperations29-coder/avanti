@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { Building2, CarFront } from 'lucide-react';
+import { Building2, CarFront, Wallet } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader, MiniStat } from '@/components/avanti/admin/page-header';
@@ -75,7 +75,7 @@ export default async function CarHireHubPage() {
       <AdminPageHeader backHref="/admin" backLabel="Admin" title="Car hire" subtitle="Car + driver hire from leasing partners — inventory, pricing, and bookings" />
 
       {/* Sub-nav */}
-      <div className="mb-5 grid gap-3 sm:grid-cols-2">
+      <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <Link href="/admin/car-hire/partners" className="flex items-center gap-3 rounded-2xl border border-admin-border bg-admin-card p-4 shadow-admin-sm transition-colors hover:border-admin-green/40">
           <Building2 className="h-5 w-5 text-admin-green-text" strokeWidth={1.75} />
           <div>
@@ -88,6 +88,13 @@ export default async function CarHireHubPage() {
           <div>
             <div className="font-body text-sm font-semibold text-admin-text">Hire vehicles</div>
             <div className="font-body text-[12px] text-admin-text-muted">{vehicleCount ?? 0} listed</div>
+          </div>
+        </Link>
+        <Link href="/admin/car-hire/settlements" className="flex items-center gap-3 rounded-2xl border border-admin-border bg-admin-card p-4 shadow-admin-sm transition-colors hover:border-admin-green/40">
+          <Wallet className="h-5 w-5 text-admin-green-text" strokeWidth={1.75} />
+          <div>
+            <div className="font-body text-sm font-semibold text-admin-text">Settlements</div>
+            <div className="font-body text-[12px] text-admin-text-muted">Partner &amp; driver payables</div>
           </div>
         </Link>
       </div>
