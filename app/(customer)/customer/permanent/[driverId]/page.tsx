@@ -9,11 +9,10 @@ import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { StampBadge } from '@/components/avanti/stamp-badge';
 import {
-  monthlySalaryForTier,
-  placementFeeForTier,
   positionNameForTier,
   formatNaira,
 } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary, placementFeeInclVat } from '@/lib/pricing/settings';
 import { HireForm } from './hire-form';
 
 function initialsOf(name: string): string {
@@ -75,8 +74,9 @@ export default async function PermanentDossierPage({
   const tier = profile.verification_tier as TierLevel;
   const name = driverUser?.full_name ?? 'Driver';
   const firstName = name.split(' ')[0];
-  const salary = monthlySalaryForTier(tier);
-  const placementFee = placementFeeForTier(tier);
+  const pricing = await getPricingSettings();
+  const salary = tierSalary(pricing, tier);
+  const placementFee = placementFeeInclVat(salary, pricing);
 
   return (
     <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">

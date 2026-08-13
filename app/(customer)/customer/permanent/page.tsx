@@ -9,10 +9,10 @@ import { EmptyState } from '@/components/avanti/empty-state';
 import { Portrait } from '@/components/avanti/portrait';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import {
-  monthlySalaryForTier,
   positionNameForTier,
   formatNaira,
 } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary } from '@/lib/pricing/settings';
 
 function initialsOf(name: string): string {
   return name
@@ -40,6 +40,7 @@ export default async function PermanentBrowsePage() {
   if (!user) redirect('/sign-in?next=/customer/permanent');
 
   const admin = createServiceRoleClient();
+  const pricing = await getPricingSettings();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: profiles } = await (admin as any)
@@ -114,7 +115,7 @@ export default async function PermanentBrowsePage() {
             }) => {
               const tier = p.verification_tier as TierLevel;
               const name = namesById[p.user_id] ?? 'Driver';
-              const salary = monthlySalaryForTier(tier);
+              const salary = tierSalary(pricing, tier);
 
               return (
                 <Link

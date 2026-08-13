@@ -1,6 +1,7 @@
 import 'server-only';
 import { createHash } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getPricingSettings } from '@/lib/pricing/settings';
 
 /**
  * Pricing engine.
@@ -49,12 +50,11 @@ export interface QuoteResult {
   };
 }
 
-const VAT_RATE = 0.075;
-
 export async function buildQuote(input: QuoteInput): Promise<QuoteResult> {
   const country = input.countryCode ?? 'NG';
   const currency = input.currency ?? 'NGN';
   const admin = createServiceRoleClient();
+  const VAT_RATE = (await getPricingSettings()).vatRate;
 
   // 1. Driver's tier and vehicle experience.
   const { data: driver, error: driverErr } = await admin

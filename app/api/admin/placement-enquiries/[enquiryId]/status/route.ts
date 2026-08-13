@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { monthlySalaryForTier } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary } from '@/lib/pricing/settings';
 import { issueUpfrontInvoice, deriveBillingDay } from '@/lib/permanent/billing';
 import type { TierLevel } from '@/components/avanti/tier-badge';
 
@@ -86,7 +87,8 @@ export async function POST(
           .single();
 
         const tier = (driverProfile?.verification_tier as TierLevel) ?? 't1';
-        const monthlySalary = monthlySalaryForTier(tier);
+        const pricingSettings = await getPricingSettings();
+        const monthlySalary = tierSalary(pricingSettings, tier) || monthlySalaryForTier(tier);
         const startDate = enquiry.preferred_start_date ?? new Date().toISOString().slice(0, 10);
 
         // Placement starts 'pending' — it only activates once the 70% upfront

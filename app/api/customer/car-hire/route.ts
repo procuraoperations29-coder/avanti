@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { computeCarHireQuote, daysBetween } from '@/lib/carhire/quote';
+import { getPricingSettings } from '@/lib/pricing/settings';
 
 const bodySchema = z.object({
   vehicleId: z.string().uuid(),
@@ -47,6 +48,7 @@ export async function POST(req: Request) {
     }
 
     const days = daysBetween(body.startDate, body.endDate);
+    const vatRate = (await getPricingSettings()).vatRate;
     const quote = computeCarHireQuote(
       {
         daily_rate: Number(v.daily_rate),
@@ -57,7 +59,8 @@ export async function POST(req: Request) {
         overtime_hourly_rate: v.overtime_hourly_rate != null ? Number(v.overtime_hourly_rate) : null,
         min_days: Number(v.min_days),
       },
-      { days, hoursPerDay: body.hoursPerDay }
+      { days, hoursPerDay: body.hoursPerDay },
+      vatRate
     );
 
     const { data: booking, error } = await A.from('car_hire_bookings')

@@ -8,6 +8,7 @@ import { sendEmail } from '@/lib/email/resend';
 import { sendPushToUser } from '@/lib/push/send';
 import { formatNaira } from '@/lib/permanent/salary';
 import { computeCarHireQuote, daysBetween } from '@/lib/carhire/quote';
+import { getPricingSettings } from '@/lib/pricing/settings';
 import { canManageCarHire } from '../../partners/route';
 
 /** Push the assigned driver (driver_profiles.id → user_id), best-effort. */
@@ -96,6 +97,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     if (!vehicle) return NextResponse.json({ error: 'vehicle_missing' }, { status: 400 });
 
     const days = booking.days ?? daysBetween(booking.start_date, booking.end_date);
+    const vatRate = (await getPricingSettings()).vatRate;
     const q = computeCarHireQuote(
       {
         daily_rate: Number(vehicle.daily_rate),
@@ -106,7 +108,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         overtime_hourly_rate: vehicle.overtime_hourly_rate != null ? Number(vehicle.overtime_hourly_rate) : null,
         min_days: Number(vehicle.min_days),
       },
-      { days, hoursPerDay: Number(booking.hours_per_day) }
+      { days, hoursPerDay: Number(booking.hours_per_day) },
+      vatRate
     );
 
     const offerTotal = body.offerTotal ?? q.offerTotal;

@@ -5,7 +5,8 @@ import { createServiceRoleClient } from '@/lib/supabase/server';
 import { StatCard } from '@/components/avanti/admin/stat-card';
 import { AdminPageHeader, AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
-import { monthlySalaryForTier, formatNaira } from '@/lib/permanent/salary';
+import { formatNaira } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary } from '@/lib/pricing/settings';
 import { EnquiryStatusButtons } from './enquiry-status-buttons';
 
 const STATUS_STYLE: Record<string, string> = {
@@ -34,6 +35,7 @@ export default async function AdminPlacementsPage() {
   const canCompliance = user.roles.includes('admin_compliance') || isSuper;
 
   const admin = createServiceRoleClient();
+  const pricing = await getPricingSettings();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: enquiries } = await (admin as any)
@@ -151,7 +153,7 @@ export default async function AdminPlacementsPage() {
                   created_at: string;
                 }) => {
                   const driver = driverInfo[e.driver_id];
-                  const salary = driver ? monthlySalaryForTier(driver.tier) : 0;
+                  const salary = driver ? tierSalary(pricing, driver.tier) : 0;
 
                   return (
                     <div key={e.id} className="rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">

@@ -51,7 +51,7 @@ export function daysBetween(startDate: string, endDate: string): number {
   return Math.max(1, Math.round((e - s) / 86_400_000) + 1);
 }
 
-export function computeCarHireQuote(v: HireVehiclePricing, input: CarHireQuoteInput): CarHireQuote {
+export function computeCarHireQuote(v: HireVehiclePricing, input: CarHireQuoteInput, vatRate: number = CARHIRE_VAT_RATE): CarHireQuote {
   const days = Math.max(v.min_days || 1, Math.max(1, Math.ceil(input.days)));
   const hoursPerDay = input.hoursPerDay > 0 ? input.hoursPerDay : v.included_hours_per_day;
 
@@ -64,7 +64,7 @@ export function computeCarHireQuote(v: HireVehiclePricing, input: CarHireQuoteIn
   const driverPayTotal = round2(v.driver_daily_pay * days);
 
   const taxable = round2(vehicleSubtotal + driverSubtotal);
-  const vatAmount = round2(taxable * CARHIRE_VAT_RATE);
+  const vatAmount = round2(taxable * vatRate);
   const offerTotal = round2(taxable + vatAmount);
   const marginTotal = round2(taxable - partnerCostTotal - driverPayTotal);
 

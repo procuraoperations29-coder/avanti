@@ -12,7 +12,7 @@ import { DriverEngagementCard } from '@/components/driver/engagement-card';
 import { AvailabilityToggle } from '@/components/driver/availability-toggle';
 import { CorporateAttendanceCard } from '@/components/driver/corporate-attendance-card';
 import { statusLabel, type EngagementStatus } from '@/lib/engagement/driver-transitions';
-import { driverNetSalaryForTier, driverTakeHome } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary, driverTakeHome } from '@/lib/pricing/settings';
 
 function initialsOf(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
@@ -41,7 +41,8 @@ export default async function DriverHomePage() {
   }
 
   const tier = profile.verification_tier as TierLevel;
-  const monthlySalary = driverNetSalaryForTier(tier);
+  const pricing = await getPricingSettings();
+  const monthlySalary = driverTakeHome(tierSalary(pricing, tier), pricing);
 
   // Payouts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -275,7 +276,7 @@ export default async function DriverHomePage() {
                       Your monthly · after 15%
                     </div>
                     <div className="font-display text-xl text-ink">
-                      {formatNaira(driverTakeHome(p.monthly_salary))}
+                      {formatNaira(driverTakeHome(p.monthly_salary, pricing))}
                     </div>
                   </div>
                 </div>

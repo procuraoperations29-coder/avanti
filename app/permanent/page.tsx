@@ -6,10 +6,10 @@ import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { SiteHeader } from '@/components/marketing/site-header';
 import { SiteFooter } from '@/components/marketing/site-footer';
 import {
-  monthlySalaryForTier,
   positionNameForTier,
   formatNaira,
 } from '@/lib/permanent/salary';
+import { getPricingSettings, tierSalary } from '@/lib/pricing/settings';
 
 /**
  * Public marketing page for permanent driver placements.
@@ -23,6 +23,7 @@ export default async function PermanentPage() {
   const user = await getAuthUser();
   const isSignedIn = Boolean(user);
   const ctaHref = isSignedIn ? '/customer/permanent' : '/sign-up?role=individual';
+  const pricing = await getPricingSettings();
 
   const tiers: { tier: TierLevel; description: string }[] = [
     { tier: 't2', description: 'Verified across identity, licence, address, and background. Suited to family runs, school routines, and everyday driving.' },
@@ -117,7 +118,7 @@ export default async function PermanentPage() {
                   {positionNameForTier(tier)}
                 </div>
                 <div className="mt-4 font-display text-2xl leading-none text-brass">
-                  {formatNaira(monthlySalaryForTier(tier))}
+                  {formatNaira(tierSalary(pricing, tier))}
                   <span className="ml-2 font-mono text-sm uppercase tracking-wider text-ink-muted">
                     /month
                   </span>

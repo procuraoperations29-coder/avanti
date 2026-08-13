@@ -5,6 +5,7 @@ import { initTransaction } from '@/lib/payments/paystack';
 import { sendEmail } from '@/lib/email/resend';
 import { sendPushToUser } from '@/lib/push/send';
 import { brandedEmail } from '@/lib/email/templates/branded';
+import { getPricingSettings } from '@/lib/pricing/settings';
 
 /**
  * Corporate staffing billing — aggregated per ORGANISATION (never per driver).
@@ -71,15 +72,16 @@ export async function raiseCorporateUpfrontInvoice(
     const nameByUser = Object.fromEntries((us ?? []).map((u: { id: string; full_name: string | null }) => [u.id, u.full_name ?? 'Driver']));
     const nameByDriver = Object.fromEntries((profs ?? []).map((p: { id: string; user_id: string | null }) => [p.id, nameByUser[p.user_id ?? ''] ?? 'Driver']));
 
+    const pset = await getPricingSettings();
     const currency = toBill[0]?.currency ?? 'NGN';
     const lineItems = toBill.map((a: { id: string; driver_id: string; monthly_rate: number }) => ({
       assignment_id: a.id,
       driver: nameByDriver[a.driver_id] ?? 'Driver',
       monthly_rate: Number(a.monthly_rate),
-      upfront: Math.round(Number(a.monthly_rate) * CORP_UPFRONT_RATE),
+      upfront: Math.round(Number(a.monthly_rate) * pset.corporateUpfrontRate),
     }));
     const baseTotal = lineItems.reduce((s: number, li: { upfront: number }) => s + li.upfront, 0);
-    const vat = Math.round(baseTotal * CORP_VAT_RATE);
+    const vat = Math.round(baseTotal * pset.vatRate);
     const amount = baseTotal + vat; // VAT-inclusive total the org pays
     const assignmentIds = toBill.map((a: { id: string }) => a.id);
     const due = new Date();
@@ -174,6 +176,7 @@ function monthLabel(d: Date): string {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise<{ invoiced: number }> {
+  const pset = await getPricingSettings();
   const targetDay = now.getUTCDate();
   const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1));
   const periodStartIso = periodStart.toISOString().slice(0, 10);
@@ -271,7 +274,7 @@ export async function runCorporateMonthlyBilling(admin: any, now: Date): Promise
 
     // VAT (7.5%) on top of the attendance-based subtotal.
     const monthlyBase = amount;
-    const monthlyVat = Math.round(monthlyBase * CORP_VAT_RATE);
+    const monthlyVat = Math.round(monthlyBase * pset.vatRate);
     amount = monthlyBase + monthlyVat; // VAT-inclusive total the org pays
 
     const currency = asgs[0]?.currency ?? 'NGN';

@@ -3,6 +3,7 @@ import { publicEnv } from '@/config/env';
 import { initTransaction } from '@/lib/payments/paystack';
 import { sendEmail } from '@/lib/email/resend';
 import { placementInvoiceEmail } from '@/lib/email/templates/placement-invoice';
+import { getPricingSettings } from '@/lib/pricing/settings';
 
 /**
  * Permanent-placement billing engine.
@@ -19,12 +20,15 @@ import { placementInvoiceEmail } from '@/lib/email/templates/placement-invoice';
  */
 
 export const UPFRONT_RATE = 0.7;
-export const VAT_RATE = 0.075; // 7.5% VAT charged on the placement fee (the monthly salary is VAT-free)
+export const VAT_RATE = 0.075; // fallback; live values come from pricing_settings
 const REMIND_DAYS_BEFORE = 2;
 
-/** Upfront placement fee (70% of a month's salary) with 7.5% VAT on top. */
-export function computeUpfront(monthlySalary: number): number {
-  return Math.round(monthlySalary * UPFRONT_RATE * (1 + VAT_RATE));
+/**
+ * Upfront placement fee = upfront% of a month's salary, + VAT.
+ * Rates default to the constants but should be passed from pricing_settings.
+ */
+export function computeUpfront(monthlySalary: number, upfrontRate = UPFRONT_RATE, vatRate = VAT_RATE): number {
+  return Math.round(monthlySalary * upfrontRate * (1 + vatRate));
 }
 
 export function deriveBillingDay(startISO: string): number {
@@ -130,7 +134,8 @@ export async function issueUpfrontInvoice(
   placement: { id: string; customer_user_id: string; monthly_salary: number; currency?: string },
   ctx: { customerName: string; customerEmail: string; driverName: string }
 ): Promise<{ ok: boolean; invoiceId?: string }> {
-  const amount = computeUpfront(Number(placement.monthly_salary));
+  const s = await getPricingSettings();
+  const amount = computeUpfront(Number(placement.monthly_salary), s.placementUpfrontRate, s.vatRate);
   const dueDate = isoDate(new Date());
 
   const { data: inserted, error } = await admin
