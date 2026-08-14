@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getPricingSettings } from '@/lib/pricing/settings';
 import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 import { VehiclesClient, type VehicleRow, type PartnerOption } from './vehicles-client';
 
@@ -27,6 +28,7 @@ export default async function CarHireVehiclesPage() {
     .is('deleted_at', null)
     .order('name');
 
+  const { vatRate } = await getPricingSettings();
   const partnerRows = (partners ?? []) as Array<{ id: string; name: string; status: string }>;
   const activePartners: PartnerOption[] = partnerRows.filter((p) => p.status === 'active').map((p) => ({ id: p.id, name: p.name }));
   const partnerNames: Record<string, string> = Object.fromEntries(partnerRows.map((p) => [p.id, p.name]));
@@ -43,6 +45,7 @@ export default async function CarHireVehiclesPage() {
         initial={(vehicles ?? []) as VehicleRow[]}
         partners={activePartners}
         partnerNames={partnerNames}
+        vatRate={vatRate}
       />
     </>
   );

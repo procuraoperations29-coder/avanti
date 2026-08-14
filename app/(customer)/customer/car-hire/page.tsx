@@ -7,6 +7,7 @@ import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { EmptyState } from '@/components/avanti/empty-state';
 import { formatNaira } from '@/lib/permanent/salary';
 import { computeCarHireQuote } from '@/lib/carhire/quote';
+import { getPricingSettings } from '@/lib/pricing/settings';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,7 +17,7 @@ function photoUrl(path: string | null): string | null {
 }
 
 /** Customer-facing indicative daily price — computed from customer-safe fields only. */
-function dailyAllIn(v: SafeVehicle): number {
+function dailyAllIn(v: SafeVehicle, vatRate: number): number {
   return computeCarHireQuote(
     {
       daily_rate: Number(v.daily_rate),
@@ -27,7 +28,8 @@ function dailyAllIn(v: SafeVehicle): number {
       overtime_hourly_rate: v.overtime_hourly_rate != null ? Number(v.overtime_hourly_rate) : null,
       min_days: Number(v.min_days),
     },
-    { days: 1, hoursPerDay: Number(v.included_hours_per_day) }
+    { days: 1, hoursPerDay: Number(v.included_hours_per_day) },
+    vatRate
   ).offerTotal;
 }
 
@@ -54,6 +56,7 @@ export default async function CarHireCatalogPage() {
   if (!user) redirect('/sign-in?next=/customer/car-hire');
 
   const admin = createServiceRoleClient();
+  const { vatRate } = await getPricingSettings();
   // Customer-safe columns only — never partner cost, driver pay, or margin.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data } = await (admin as any)
@@ -115,7 +118,7 @@ export default async function CarHireCatalogPage() {
                   </div>
                   <div className="mt-auto pt-4">
                     <div className="font-display text-2xl font-semibold leading-none tracking-tight tabular-nums text-admin-text">
-                      {formatNaira(dailyAllIn(v))}
+                      {formatNaira(dailyAllIn(v, vatRate))}
                       <span className="ml-2 font-body text-xs font-medium text-admin-text-muted">/day, all-in</span>
                     </div>
                     <div className="mt-3 inline-flex items-center gap-1 font-body text-[13px] font-medium text-admin-green-text transition-transform group-hover:translate-x-1">

@@ -42,7 +42,7 @@ const input =
   'w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm text-admin-text outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20';
 const label = 'mb-1 block font-body text-[11px] uppercase tracking-wide text-admin-text-muted';
 
-export function VehiclesClient({ initial, partners, partnerNames }: { initial: VehicleRow[]; partners: PartnerOption[]; partnerNames: Record<string, string> }) {
+export function VehiclesClient({ initial, partners, partnerNames, vatRate }: { initial: VehicleRow[]; partners: PartnerOption[]; partnerNames: Record<string, string>; vatRate: number }) {
   const router = useRouter();
   const [editing, setEditing] = useState<Partial<VehicleRow> | null>(null);
 
@@ -64,6 +64,7 @@ export function VehiclesClient({ initial, partners, partnerNames }: { initial: V
         <VehicleForm
           initial={editing}
           partners={partners}
+          vatRate={vatRate}
           onClose={() => setEditing(null)}
           onSaved={() => { setEditing(null); router.refresh(); }}
         />
@@ -79,7 +80,8 @@ export function VehiclesClient({ initial, partners, partnerNames }: { initial: V
             const url = photoUrl(v.photo_path);
             const allIn = computeCarHireQuote(
               { daily_rate: Number(v.daily_rate), partner_daily_cost: Number(v.partner_daily_cost), driver_daily_rate: Number(v.driver_daily_rate), driver_daily_pay: Number(v.driver_daily_pay), included_hours_per_day: Number(v.included_hours_per_day), overtime_hourly_rate: v.overtime_hourly_rate != null ? Number(v.overtime_hourly_rate) : null, min_days: Number(v.min_days) },
-              { days: 1, hoursPerDay: Number(v.included_hours_per_day) }
+              { days: 1, hoursPerDay: Number(v.included_hours_per_day) },
+              vatRate
             );
             return (
               <div key={v.id} className="flex gap-4 rounded-2xl border border-admin-border bg-admin-card p-4 shadow-admin-sm">
@@ -125,7 +127,7 @@ function VehicleStatusPill({ status }: { status: string }) {
 
 function num(v: unknown): number { const n = Number(v); return Number.isFinite(n) ? n : 0; }
 
-function VehicleForm({ initial, partners, onClose, onSaved }: { initial: Partial<VehicleRow>; partners: PartnerOption[]; onClose: () => void; onSaved: () => void }) {
+function VehicleForm({ initial, partners, vatRate, onClose, onSaved }: { initial: Partial<VehicleRow>; partners: PartnerOption[]; vatRate: number; onClose: () => void; onSaved: () => void }) {
   const isEdit = Boolean(initial.id);
   const [f, setF] = useState<Record<string, string>>({
     partner_id: initial.partner_id ?? partners[0]?.id ?? '',
@@ -156,8 +158,9 @@ function VehicleForm({ initial, partners, onClose, onSaved }: { initial: Partial
 
   const preview = useMemo(() => computeCarHireQuote(
     { daily_rate: num(f.daily_rate), partner_daily_cost: num(f.partner_daily_cost), driver_daily_rate: num(f.driver_daily_rate), driver_daily_pay: num(f.driver_daily_pay), included_hours_per_day: num(f.included_hours_per_day) || 10, overtime_hourly_rate: f.overtime_hourly_rate ? num(f.overtime_hourly_rate) : null, min_days: num(f.min_days) || 1 },
-    { days: 1, hoursPerDay: num(f.included_hours_per_day) || 10 }
-  ), [f]);
+    { days: 1, hoursPerDay: num(f.included_hours_per_day) || 10 },
+    vatRate
+  ), [f, vatRate]);
 
   const uploadPhoto = async (file: File) => {
     setUploading(true);

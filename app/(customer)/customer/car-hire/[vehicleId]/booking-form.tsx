@@ -28,7 +28,7 @@ function todayISO(offsetDays = 0): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function CarHireBookingForm({ vehicle, defaultPhone }: { vehicle: SafeVehicleDetail; defaultPhone: string }) {
+export function CarHireBookingForm({ vehicle, defaultPhone, vatRate }: { vehicle: SafeVehicleDetail; defaultPhone: string; vatRate: number }) {
   const router = useRouter();
   const [startDate, setStartDate] = useState(todayISO(1));
   const [endDate, setEndDate] = useState(todayISO(1));
@@ -55,9 +55,10 @@ export function CarHireBookingForm({ vehicle, defaultPhone }: { vehicle: SafeVeh
           overtime_hourly_rate: vehicle.overtime_hourly_rate,
           min_days: vehicle.min_days,
         },
-        { days, hoursPerDay: hpd }
+        { days, hoursPerDay: hpd },
+        vatRate
       ),
-    [vehicle, days, hpd]
+    [vehicle, days, hpd, vatRate]
   );
 
   const belowMin = quote.days < vehicle.min_days;

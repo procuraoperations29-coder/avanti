@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ChevronLeft, Check, CarFront } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
+import { getPricingSettings } from '@/lib/pricing/settings';
 import { AdminSectionLabel } from '@/components/avanti/admin/page-header';
 import { CarHireBookingForm, type SafeVehicleDetail } from './booking-form';
 
@@ -19,6 +20,7 @@ export default async function CarHireVehiclePage({ params }: { params: Promise<{
   if (!user) redirect(`/sign-in?next=/customer/car-hire/${vehicleId}`);
 
   const admin = createServiceRoleClient();
+  const { vatRate } = await getPricingSettings();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: v } = await (admin as any)
     .from('hire_vehicles')
@@ -91,7 +93,7 @@ export default async function CarHireVehiclePage({ params }: { params: Promise<{
           </div>
 
           <div className="mt-8">
-            <CarHireBookingForm vehicle={vehicle} defaultPhone={me?.phone ?? ''} />
+            <CarHireBookingForm vehicle={vehicle} defaultPhone={me?.phone ?? ''} vatRate={vatRate} />
           </div>
         </div>
       </div>
