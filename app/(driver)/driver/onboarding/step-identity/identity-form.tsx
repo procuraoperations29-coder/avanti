@@ -26,6 +26,9 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
   const [idFrontPath, setIdFrontPath] = useState(initialData.id_front_path ?? '');
   const [idBackPath, setIdBackPath] = useState(initialData.id_back_path ?? '');
   const [selfiePath, setSelfiePath] = useState(initialData.selfie_path ?? '');
+  const [kinName, setKinName] = useState(initialData.next_of_kin_name ?? '');
+  const [kinPhone, setKinPhone] = useState(initialData.next_of_kin_phone ?? '');
+  const [kinRelationship, setKinRelationship] = useState(initialData.next_of_kin_relationship ?? '');
 
   const canContinue =
     legalName.trim().length >= 2 &&
@@ -33,7 +36,9 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
     idType &&
     idNumber.trim().length >= 5 &&
     idFrontPath.length > 0 &&
-    selfiePath.length > 0;
+    selfiePath.length > 0 &&
+    kinName.trim().length >= 2 &&
+    kinPhone.trim().length >= 6;
 
   const saveAndContinue = async () => {
     if (!canContinue) {
@@ -56,6 +61,9 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
             id_front_path: idFrontPath,
             id_back_path: idBackPath || null,
             selfie_path: selfiePath,
+            next_of_kin_name: kinName.trim(),
+            next_of_kin_phone: kinPhone.trim(),
+            next_of_kin_relationship: kinRelationship.trim() || null,
           },
         }),
       });
@@ -216,6 +224,28 @@ export function IdentityStepForm({ initialData }: { initialData: IdentityData })
           onUploaded={setSelfiePath}
           helperText="A clear, front-facing photo of your face. This becomes your profile picture — customers see it when choosing a driver."
         />
+      </div>
+
+      {/* Next of kin */}
+      <div className="mb-10">
+        <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">Next of kin / emergency contact</div>
+        <p className="mb-4 font-body text-xs leading-relaxed text-ink-muted">
+          Held securely for safety and emergencies only. Never shown to customers.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div>
+            <label htmlFor="kin_name" className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">Full name</label>
+            <Input id="kin_name" value={kinName} onChange={(e) => setKinName(e.target.value)} placeholder="e.g. Ngozi Okafor" />
+          </div>
+          <div>
+            <label htmlFor="kin_phone" className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">Phone</label>
+            <Input id="kin_phone" value={kinPhone} onChange={(e) => setKinPhone(e.target.value)} placeholder="0803…" className="font-mono" />
+          </div>
+          <div>
+            <label htmlFor="kin_rel" className="mb-2 block font-mono text-[10px] uppercase tracking-[0.2em] text-ink-muted">Relationship</label>
+            <Input id="kin_rel" value={kinRelationship} onChange={(e) => setKinRelationship(e.target.value)} placeholder="e.g. Spouse, Sibling" />
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between border-t border-line pt-8">

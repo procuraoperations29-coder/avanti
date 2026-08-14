@@ -44,6 +44,19 @@ export default async function DriverHomePage() {
   const pricing = await getPricingSettings();
   const monthlySalary = driverTakeHome(tierSalary(pricing, tier), pricing);
 
+  // Has the driver signed their services agreement yet?
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: drvContract } = await (admin as any)
+    .from('contracts')
+    .select('status')
+    .eq('subject_user_id', user.id)
+    .eq('kind', 'employment_permanent')
+    .is('engagement_id', null)
+    .order('version', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const contractSigned = drvContract?.status === 'executed';
+
   // Payouts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: payoutsData } = await (admin as any)
@@ -212,6 +225,17 @@ export default async function DriverHomePage() {
             Verified · bookable
           </span>
         </div>
+
+        {/* Contract prompt */}
+        {!contractSigned && (
+          <Link href="/driver/contract" className="mb-8 flex items-center justify-between gap-4 border border-ink bg-ink px-5 py-4 text-paper transition-opacity hover:opacity-90">
+            <div>
+              <div className="font-body text-sm font-semibold">Sign your driver services agreement</div>
+              <div className="mt-0.5 font-body text-[12px] text-paper/70">Please review and sign to keep taking jobs.</div>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0" strokeWidth={2} />
+          </Link>
+        )}
 
         {/* Availability toggle */}
         <div className="mb-10">

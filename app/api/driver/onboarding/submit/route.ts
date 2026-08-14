@@ -209,6 +209,9 @@ export async function POST() {
         languages: experience.languages ?? [],
         years_experience: experience.years_experience ?? 0,
         service_radius_km: experience.service_radius_km ?? null,
+        next_of_kin_name: typeof identity.next_of_kin_name === 'string' ? identity.next_of_kin_name : null,
+        next_of_kin_phone: typeof identity.next_of_kin_phone === 'string' ? identity.next_of_kin_phone : null,
+        next_of_kin_relationship: typeof identity.next_of_kin_relationship === 'string' ? identity.next_of_kin_relationship : null,
       })
       .eq('user_id', user.id);
 

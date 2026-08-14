@@ -107,19 +107,16 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
       });
       const body = (await res.json()) as {
         engagementId?: string;
-        authorizationUrl?: string;
-        mock?: boolean;
+        contractId?: string;
         error?: string;
         message?: string;
       };
-      if (!res.ok || !body.authorizationUrl) {
+      if (!res.ok || !body.engagementId) {
         toast.error(body.message ?? body.error ?? 'Booking failed');
         return;
       }
-      if (body.mock) {
-        toast('Redirecting to mock payment…');
-      }
-      window.location.href = body.authorizationUrl;
+      // Review & sign the contract before payment.
+      window.location.href = `/customer/engagements/${body.engagementId}/contract`;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Booking failed');
       setBooking(false);
@@ -292,11 +289,11 @@ export function BookingForm({ driverId, driverName, availableClasses }: BookingF
               className="w-full rounded-xl bg-admin-green font-medium text-admin-navy-2 shadow-admin-sm hover:brightness-95 disabled:opacity-60"
             >
               {booking && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {booking ? 'Redirecting…' : `Book ${driverName}`}
+              {booking ? 'Preparing…' : `Review agreement & book`}
             </Button>
             <p className="font-body text-[12px] leading-relaxed text-admin-text-muted">
-              You&apos;ll be sent to a secure payment page. The engagement is only confirmed after
-              payment succeeds.
+              Next you&apos;ll review and sign a short agreement, then pay. The engagement is only
+              confirmed after payment succeeds.
             </p>
           </>
         ) : (

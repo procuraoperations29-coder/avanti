@@ -2,18 +2,17 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
-import { initTransaction } from '@/lib/payments/paystack';
-import { publicEnv } from '@/config/env';
+import { getPricingSettings } from '@/lib/pricing/settings';
+import { buildCustomerContractTerms } from '@/lib/contracts/generate';
 
 /**
  * POST /api/customer/book
  *
- * Creates the engagement (status='draft') and payment (status='pending'),
- * then initiates a Paystack transaction. Returns the authorization URL.
- *
- * In mock mode (PAYSTACK_SECRET_KEY empty), initTransaction returns a
- * mock URL that points back to the engagement detail page with
- * ?reference=... which the PaymentCallbackHandler picks up.
+ * Creates the engagement (status='contract_pending'), generates the engagement
+ * contract for the customer to sign, and a pending payment row. Payment is NOT
+ * initiated here — the customer signs the contract first, then /sign-and-pay
+ * initiates Paystack. Returns { engagementId } so the client can route to the
+ * contract page.
  */
 
 const addressSchema = z.object({
@@ -78,7 +77,7 @@ export async function POST(req: Request) {
         customer_user_id: user.id,
         driver_id: quote.driver_id!,
         engagement_type: quote.engagement_type,
-        status: 'draft',
+        status: 'contract_pending',
         starts_at: quoteInputs.starts_at,
         ends_at: quoteInputs.ends_at,
         expected_daily_hours: quote.engagement_type === 'full_day' ? 8 : null,
@@ -102,48 +101,69 @@ export async function POST(req: Request) {
       );
     }
 
+    // ── Generate the engagement contract for the customer to sign ──
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const A = admin as any;
+    const [{ data: cust }, { data: dp }] = await Promise.all([
+      A.from('users').select('full_name').eq('id', user.id).single(),
+      A.from('driver_profiles').select('user_id').eq('id', quote.driver_id!).single(),
+    ]);
+    let driverName = 'your driver';
+    if (dp?.user_id) {
+      const { data: du } = await A.from('users').select('full_name').eq('id', dp.user_id).single();
+      driverName = du?.full_name ?? driverName;
+    }
+    const settings = await getPricingSettings();
     const reference = `AVANTI-${engagement.id.slice(0, 8)}-${Date.now()}`;
-    const { data: payment, error: payErr } = await admin
-      .from('payments')
+    const terms = buildCustomerContractTerms({
+      reference,
+      customerName: cust?.full_name ?? 'the Customer',
+      driverName,
+      engagementType: quote.engagement_type,
+      vehicleClass: quote.vehicle_class ?? null,
+      startsAt: quoteInputs.starts_at ?? null,
+      endsAt: quoteInputs.ends_at ?? null,
+      expectedDailyHours: quote.engagement_type === 'full_day' ? 8 : null,
+      pickup: body.pickupAddress.line ?? null,
+      currency: quote.currency,
+      customerPriceTotal: Number(quote.customer_price_total),
+      cancelPolicy: { freeHours: settings.cancelFreeHours, nearHours: settings.cancelNearHours, feeNear: settings.cancelFeeNear, feeMid: settings.cancelFeeMid },
+      generatedAt: new Date().toISOString(),
+    });
+    const kind = quote.engagement_type === 'full_day' ? 'engagement_standard' : 'engagement_short';
+    const { data: contract, error: cErr } = await A.from('contracts')
       .insert({
         engagement_id: engagement.id,
-        payer_user_id: user.id,
-        provider: 'paystack',
-        provider_ref: reference,
-        method_type: 'card',
+        kind,
+        price_quote_hash: quote.quote_hash,
+        jurisdiction: 'NG',
         currency: quote.currency,
-        gross_amount: quote.customer_price_total,
-        status: 'pending',
+        terms,
+        status: 'pending_signatures',
       })
       .select('id')
       .single();
-    if (payErr || !payment) {
-      return NextResponse.json(
-        { error: 'payment_create_failed', message: payErr?.message ?? 'unknown' },
-        { status: 500 }
-      );
+    if (cErr || !contract) {
+      return NextResponse.json({ error: 'contract_create_failed', message: cErr?.message ?? 'unknown' }, { status: 500 });
+    }
+    await A.from('engagements').update({ contract_id: contract.id }).eq('id', engagement.id);
+
+    // Pending payment row (Paystack is initiated after signing, in /sign-and-pay).
+    const { error: payErr } = await A.from('payments').insert({
+      engagement_id: engagement.id,
+      payer_user_id: user.id,
+      provider: 'paystack',
+      provider_ref: reference,
+      method_type: 'card',
+      currency: quote.currency,
+      gross_amount: quote.customer_price_total,
+      status: 'pending',
+    });
+    if (payErr) {
+      return NextResponse.json({ error: 'payment_create_failed', message: payErr.message }, { status: 500 });
     }
 
-    const callbackUrl = `${publicEnv.NEXT_PUBLIC_APP_URL}/customer/engagements/${engagement.id}`;
-    const init = await initTransaction({
-      email: user.email || `customer-${user.id}@avanti.local`,
-      amountNaira: Number(quote.customer_price_total),
-      reference,
-      callbackUrl,
-      metadata: {
-        engagement_id: engagement.id,
-        payment_id: payment.id,
-        user_id: user.id,
-      },
-    });
-
-    return NextResponse.json({
-      engagementId: engagement.id,
-      paymentId: payment.id,
-      authorizationUrl: init.authorizationUrl,
-      reference: init.reference,
-      mock: init.mock,
-    });
+    return NextResponse.json({ engagementId: engagement.id, contractId: contract.id });
   } catch (err) {
     if (err instanceof AuthError) {
       return NextResponse.json({ error: err.code }, { status: err.status });
