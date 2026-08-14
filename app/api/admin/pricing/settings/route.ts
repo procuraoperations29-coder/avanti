@@ -18,6 +18,10 @@ const bodySchema = z.object({
   placementFeeRate: rate.optional(),
   placementUpfrontRate: rate.optional(),
   corporateUpfrontRate: rate.optional(),
+  cancelFreeHours: z.number().min(0).max(720).optional(),
+  cancelNearHours: z.number().min(0).max(720).optional(),
+  cancelFeeNear: rate.optional(),
+  cancelFeeMid: rate.optional(),
 });
 
 export async function PATCH(req: Request) {
@@ -40,6 +44,10 @@ export async function PATCH(req: Request) {
     if (body.placementFeeRate != null) update.placement_fee_rate = body.placementFeeRate;
     if (body.placementUpfrontRate != null) update.placement_upfront_rate = body.placementUpfrontRate;
     if (body.corporateUpfrontRate != null) update.corporate_upfront_rate = body.corporateUpfrontRate;
+    if (body.cancelFreeHours != null) update.cancel_free_hours = body.cancelFreeHours;
+    if (body.cancelNearHours != null) update.cancel_near_hours = body.cancelNearHours;
+    if (body.cancelFeeNear != null) update.cancel_fee_near = body.cancelFeeNear;
+    if (body.cancelFeeMid != null) update.cancel_fee_mid = body.cancelFeeMid;
 
     const admin = createServiceRoleClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

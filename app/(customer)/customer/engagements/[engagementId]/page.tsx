@@ -6,12 +6,21 @@ import { createClient, createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminSectionLabel, AdminSpecRow } from '@/components/avanti/admin/page-header';
 import { TierBadge, type TierLevel } from '@/components/avanti/tier-badge';
 import { cn } from '@/lib/utils/cn';
+import { getDriverSelfieUrl } from '@/lib/storage/upload';
+import { getPricingSettings } from '@/lib/pricing/settings';
+import { CANCELLABLE_STATUSES } from '@/lib/engagement/cancellation';
+import { Portrait } from '@/components/avanti/portrait';
 import { PaymentCallbackHandler } from './payment-callback-handler';
 import { ConfirmCompletionButton } from './confirm-completion-button';
+import { CancelEngagement } from './cancel-engagement-button';
 
 function formatNaira(n: number): string {
   return `₦${n.toLocaleString('en-NG')}`;
 }
+function initialsOf(name: string): string {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('') || '—';
+}
+const PAID_STATUSES = ['confirmed', 'active', 'completed'];
 
 const STATUS_PILL: Record<string, string> = {
   draft: 'bg-admin-bg text-admin-text-muted',
@@ -49,15 +58,30 @@ export default async function EngagementDetailPage({
 
   if (!engagement) notFound();
 
-  // customer_confirmed_at isn't on the customer view — read it directly.
+  // Fields not on the customer view — read directly with service role.
   const admin = createServiceRoleClient();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: engRow } = await (admin as any)
-    .from('engagements')
-    .select('customer_confirmed_at')
+  const A = admin as any;
+  const { data: engRow } = await A.from('engagements')
+    .select('customer_confirmed_at, driver_id, cancellation_fee, refund_amount, refunded_at')
     .eq('id', engagementId)
     .single();
   const customerConfirmedAt: string | null = engRow?.customer_confirmed_at ?? null;
+
+  const isPaid = PAID_STATUSES.includes(engagement.status);
+  const isCancellable = CANCELLABLE_STATUSES.includes(engagement.status);
+
+  // Post-payment: reveal the driver's contact (never NIN / next-of-kin).
+  let driverContact: { name: string; phone: string | null; selfieUrl: string | null } | null = null;
+  if (isPaid && engRow?.driver_id) {
+    const { data: dp } = await A.from('driver_profiles').select('user_id').eq('id', engRow.driver_id).single();
+    if (dp?.user_id) {
+      const { data: du } = await A.from('users').select('full_name, phone').eq('id', dp.user_id).single();
+      driverContact = { name: du?.full_name ?? engagement.driver_name ?? 'Driver', phone: du?.phone ?? null, selfieUrl: await getDriverSelfieUrl(dp.user_id) };
+    }
+  }
+
+  const pricing = isCancellable ? await getPricingSettings() : null;
 
   const startDate = new Date(engagement.starts_at);
   const endDate = engagement.ends_at ? new Date(engagement.ends_at) : null;
@@ -131,6 +155,14 @@ export default async function EngagementDetailPage({
             </span>{' '}
             — this engagement was cancelled.
           </p>
+          {(engRow?.refund_amount != null || engRow?.cancellation_fee != null) && (
+            <p className="mt-1 font-body text-[12px] text-admin-text-muted">
+              {Number(engRow?.cancellation_fee ?? 0) > 0 && <>Cancellation fee {formatNaira(Number(engRow.cancellation_fee))}. </>}
+              {Number(engRow?.refund_amount ?? 0) > 0
+                ? <>Refund of {formatNaira(Number(engRow.refund_amount))} {engRow?.refunded_at ? 'has been issued' : 'is being processed'}.</>
+                : <>No refund was due.</>}
+            </p>
+          )}
         </div>
       )}
       {engagement.status === 'active' && (
@@ -164,6 +196,24 @@ export default async function EngagementDetailPage({
               <ConfirmCompletionButton engagementId={engagementId} />
             </>
           )}
+        </div>
+      )}
+
+      {/* Your driver — revealed after payment */}
+      {driverContact && (
+        <div className="mb-6 rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+          <AdminSectionLabel>Your driver</AdminSectionLabel>
+          <div className="mt-3 flex items-center gap-4">
+            <Portrait initials={initialsOf(driverContact.name)} imageUrl={driverContact.selfieUrl} imageAlt={driverContact.name} size="md" />
+            <div className="min-w-0">
+              <div className="font-body text-sm font-semibold text-admin-text">{driverContact.name}</div>
+              {driverContact.phone ? (
+                <a href={`tel:${driverContact.phone}`} className="font-body text-[13px] font-medium text-admin-green-text hover:underline">{driverContact.phone}</a>
+              ) : (
+                <span className="font-body text-[12px] text-admin-text-muted">Contact shared closer to the start time</span>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -237,6 +287,24 @@ export default async function EngagementDetailPage({
           Total · {engagement.currency}
         </div>
       </div>
+
+      {/* Cancel */}
+      {isCancellable && pricing && (
+        <div className="mt-6">
+          <CancelEngagement
+            engagementId={engagementId}
+            startsAt={engagement.starts_at}
+            amountPaid={Number(engagement.customer_price_total ?? 0)}
+            isPaid={isPaid}
+            policy={{
+              cancelFreeHours: pricing.cancelFreeHours,
+              cancelNearHours: pricing.cancelNearHours,
+              cancelFeeNear: pricing.cancelFeeNear,
+              cancelFeeMid: pricing.cancelFeeMid,
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -13,6 +13,10 @@ export interface PricingSettingsView {
   placementFeeRate: number;
   placementUpfrontRate: number;
   corporateUpfrontRate: number;
+  cancelFreeHours: number;
+  cancelNearHours: number;
+  cancelFeeNear: number;
+  cancelFeeMid: number;
 }
 
 const TIERS = ['t1', 't2', 't3', 't4'] as const;
@@ -34,6 +38,10 @@ export function SettingsEditor({ initial }: { initial: PricingSettingsView }) {
   const [placeFee, setPlaceFee] = useState(pct(initial.placementFeeRate));
   const [placeUpfront, setPlaceUpfront] = useState(pct(initial.placementUpfrontRate));
   const [corpUpfront, setCorpUpfront] = useState(pct(initial.corporateUpfrontRate));
+  const [cFree, setCFree] = useState(String(initial.cancelFreeHours));
+  const [cNear, setCNear] = useState(String(initial.cancelNearHours));
+  const [cFeeNear, setCFeeNear] = useState(pct(initial.cancelFeeNear));
+  const [cFeeMid, setCFeeMid] = useState(pct(initial.cancelFeeMid));
 
   async function save() {
     setBusy(true);
@@ -46,6 +54,10 @@ export function SettingsEditor({ initial }: { initial: PricingSettingsView }) {
         placementFeeRate: toFrac(placeFee),
         placementUpfrontRate: toFrac(placeUpfront),
         corporateUpfrontRate: toFrac(corpUpfront),
+        cancelFreeHours: Math.max(0, Number(cFree) || 0),
+        cancelNearHours: Math.max(0, Number(cNear) || 0),
+        cancelFeeNear: toFrac(cFeeNear),
+        cancelFeeMid: toFrac(cFeeMid),
       };
       const res = await fetch('/api/admin/pricing/settings', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const b = (await res.json()) as { ok?: boolean; error?: string; message?: string };
@@ -103,6 +115,18 @@ export function SettingsEditor({ initial }: { initial: PricingSettingsView }) {
         <label><span className={lab}>Placement fee %</span><input className={box} inputMode="decimal" value={placeFee} onChange={(e) => setPlaceFee(e.target.value)} /></label>
         <label><span className={lab}>Placement upfront %</span><input className={box} inputMode="decimal" value={placeUpfront} onChange={(e) => setPlaceUpfront(e.target.value)} /></label>
         <label><span className={lab}>Corporate upfront %</span><input className={box} inputMode="decimal" value={corpUpfront} onChange={(e) => setCorpUpfront(e.target.value)} /></label>
+      </div>
+
+      {/* Cancellation policy (on-demand) */}
+      <div className="mt-5">
+        <div className="mb-2 font-body text-[12px] font-semibold text-admin-text">On-demand cancellation policy</div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <label><span className={lab}>Free if notice ≥ (hours)</span><input className={box} inputMode="numeric" value={cFree} onChange={(e) => setCFree(e.target.value)} /></label>
+          <label><span className={lab}>Highest fee if under (hours)</span><input className={box} inputMode="numeric" value={cNear} onChange={(e) => setCNear(e.target.value)} /></label>
+          <label><span className={lab}>Fee under near-window %</span><input className={box} inputMode="decimal" value={cFeeNear} onChange={(e) => setCFeeNear(e.target.value)} /></label>
+          <label><span className={lab}>Fee mid-window %</span><input className={box} inputMode="decimal" value={cFeeMid} onChange={(e) => setCFeeMid(e.target.value)} /></label>
+        </div>
+        <span className="mt-1 block font-body text-[11px] text-admin-text-muted">e.g. free ≥72h · 5% from 24–72h · 10% under 24h. Fee is a % of what the customer paid; the rest is auto-refunded.</span>
       </div>
 
       <div className="mt-5 flex justify-end">

@@ -95,6 +95,39 @@ export async function initTransaction(input: InitTransactionInput): Promise<Init
   };
 }
 
+export interface RefundResult {
+  ok: boolean;
+  providerRef: string | null;
+  mock: boolean;
+}
+
+/**
+ * Refund a transaction (full, or a partial amount in Naira). Returns ok=false
+ * rather than throwing on a provider error, so the caller can still record the
+ * refund intent and let ops reconcile.
+ */
+export async function refundTransaction(reference: string, amountNaira?: number): Promise<RefundResult> {
+  if (!hasPaystackConfig()) {
+    return { ok: true, providerRef: `mock-refund-${reference}`, mock: true };
+  }
+  try {
+    const env = serverEnv();
+    const body: Record<string, unknown> = { transaction: reference };
+    if (amountNaira != null) body.amount = Math.round(amountNaira * 100); // kobo
+    const res = await fetch(`${PAYSTACK_BASE}/refund`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${env.PAYSTACK_SECRET_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = (await res.json().catch(() => null)) as { status?: boolean; data?: { id?: number | string } } | null;
+    if (!res.ok || !data?.status) return { ok: false, providerRef: null, mock: false };
+    return { ok: true, providerRef: data.data?.id != null ? String(data.data.id) : null, mock: false };
+  } catch (err) {
+    console.error('[paystack refund]', err);
+    return { ok: false, providerRef: null, mock: false };
+  }
+}
+
 export async function verifyTransaction(reference: string): Promise<VerifyTransactionResult> {
   if (!hasPaystackConfig()) {
     // Mock: any reference passed to verify comes back successful.

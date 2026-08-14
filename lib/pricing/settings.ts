@@ -16,6 +16,10 @@ export interface PricingSettings {
   placementFeeRate: number;
   placementUpfrontRate: number;
   corporateUpfrontRate: number;
+  cancelFreeHours: number;
+  cancelNearHours: number;
+  cancelFeeNear: number;
+  cancelFeeMid: number;
 }
 
 export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
@@ -27,6 +31,10 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   placementFeeRate: 0.7,
   placementUpfrontRate: 0.7,
   corporateUpfrontRate: 0.7,
+  cancelFreeHours: 72,
+  cancelNearHours: 24,
+  cancelFeeNear: 0.1,
+  cancelFeeMid: 0.05,
 };
 
 export async function getPricingSettings(): Promise<PricingSettings> {
@@ -44,6 +52,10 @@ export async function getPricingSettings(): Promise<PricingSettings> {
       placementFeeRate: Number(data.placement_fee_rate ?? DEFAULT_PRICING_SETTINGS.placementFeeRate),
       placementUpfrontRate: Number(data.placement_upfront_rate ?? DEFAULT_PRICING_SETTINGS.placementUpfrontRate),
       corporateUpfrontRate: Number(data.corporate_upfront_rate ?? DEFAULT_PRICING_SETTINGS.corporateUpfrontRate),
+      cancelFreeHours: Number(data.cancel_free_hours ?? DEFAULT_PRICING_SETTINGS.cancelFreeHours),
+      cancelNearHours: Number(data.cancel_near_hours ?? DEFAULT_PRICING_SETTINGS.cancelNearHours),
+      cancelFeeNear: Number(data.cancel_fee_near ?? DEFAULT_PRICING_SETTINGS.cancelFeeNear),
+      cancelFeeMid: Number(data.cancel_fee_mid ?? DEFAULT_PRICING_SETTINGS.cancelFeeMid),
     };
   } catch {
     return DEFAULT_PRICING_SETTINGS;
