@@ -80,6 +80,17 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
 
   const selfieByUser = await getDriverSelfieUrls(ids);
 
+  // Driver services agreements (keyed by the driver's user id = subject_user_id).
+  let contractByUser: Record<string, { id: string; status: string }> = {};
+  if (ids.length) {
+    const { data: cs } = await A.from('contracts')
+      .select('id, subject_user_id, status')
+      .eq('kind', 'employment_permanent')
+      .is('engagement_id', null)
+      .in('subject_user_id', ids);
+    contractByUser = Object.fromEntries((cs ?? []).map((c: { id: string; subject_user_id: string; status: string }) => [c.subject_user_id, { id: c.id, status: c.status }]));
+  }
+
   // Headline counts (independent of the current filter/page).
   const { count: totalDrivers } = await A.from('driver_profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null);
   const { count: approvedDrivers } = await A.from('driver_profiles').select('id', { count: 'exact', head: true }).is('deleted_at', null).eq('verification_status', 'approved');
@@ -139,6 +150,7 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
         <div className="overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
           {drivers.map((d: { id: string; user_id: string; verification_tier: string; verification_status: string; average_rating: number | null; total_ratings: number; suspended: boolean; available_on_demand: boolean; available_permanent: boolean; vehicle_class_experience: string[] | null; created_at: string }) => {
             const u = usersById[d.user_id];
+            const dc = contractByUser[d.user_id];
             return (
               <div key={d.id} className="flex flex-col gap-3 border-b border-admin-border px-5 py-4 last:border-0 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
@@ -167,6 +179,11 @@ export default async function DriversPage({ searchParams }: { searchParams: Prom
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
+                  {dc && (
+                    <Link href={`/admin/contracts/${dc.id}`} className="font-body text-[12px] font-medium text-admin-text-muted hover:text-admin-text hover:underline">
+                      Contract{dc.status === 'executed' ? ' ✓' : ''}
+                    </Link>
+                  )}
                   <DriverActions driverId={d.id} suspended={d.suspended} />
                   {canVerify && (
                     <Link href={`/admin/verification/${d.id}`} className="font-body text-[12px] font-medium text-admin-green-text hover:underline">Open →</Link>

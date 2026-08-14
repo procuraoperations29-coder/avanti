@@ -41,7 +41,7 @@ export default async function AdminEngagementsPage({ searchParams }: { searchPar
   const A = admin as any;
 
   let query = A.from('engagements')
-    .select('id, customer_user_id, driver_id, engagement_type, status, starts_at, currency, customer_price_total, cancellation_fee, refund_amount', { count: 'exact' })
+    .select('id, customer_user_id, driver_id, engagement_type, status, starts_at, currency, customer_price_total, cancellation_fee, refund_amount, contract_id', { count: 'exact' })
     .order('starts_at', { ascending: false });
   if (status) query = query.eq('status', status);
   query = query.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
@@ -107,6 +107,9 @@ export default async function AdminEngagementsPage({ searchParams }: { searchPar
                     {String(e.engagement_type).replace(/_/g, ' ')} · driver {driverName(e.driver_id ? String(e.driver_id) : null)} · {fmtDate(String(e.starts_at))} · {naira(e.customer_price_total as number)}
                     {Number(e.refund_amount ?? 0) > 0 && ` · refunded ${naira(e.refund_amount as number)}`}
                   </div>
+                  {Boolean(e.contract_id) && (
+                    <Link href={`/admin/contracts/${String(e.contract_id)}`} className="mt-1 inline-block font-body text-[12px] font-medium text-admin-green-text hover:underline">View contract →</Link>
+                  )}
                 </div>
                 <div className="w-full shrink-0 lg:w-72">
                   <AdminEngagementActions engagementId={String(e.id)} status={st} />
