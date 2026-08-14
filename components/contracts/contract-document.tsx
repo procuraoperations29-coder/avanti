@@ -8,9 +8,11 @@ import type { ContractTerms } from '@/lib/contracts/generate';
 export function ContractDocument({
   terms,
   signature,
+  countersignature,
 }: {
   terms: ContractTerms;
   signature?: { name: string; date: string } | null;
+  countersignature?: { name: string; date: string } | null;
 }) {
   const generated = new Date(terms.generatedAt);
   return (
@@ -47,12 +49,20 @@ export function ContractDocument({
 
         <p className="mt-6 font-body text-[12px] italic text-[#8a93a3]">{terms.jurisdictionNote}</p>
 
-        {signature && (
-          <div className="mt-6 rounded-xl border border-[#d7efe0] bg-[#f2fbf6] px-4 py-3">
-            <div className="font-mono text-[10px] uppercase tracking-wider text-[#2f855a]">Signed electronically</div>
-            <div className="mt-1 font-body text-[13px] text-[#1f2430]">
-              {signature.name} · {signature.date}
-            </div>
+        {(signature || countersignature) && (
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            {signature && (
+              <div className="rounded-xl border border-[#d7efe0] bg-[#f2fbf6] px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#2f855a]">Signed electronically</div>
+                <div className="mt-1 font-body text-[13px] text-[#1f2430]">{signature.name} · {signature.date}</div>
+              </div>
+            )}
+            {countersignature && (
+              <div className="rounded-xl border border-[#d7dcef] bg-[#f4f6fb] px-4 py-3">
+                <div className="font-mono text-[10px] uppercase tracking-wider text-[#3a4a8a]">Countersigned by Avanti</div>
+                <div className="mt-1 font-body text-[13px] text-[#1f2430]">{countersignature.name} · {countersignature.date}</div>
+              </div>
+            )}
           </div>
         )}
       </div>

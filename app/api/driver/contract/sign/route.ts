@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { ensureDriverContract } from '@/lib/contracts/driver-contract';
+import { countersignAsAvanti } from '@/lib/contracts/countersign';
 
 const bodySchema = z.object({ fullName: z.string().trim().min(3).max(200) });
 
@@ -41,6 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'sign_failed', message: sigErr.message }, { status: 500 });
     }
     await A.from('contracts').update({ status: 'executed', executed_at: new Date().toISOString() }).eq('id', contract.id);
+    await countersignAsAvanti(A, contract.id);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

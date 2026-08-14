@@ -4,6 +4,7 @@ import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 import { ContractDocument } from '@/components/contracts/contract-document';
+import { CountersignButton } from './countersign-button';
 import type { ContractTerms } from '@/lib/contracts/generate';
 
 export const dynamic = 'force-dynamic';
@@ -68,6 +69,8 @@ export default async function AdminContractPage({ params }: { params: Promise<{ 
 
   const terms = c.terms as ContractTerms;
   const rows = (sigs ?? []) as Array<{ signatory_role: string; signature_ref: string; signed_at: string; ip_address: string | null }>;
+  const hasCountersign = rows.some((s) => s.signatory_role === 'avanti_witness');
+  const hasPartySignature = rows.some((s) => s.signatory_role !== 'avanti_witness');
 
   return (
     <>
@@ -83,7 +86,10 @@ export default async function AdminContractPage({ params }: { params: Promise<{ 
 
       {/* Signatures */}
       <div className="mt-6 overflow-hidden rounded-2xl border border-admin-border bg-admin-card shadow-admin-sm">
-        <div className="border-b border-admin-border bg-admin-bg px-5 py-2.5 font-body text-[11px] font-semibold uppercase tracking-wide text-admin-text-muted">Signatures</div>
+        <div className="flex items-center justify-between border-b border-admin-border bg-admin-bg px-5 py-2.5">
+          <span className="font-body text-[11px] font-semibold uppercase tracking-wide text-admin-text-muted">Signatures</span>
+          {!hasCountersign && hasPartySignature && <CountersignButton contractId={contractId} />}
+        </div>
         {rows.length === 0 ? (
           <div className="px-5 py-6 text-center font-body text-sm text-admin-text-muted">Not signed yet.</div>
         ) : (

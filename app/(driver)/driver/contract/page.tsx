@@ -36,7 +36,7 @@ export default async function DriverContractPage() {
         <EmptyState Icon={FileText} title="Available after approval" description="Once your verification is approved, your services agreement will appear here to review and sign." />
       ) : (
         <>
-          <ContractDocument terms={contract.terms} signature={contract.signature} />
+          <ContractDocument terms={contract.terms} signature={contract.signature} countersignature={contract.countersignature} />
           {contract.signature ? (
             <p className="mt-4 font-body text-[13px] text-ink-muted">You signed this agreement on {contract.signature.date}. Thank you.</p>
           ) : (

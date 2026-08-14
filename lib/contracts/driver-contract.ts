@@ -6,6 +6,7 @@ export interface DriverContractRow {
   terms: ContractTerms;
   status: string;
   signature: { name: string; date: string } | null;
+  countersignature: { name: string; date: string } | null;
 }
 
 /**
@@ -94,16 +95,19 @@ export async function ensureDriverContract(admin: any, userId: string): Promise<
     if (!contract) return null;
   }
 
-  const { data: sig } = await A.from('signatures')
-    .select('signature_ref, signed_at')
-    .eq('contract_id', contract.id)
-    .eq('signatory_role', 'driver')
-    .maybeSingle();
+  const { data: sigs } = await A.from('signatures')
+    .select('signatory_role, signature_ref, signed_at')
+    .eq('contract_id', contract.id);
+  const fmtSig = (s: { signature_ref: string; signed_at: string }) => ({ name: s.signature_ref, date: new Date(s.signed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) });
+  const rows = (sigs ?? []) as Array<{ signatory_role: string; signature_ref: string; signed_at: string }>;
+  const driverSig = rows.find((s) => s.signatory_role === 'driver');
+  const avantiSig = rows.find((s) => s.signatory_role === 'avanti_witness');
 
   return {
     id: contract.id,
     terms: contract.terms as ContractTerms,
     status: contract.status,
-    signature: sig ? { name: sig.signature_ref, date: new Date(sig.signed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) } : null,
+    signature: driverSig ? fmtSig(driverSig) : null,
+    countersignature: avantiSig ? fmtSig(avantiSig) : null,
   };
 }

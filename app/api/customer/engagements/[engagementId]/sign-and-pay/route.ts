@@ -4,6 +4,7 @@ import { requireAuthUser, AuthError } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { initTransaction } from '@/lib/payments/paystack';
 import { publicEnv } from '@/config/env';
+import { countersignAsAvanti } from '@/lib/contracts/countersign';
 
 const bodySchema = z.object({ fullName: z.string().trim().min(3).max(200) });
 
@@ -53,6 +54,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ engagementId: 
       return NextResponse.json({ error: 'sign_failed', message: sigErr.message }, { status: 500 });
     }
     await A.from('contracts').update({ status: 'executed', executed_at: new Date().toISOString() }).eq('id', eng.contract_id);
+    await countersignAsAvanti(A, eng.contract_id);
 
     // Find the pending payment reference and initiate Paystack.
     const { data: payment } = await A.from('payments')
