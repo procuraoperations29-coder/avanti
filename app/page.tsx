@@ -13,6 +13,9 @@ import {
   Building2,
   Users,
   TrendingUp,
+  CarFront,
+  UserCheck,
+  Route,
 } from 'lucide-react';
 import { getAuthUser } from '@/lib/auth';
 import { FintechHeader } from '@/components/marketing/fintech-header';
@@ -47,6 +50,16 @@ export default async function LandingPage() {
         : '/customer';
   const findDriverHref = isSignedIn ? '/customer/search' : '/sign-up?role=individual';
   const businessHref = isSignedIn ? '/corporate' : '/sign-up?role=corporate';
+  const carHireHref = isSignedIn ? '/customer/car-hire' : '/sign-up?role=individual';
+  const travelHref = isSignedIn ? '/customer/travel' : '/sign-up?role=individual';
+
+  const SERVICES = [
+    { icon: Clock, label: 'On-demand', title: 'A driver by the hour or day', body: 'Airport runs, events, errands, evenings — book a vetted driver and pay only for the time you need.', price: 'From ₦4,500/hr', href: findDriverHref },
+    { icon: UserCheck, label: 'Permanent placement', title: 'Hire a driver full-time', body: 'A dedicated, verified driver on a monthly salary set by us — with a replacement guarantee.', price: 'From ₦175,000/mo', href: '/permanent' },
+    { icon: CarFront, label: 'Car hire', title: 'A car and a driver, together', body: 'No car of your own? Hire one of ours with a professional driver, priced by the day.', price: 'Car + driver', href: carHireHref },
+    { icon: Building2, label: 'Corporate staffing', title: 'Dedicated drivers for your team', body: 'Staff your executives or operations with vetted drivers. Corporate billing, one point of contact.', price: 'For business', href: businessHref },
+    { icon: Route, label: 'Out-of-state travel', title: 'Multi-day inter-city trips', body: 'Travelling beyond the city? Tell us your plan and we’ll quote a driver for the journey.', price: 'Quoted per trip', href: travelHref },
+  ];
 
   return (
     <div className="min-h-dvh bg-admin-bg text-admin-text">
@@ -55,9 +68,9 @@ export default async function LandingPage() {
         continueHref={continueHref}
         primaryHref={findDriverHref}
         navLinks={[
+          { href: '#services', label: 'Services' },
           { href: '#how', label: 'How it works' },
           { href: '#standards', label: 'Standards' },
-          { href: '#audience', label: 'Who it’s for' },
           { href: '/permanent', label: 'Permanent placements' },
         ]}
       />
@@ -79,8 +92,8 @@ export default async function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-lg font-body text-lg leading-relaxed text-admin-text-muted">
-              Book a vetted driver by the hour, day, or year — with transparent pricing and secure payments.
-              Every driver is checked across identity, licence, background, and experience.
+              Book a vetted driver by the hour or day, hire one permanently, add a car to go with them,
+              staff your team, or travel out of state — all with transparent pricing and secure payments.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -195,6 +208,42 @@ export default async function LandingPage() {
                 <div className="font-body text-[12px] text-admin-text-muted">{f.v}</div>
               </div>
             </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ───────────────── SERVICES / VERTICALS ───────────────── */}
+      <section id="services" className="mx-auto max-w-6xl px-5 py-24 sm:px-6">
+        <div className="max-w-2xl">
+          <div className="font-body text-[12px] font-semibold uppercase tracking-wide text-admin-green-text">What we offer</div>
+          <h2 className="mt-3 font-display text-4xl font-semibold leading-tight tracking-tight text-admin-text md:text-5xl">
+            One vetted driver network. Five ways to use it.
+          </h2>
+          <p className="mt-4 font-body text-lg leading-relaxed text-admin-text-muted">
+            However you need to move — a quick trip, a full-time driver, a car and driver together, a corporate fleet, or an inter-city journey — it&apos;s the same standard of driver.
+          </p>
+        </div>
+
+        <div className="mt-14 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {SERVICES.map((s) => (
+            <Link
+              key={s.label}
+              href={s.href}
+              className="group flex flex-col rounded-3xl border border-admin-border bg-admin-card p-7 shadow-admin-sm transition-all hover:-translate-y-0.5 hover:shadow-admin"
+            >
+              <div className="flex items-center justify-between">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-admin-green-soft text-admin-green-text">
+                  <s.icon className="h-5 w-5" strokeWidth={2} />
+                </span>
+                <span className="font-body text-[11px] font-semibold uppercase tracking-wide text-admin-text-muted">{s.price}</span>
+              </div>
+              <div className="mt-5 font-body text-[11px] font-semibold uppercase tracking-wide text-admin-green-text">{s.label}</div>
+              <h3 className="mt-1 font-display text-xl font-semibold leading-tight text-admin-text">{s.title}</h3>
+              <p className="mt-2 flex-1 font-body text-sm leading-relaxed text-admin-text-muted">{s.body}</p>
+              <div className="mt-6 inline-flex items-center gap-1.5 font-body text-sm font-semibold text-admin-green-text transition-transform group-hover:translate-x-1">
+                Learn more <ArrowRight className="h-4 w-4" strokeWidth={2} />
+              </div>
+            </Link>
           ))}
         </div>
       </section>
@@ -375,9 +424,11 @@ export default async function LandingPage() {
           {
             heading: 'Product',
             links: [
-              { href: findDriverHref, label: 'Find a driver' },
-              { href: businessHref, label: 'For business' },
+              { href: findDriverHref, label: 'On-demand drivers' },
               { href: '/permanent', label: 'Permanent placements' },
+              { href: carHireHref, label: 'Car hire' },
+              { href: businessHref, label: 'Corporate staffing' },
+              { href: travelHref, label: 'Out-of-state travel' },
             ],
           },
           {
