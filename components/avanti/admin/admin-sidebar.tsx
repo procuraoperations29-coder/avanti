@@ -26,6 +26,7 @@ import {
   Car,
   CarFront,
   CalendarCheck,
+  ChevronUp,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils/cn';
@@ -93,6 +94,7 @@ const SUPER: NavItem[] = [
 ];
 
 const STORAGE_KEY = 'avanti-admin-sidebar-collapsed';
+const ACCOUNT_KEY = 'avanti-admin-account-open';
 
 /**
  * AdminSidebar — persistent left chrome for the fintech admin console.
@@ -112,15 +114,25 @@ export function AdminSidebar({
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
 
   useEffect(() => {
     setCollapsed(localStorage.getItem(STORAGE_KEY) === '1');
+    setAccountOpen(localStorage.getItem(ACCOUNT_KEY) === '1');
   }, []);
 
   function toggleCollapsed() {
     setCollapsed((c) => {
       const next = !c;
       try { localStorage.setItem(STORAGE_KEY, next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  }
+
+  function toggleAccount() {
+    setAccountOpen((o) => {
+      const next = !o;
+      try { localStorage.setItem(ACCOUNT_KEY, next ? '1' : '0'); } catch { /* ignore */ }
       return next;
     });
   }
@@ -202,39 +214,47 @@ export function AdminSidebar({
 
       {/* Account */}
       <div className={cn('border-t border-white/5', collapsed ? 'flex flex-col items-center gap-1 p-2' : 'p-3')}>
-        {!collapsed && (
-          <div className="mb-1 px-3 py-1.5">
-            <div className="truncate font-body text-[13px] font-medium text-white">{userName}</div>
-            <div className="truncate font-mono text-[10px] uppercase tracking-[0.12em] text-admin-green">{roleLabel}</div>
-            <div className="truncate font-body text-[11px] text-admin-nav-text">{userEmail}</div>
-          </div>
-        )}
-        <Link
-          href="/settings"
-          title="Settings"
-          className={cn(
-            'flex items-center rounded-lg font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white',
-            collapsed ? 'h-9 w-9 justify-center' : 'w-full gap-2.5 px-3 py-2'
-          )}
-        >
-          <Settings className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
-          {!collapsed && 'Settings'}
-        </Link>
-        <button
-          onClick={signOut}
-          title="Sign out"
-          className={cn(
-            'flex items-center rounded-lg text-left font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white',
-            collapsed ? 'h-9 w-9 justify-center' : 'w-full gap-2.5 px-3 py-2'
-          )}
-        >
-          <LogOut className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
-          {!collapsed && 'Sign out'}
-        </button>
-        {!collapsed && (
-          <div className="mt-1">
-            <ThemeToggle />
-          </div>
+        {collapsed ? (
+          <>
+            <Link href="/settings" title="Settings" className="flex h-9 w-9 items-center justify-center rounded-lg text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white">
+              <Settings className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
+            </Link>
+            <button onClick={signOut} title="Sign out" className="flex h-9 w-9 items-center justify-center rounded-lg text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white">
+              <LogOut className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} />
+            </button>
+          </>
+        ) : (
+          <>
+            {/* Expandable options (appear above the identity row) */}
+            {accountOpen && (
+              <div className="mb-1 space-y-0.5">
+                <div className="truncate px-3 pb-1 font-body text-[11px] text-admin-nav-text">{userEmail}</div>
+                <Link href="/settings" className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white">
+                  <Settings className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} /> Settings
+                </Link>
+                <button onClick={signOut} className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-body text-[13px] text-admin-nav-text transition-all hover:bg-admin-navy-soft hover:text-white">
+                  <LogOut className="h-[17px] w-[17px] shrink-0 opacity-80" strokeWidth={1.75} /> Sign out
+                </button>
+                <div className="px-1 pt-1"><ThemeToggle /></div>
+              </div>
+            )}
+
+            {/* Identity row — click to expand/collapse */}
+            <button
+              onClick={toggleAccount}
+              aria-expanded={accountOpen}
+              className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left transition-all hover:bg-admin-navy-soft"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-admin-green/20 font-body text-[12px] font-semibold text-admin-green">
+                {(userName || '?').trim().charAt(0).toUpperCase()}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-body text-[13px] font-medium text-white">{userName}</span>
+                <span className="block truncate font-mono text-[10px] uppercase tracking-[0.12em] text-admin-green">{roleLabel}</span>
+              </span>
+              <ChevronUp className={cn('h-4 w-4 shrink-0 text-admin-nav-text transition-transform', accountOpen ? '' : 'rotate-180')} strokeWidth={1.75} />
+            </button>
+          </>
         )}
       </div>
     </aside>
