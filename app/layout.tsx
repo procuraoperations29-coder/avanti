@@ -1,9 +1,11 @@
 export const dynamic = 'force-dynamic';
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { Toaster } from '@/components/ui/sonner';
 import { RegisterSW } from '@/components/pwa/register-sw';
 import { InstallPrompt } from '@/components/pwa/install-prompt';
 import { InstallTracker } from '@/components/pwa/install-tracker';
+import { PageViewTracker } from '@/components/analytics/page-view-tracker';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -56,6 +58,7 @@ export default function RootLayout({
         <RegisterSW />
         <InstallPrompt />
         <InstallTracker />
+        <Suspense fallback={null}><PageViewTracker /></Suspense>
       </body>
     </html>
   );

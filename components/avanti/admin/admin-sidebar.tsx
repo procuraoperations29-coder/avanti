@@ -44,6 +44,7 @@ export type AdminNavKey =
   | 'corporate'
   | 'support'
   | 'notifications'
+  | 'marketing'
   | 'finance'
   | 'pricing'
   | 'compliance'
@@ -81,6 +82,7 @@ const OPERATIONS: NavItem[] = [
   { key: 'carhire', href: '/admin/car-hire', label: 'Car hire', Icon: CarFront },
   { key: 'corporate', href: '/admin/corporate', label: 'Corporate', Icon: Building2 },
   { key: 'notifications', href: '/admin/notifications', label: 'Notifications', Icon: Megaphone },
+  { key: 'marketing', href: '/admin/marketing', label: 'Marketing', Icon: TrendingUp },
   { key: 'finance', href: '/admin/finance', label: 'Finance', Icon: DollarSign },
   { key: 'pricing', href: '/admin/pricing', label: 'Pricing', Icon: Tags },
   { key: 'compliance', href: '/admin/compliance', label: 'Compliance', Icon: ShieldAlert },
@@ -157,6 +159,7 @@ export function AdminSidebar({
     corporate: canSupport || canVerify || canFinance,
     support: canSupport,
     notifications: canSupport,
+    marketing: canSupport || canFinance,
     finance: canFinance,
     pricing: canFinance,
     compliance: canCompliance,

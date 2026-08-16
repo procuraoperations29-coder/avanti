@@ -55,7 +55,7 @@ export default async function LandingPage() {
 
   const SERVICES = [
     { icon: Clock, label: 'On-demand', title: 'A driver by the hour or day', body: 'Airport runs, events, errands, evenings — book a vetted driver and pay only for the time you need.', price: 'From ₦4,500/hr', href: findDriverHref },
-    { icon: UserCheck, label: 'Permanent placement', title: 'Hire a driver full-time', body: 'A dedicated, verified driver on a monthly salary set by us — with a replacement guarantee.', price: 'From ₦175,000/mo', href: '/permanent' },
+    { icon: UserCheck, label: 'Permanent placement', title: 'Hire a driver full-time', body: 'A dedicated, verified driver on a monthly salary set by us — with a replacement guarantee.', price: 'From ₦120,000/mo', href: '/permanent' },
     { icon: CarFront, label: 'Car hire', title: 'A car and a driver, together', body: 'No car of your own? Hire one of ours with a professional driver, priced by the day.', price: 'Car + driver', href: carHireHref },
     { icon: Building2, label: 'Corporate staffing', title: 'Dedicated drivers for your team', body: 'Staff your executives or operations with vetted drivers. Corporate billing, one point of contact.', price: 'For business', href: businessHref },
     { icon: Route, label: 'Out-of-state travel', title: 'Multi-day inter-city trips', body: 'Travelling beyond the city? Tell us your plan and we’ll quote a driver for the journey.', price: 'Quoted per trip', href: travelHref },
@@ -87,8 +87,8 @@ export default async function LandingPage() {
           {/* Copy */}
           <div>
             <h1 className="font-display text-5xl font-semibold leading-[1.05] tracking-tight text-admin-text md:text-6xl">
-              Professional drivers,{' '}
-              <span className="bg-gradient-to-r from-admin-green to-admin-green-text bg-clip-text text-transparent">personally verified.</span>
+              Verified drivers,{' '}
+              <span className="bg-gradient-to-r from-admin-green to-admin-green-text bg-clip-text text-transparent">however you need to move.</span>
             </h1>
 
             <p className="mt-6 max-w-lg font-body text-lg leading-relaxed text-admin-text-muted">
@@ -105,18 +105,18 @@ export default async function LandingPage() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2} />
               </Link>
               <Link
-                href={businessHref}
+                href="#services"
                 className="inline-flex items-center gap-2 rounded-full border border-admin-border bg-admin-card px-6 py-3.5 font-body text-sm font-semibold text-admin-text shadow-admin-sm transition-colors hover:bg-admin-bg"
               >
-                For business
+                Explore services
               </Link>
             </div>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
               {[
+                { k: '5 services', v: 'One driver standard' },
                 { k: '4 tiers', v: 'Earned, not claimed' },
                 { k: '100%', v: 'Manually verified' },
-                { k: 'Hourly', v: 'Or daily & yearly' },
               ].map((s) => (
                 <div key={s.k}>
                   <div className="font-display text-2xl font-semibold tracking-tight text-admin-text">{s.k}</div>

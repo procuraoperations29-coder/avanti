@@ -26,7 +26,7 @@ export const DEFAULT_PRICING_SETTINGS: PricingSettings = {
   currency: 'NGN',
   vatRate: 0.075,
   ondemandCommissionByTier: { t1: 0.2, t2: 0.2, t3: 0.2, t4: 0.2 },
-  tierMonthlySalary: { t1: 150_000, t2: 175_000, t3: 225_000, t4: 325_000 },
+  tierMonthlySalary: { t1: 120_000, t2: 150_000, t3: 175_000, t4: 200_000 },
   placementCommissionRate: 0.15,
   placementFeeRate: 0.7,
   placementUpfrontRate: 0.7,

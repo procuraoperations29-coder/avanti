@@ -14,10 +14,10 @@ import type { TierLevel } from '@/components/avanti/tier-badge';
 
 export const MONTHLY_SALARY_BY_TIER: Record<TierLevel, number> = {
   t0: 0,
-  t1: 150_000,
-  t2: 175_000,
-  t3: 225_000,
-  t4: 325_000,
+  t1: 120_000,
+  t2: 150_000,
+  t3: 175_000,
+  t4: 200_000,
 };
 
 // Placement fee = 70% of a month's salary + 7.5% VAT, paid once at contract
@@ -29,10 +29,10 @@ const feeInclVat = (salary: number) =>
   Math.round(salary * PLACEMENT_FEE_RATE * (1 + PLACEMENT_FEE_VAT_RATE));
 export const PLACEMENT_FEE_BY_TIER: Record<TierLevel, number> = {
   t0: 0,
-  t1: feeInclVat(150_000),
-  t2: feeInclVat(175_000),
-  t3: feeInclVat(225_000),
-  t4: feeInclVat(325_000),
+  t1: feeInclVat(120_000),
+  t2: feeInclVat(150_000),
+  t3: feeInclVat(175_000),
+  t4: feeInclVat(200_000),
 };
 
 const POSITION_NAMES: Record<TierLevel, string> = {
