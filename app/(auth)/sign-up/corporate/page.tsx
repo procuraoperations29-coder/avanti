@@ -213,6 +213,12 @@ export default function CorporateSignUpPage() {
             {busy ? 'Sending…' : 'Continue'} <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
 
+          <p className="mt-6 font-body text-xs leading-relaxed text-ink-faint">
+            By continuing you agree to Avanti&apos;s{' '}
+            <a href="/terms" target="_blank" className="underline hover:text-ink">Terms of Use</a> and{' '}
+            <a href="/privacy" target="_blank" className="underline hover:text-ink">Privacy Policy</a>.
+          </p>
+
           <p className="mt-6 font-body text-sm text-ink-muted">
             Individual customer instead?{' '}
             <Link href="/sign-up/customer" className="font-medium text-ink underline">

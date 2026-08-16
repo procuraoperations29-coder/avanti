@@ -4,7 +4,7 @@ import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { AdminPageHeader } from '@/components/avanti/admin/page-header';
 import { ContractDocument } from '@/components/contracts/contract-document';
-import { CountersignButton } from './countersign-button';
+import { CountersignButton, RegenerateButton } from './countersign-button';
 import type { ContractTerms } from '@/lib/contracts/generate';
 
 export const dynamic = 'force-dynamic';
@@ -80,6 +80,7 @@ export default async function AdminContractPage({ params }: { params: Promise<{ 
         <span className={'inline-flex items-center rounded-full px-2.5 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' + (STATUS_PILL[c.status] ?? 'bg-admin-bg text-admin-text-muted')}>{String(c.status).replace(/_/g, ' ')}</span>
         <span className="font-body text-[12px] text-admin-text-muted">Created {fmt(c.created_at)}{c.executed_at ? ` · Executed ${fmt(c.executed_at)}` : ''}</span>
         <a href={`/api/contracts/${contractId}/pdf`} className="font-body text-[12px] font-medium text-admin-green-text hover:underline">Download PDF ↓</a>
+        {c.subject_user_id && <RegenerateButton contractId={contractId} />}
       </div>
 
       <ContractDocument terms={terms} />

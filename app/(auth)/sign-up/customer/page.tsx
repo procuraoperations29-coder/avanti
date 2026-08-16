@@ -202,7 +202,9 @@ export default function CustomerSignUpPage() {
           </Button>
 
           <p className="mt-6 font-body text-xs leading-relaxed text-ink-faint">
-            By continuing you agree to Avanti&apos;s terms of service and privacy policy.
+            By continuing you agree to Avanti&apos;s{' '}
+            <a href="/terms" target="_blank" className="underline hover:text-ink">Terms of Use</a> and{' '}
+            <a href="/privacy" target="_blank" className="underline hover:text-ink">Privacy Policy</a>.
           </p>
 
           <p className="mt-6 font-body text-sm text-ink-muted">
