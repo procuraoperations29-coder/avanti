@@ -51,9 +51,12 @@ export function FintechFooter({ columns = [] }: FintechFooterProps) {
         </div>
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-admin-border pt-6 sm:flex-row sm:items-center">
           <span className="font-body text-[13px] text-admin-text-muted">© 2026 Avanti Solutions Services. Lagos, Nigeria.</span>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
             <Link href="/permanent" className="font-body text-[13px] text-admin-text-muted hover:text-admin-text">Permanent placements</Link>
             <Link href="/sign-up?role=driver" className="font-body text-[13px] text-admin-text-muted hover:text-admin-text">Drive with us</Link>
+            <Link href="/terms" className="font-body text-[13px] text-admin-text-muted hover:text-admin-text">Terms</Link>
+            <Link href="/privacy" className="font-body text-[13px] text-admin-text-muted hover:text-admin-text">Privacy</Link>
+            <Link href="/cookies" className="font-body text-[13px] text-admin-text-muted hover:text-admin-text">Cookies</Link>
           </div>
         </div>
       </div>

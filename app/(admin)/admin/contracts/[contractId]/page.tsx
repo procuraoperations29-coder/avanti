@@ -79,7 +79,7 @@ export default async function AdminContractPage({ params }: { params: Promise<{ 
       <div className="mb-5 flex flex-wrap items-center gap-3">
         <span className={'inline-flex items-center rounded-full px-2.5 py-0.5 font-body text-[11px] font-medium uppercase tracking-wide ' + (STATUS_PILL[c.status] ?? 'bg-admin-bg text-admin-text-muted')}>{String(c.status).replace(/_/g, ' ')}</span>
         <span className="font-body text-[12px] text-admin-text-muted">Created {fmt(c.created_at)}{c.executed_at ? ` · Executed ${fmt(c.executed_at)}` : ''}</span>
-        {c.engagement_id && <Link href={`/admin/engagements`} className="font-body text-[12px] font-medium text-admin-green-text hover:underline">Engagements →</Link>}
+        <a href={`/api/contracts/${contractId}/pdf`} className="font-body text-[12px] font-medium text-admin-green-text hover:underline">Download PDF ↓</a>
       </div>
 
       <ContractDocument terms={terms} />

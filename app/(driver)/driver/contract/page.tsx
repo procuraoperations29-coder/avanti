@@ -37,6 +37,11 @@ export default async function DriverContractPage() {
       ) : (
         <>
           <ContractDocument terms={contract.terms} signature={contract.signature} countersignature={contract.countersignature} />
+          <div className="mt-4">
+            <a href={`/api/contracts/${contract.id}/pdf`} className="inline-flex items-center gap-1.5 border border-line bg-paper-2 px-4 py-2 font-body text-sm font-medium text-ink transition-colors hover:bg-paper-3">
+              Download PDF ↓
+            </a>
+          </div>
           {contract.signature ? (
             <p className="mt-4 font-body text-[13px] text-ink-muted">You signed this agreement on {contract.signature.date}. Thank you.</p>
           ) : (

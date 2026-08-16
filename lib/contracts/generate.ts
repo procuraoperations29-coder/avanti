@@ -3,6 +3,7 @@
  * contract and rendered on-screen for signing. Isomorphic (pure), so the same
  * types back both the API and the display component.
  */
+import { COMPANY } from '@/config/company';
 
 export interface ContractSummaryItem { label: string; value: string }
 export interface ContractSection { heading: string; body: string }
@@ -50,7 +51,7 @@ export function buildCustomerContractTerms(p: CustomerContractParams): ContractT
     reference: p.reference,
     generatedAt: p.generatedAt,
     intro:
-      `This Agreement is made between Avanti Mobility ("Avanti"), ${p.customerName} ("the Customer"), ` +
+      `This Agreement is made between ${COMPANY.legalName} ("Avanti"), ${p.customerName} ("the Customer"), ` +
       `and covers the professional driving engagement described below, performed by ${p.driverName} ("the Driver"). ` +
       'By signing electronically, the Customer confirms they have read and accepted these terms.',
     summary: [
@@ -101,7 +102,7 @@ export function buildDriverContractTerms(p: DriverContractParams): ContractTerms
     reference: p.reference,
     generatedAt: p.generatedAt,
     intro:
-      `This Agreement is made between Avanti Mobility ("Avanti") and ${p.driverName} ("the Driver"). ` +
+      `This Agreement is made between ${COMPANY.legalName} ("Avanti") and ${p.driverName} ("the Driver"). ` +
       'It sets out the terms on which the Driver offers professional driving services through the Avanti platform, based on the information provided during onboarding. ' +
       'By signing electronically, the Driver confirms the information is accurate and accepts these terms.',
     summary: [

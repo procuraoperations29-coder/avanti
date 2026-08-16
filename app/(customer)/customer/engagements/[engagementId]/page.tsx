@@ -63,7 +63,7 @@ export default async function EngagementDetailPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const A = admin as any;
   const { data: engRow } = await A.from('engagements')
-    .select('customer_confirmed_at, driver_id, cancellation_fee, refund_amount, refunded_at')
+    .select('customer_confirmed_at, driver_id, cancellation_fee, refund_amount, refunded_at, contract_id')
     .eq('id', engagementId)
     .single();
   const customerConfirmedAt: string | null = engRow?.customer_confirmed_at ?? null;
@@ -287,6 +287,19 @@ export default async function EngagementDetailPage({
           Total · {engagement.currency}
         </div>
       </div>
+
+      {/* Agreement */}
+      {Boolean(engRow?.contract_id) && (
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-admin-border bg-admin-card p-5 shadow-admin-sm">
+          <div>
+            <div className="font-body text-sm font-semibold text-admin-text">Your signed agreement</div>
+            <div className="mt-0.5 font-body text-[12px] text-admin-text-muted">The contract you signed for this engagement.</div>
+          </div>
+          <a href={`/api/contracts/${String(engRow?.contract_id)}/pdf`} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-admin-border bg-admin-bg px-4 py-2 font-body text-sm font-medium text-admin-text hover:bg-admin-card">
+            Download PDF ↓
+          </a>
+        </div>
+      )}
 
       {/* Cancel */}
       {isCancellable && pricing && (

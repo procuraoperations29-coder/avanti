@@ -71,9 +71,9 @@ export function SiteFooter({ productLinks = PRODUCT_LINKS }: { productLinks?: ty
             © 2026 Avanti · All rights reserved
           </div>
           <div className="flex gap-6 font-mono text-[10px] uppercase tracking-wider text-ink-muted">
-            <Link href="#" className="hover:text-ink">Terms</Link>
-            <Link href="#" className="hover:text-ink">Privacy</Link>
-            <Link href="#" className="hover:text-ink">Cookies</Link>
+            <Link href="/terms" className="hover:text-ink">Terms</Link>
+            <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+            <Link href="/cookies" className="hover:text-ink">Cookies</Link>
           </div>
         </div>
       </div>
