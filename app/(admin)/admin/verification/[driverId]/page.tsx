@@ -8,6 +8,7 @@ import {
 } from '@/components/avanti/admin/page-header';
 import { TierBadge } from '@/components/avanti/tier-badge';
 import { DecisionPanel } from '@/components/admin/decision-panel';
+import { DriverEditForm } from '@/components/admin/driver-edit-form';
 
 const DOC_LABEL: Record<string, string> = {
   national_id: 'National ID',
@@ -85,13 +86,28 @@ export default async function DriverVerificationReviewPage({
         title={profile.users?.full_name ?? 'Driver'}
         subtitle={`${profile.users?.phone ?? '—'} · ${profile.users?.country_code ?? '—'}`}
         actions={
-          <div className="text-right">
-            <TierBadge
-              tier={(profile.verification_tier as 't0' | 't1' | 't2' | 't3' | 't4') ?? 't0'}
-              label="long"
+          <div className="flex items-start gap-3">
+            <DriverEditForm
+              driverId={driverId}
+              initial={{
+                full_name: profile.users?.full_name ?? '',
+                email: profile.users?.email ?? '',
+                phone: profile.users?.phone ?? '',
+                identity,
+                licence,
+                address,
+                payout,
+                experience,
+              }}
             />
-            <div className="mt-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
-              {humanise(profile.verification_status)}
+            <div className="text-right">
+              <TierBadge
+                tier={(profile.verification_tier as 't0' | 't1' | 't2' | 't3' | 't4') ?? 't0'}
+                label="long"
+              />
+              <div className="mt-2 font-body text-[11px] font-medium uppercase tracking-wide text-admin-text-muted">
+                {humanise(profile.verification_status)}
+              </div>
             </div>
           </div>
         }
@@ -236,7 +252,7 @@ export default async function DriverVerificationReviewPage({
             ) : (
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 {documents.map((d) => (
-                  <a
+                  
                     key={d.id}
                     href={d.previewUrl ?? '#'}
                     target="_blank"
