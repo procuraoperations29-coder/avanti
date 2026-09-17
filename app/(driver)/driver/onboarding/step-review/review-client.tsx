@@ -47,7 +47,7 @@ export function ReviewClient(props: ReviewProps) {
   if (!background.references || background.references.length < 2) missingSteps.push('Background');
   if (!experience.vehicle_classes || experience.vehicle_classes.length === 0) missingSteps.push('Experience');
   if (!availabilitySet) missingSteps.push('Availability');
-  if (!payout.account_number || !payout.bank_code) missingSteps.push('Payout');
+  if (!payout.account_number || !payout.bank_name) missingSteps.push('Payout');
 
   const submit = async () => {
     if (missingSteps.length > 0) {
