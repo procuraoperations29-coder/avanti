@@ -170,12 +170,14 @@ export async function POST() {
       if (insErr) console.error('[submit] documents self-heal insert failed:', doc.kind, insErr);
     }
 
-    // ---- Payout method ----
+      // ---- Payout method ----
     // Columns must match the real schema: account_number_last4 (for display) +
-    // account_holder_name + bank_code. The full number is NOT stored plainly —
-    // there is no bank_name/account_number/is_verified column. Getting this
-    // wrong is why payout methods silently never appeared (see the finance
-    // backfill route).
+    // account_holder_name. The full number is NOT stored plainly — there is
+    // no bank_name/account_number/is_verified column. bank_code is left null:
+    // we don't do live account verification against any provider, so the
+    // driver only ever picks a bank by name (stored in onboarding_state);
+    // finance can attach a routing code later if a real disbursement
+    // integration needs one.
     const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: payoutMethodErr } = await (admin as any)
@@ -183,7 +185,7 @@ export async function POST() {
       .insert({
         driver_id: profile.id,
         method_type: 'bank_account',
-        bank_code: typeof payout.bank_code === 'string' ? payout.bank_code : null,
+        bank_code: null,
         account_number_last4: accountNumber.slice(-4) || null,
         account_holder_name: typeof payout.account_holder_name === 'string' ? payout.account_holder_name : '',
         is_default: true,
