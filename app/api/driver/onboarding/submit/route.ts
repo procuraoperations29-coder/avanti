@@ -95,7 +95,7 @@ export async function POST() {
     if (!profile.available_on_demand && !profile.available_permanent) {
       missing.push('availability');
     }
-    if (!payout.bank_code || !payout.account_number || !payout.account_holder_name) {
+    if (!payout.bank_name || !payout.account_number || !payout.account_holder_name) {
       missing.push('payout');
     }
 
