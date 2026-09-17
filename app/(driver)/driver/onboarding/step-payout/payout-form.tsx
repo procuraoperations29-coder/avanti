@@ -13,16 +13,14 @@ export function PayoutStepForm({ initialData }: { initialData: PayoutData }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
-  const [bankCode, setBankCode] = useState(initialData.bank_code ?? '');
+  const [bankName, setBankName] = useState(initialData.bank_name ?? '');
   const [accountNumber, setAccountNumber] = useState(initialData.account_number ?? '');
   const [accountHolderName, setAccountHolderName] = useState(
     initialData.account_holder_name ?? ''
   );
 
-  const bankName = NIGERIAN_BANKS.find((b) => b.code === bankCode)?.name ?? '';
-
   const canContinue =
-    bankCode.length > 0 &&
+    bankName.length > 0 &&
     /^\d{10}$/.test(accountNumber) &&
     accountHolderName.trim().length >= 4;
 
@@ -39,7 +37,6 @@ export function PayoutStepForm({ initialData }: { initialData: PayoutData }) {
         body: JSON.stringify({
           step: 'payout',
           data: {
-            bank_code: bankCode,
             bank_name: bankName,
             account_number: accountNumber,
             account_holder_name: accountHolderName.trim(),
@@ -67,18 +64,18 @@ export function PayoutStepForm({ initialData }: { initialData: PayoutData }) {
           Bank
         </label>
         <select
-          value={bankCode}
-          onChange={(e) => setBankCode(e.target.value)}
+          value={bankName}
+          onChange={(e) => setBankName(e.target.value)}
           className={cn(
             'w-full border p-3 font-body text-sm text-ink focus:border-ink focus:outline-none',
-            bankCode ? 'border-line-strong bg-paper' : 'border-line-strong bg-paper-2 text-ink-faint'
+            bankName ? 'border-line-strong bg-paper' : 'border-line-strong bg-paper-2 text-ink-faint'
           )}
           autoFocus
         >
           <option value="">Select your bank…</option>
-          {NIGERIAN_BANKS.map((b) => (
-            <option key={b.code + b.name} value={b.code}>
-              {b.name}
+          {NIGERIAN_BANKS.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>
