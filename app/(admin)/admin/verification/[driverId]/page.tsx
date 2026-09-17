@@ -252,7 +252,7 @@ export default async function DriverVerificationReviewPage({
             ) : (
               <div className="mt-3 grid gap-4 sm:grid-cols-2">
                 {documents.map((d) => (
-                  
+                  <a
                     key={d.id}
                     href={d.previewUrl ?? '#'}
                     target="_blank"
