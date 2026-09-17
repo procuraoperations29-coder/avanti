@@ -68,12 +68,12 @@ export async function POST() {
         continue;
       }
 
-      const payout = (profile.onboarding_state ?? {}).payout ?? {};
-      const bankCode = typeof payout.bank_code === 'string' ? payout.bank_code : null;
+          const payout = (profile.onboarding_state ?? {}).payout ?? {};
+      const bankName = typeof payout.bank_name === 'string' ? payout.bank_name : null;
       const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
       const accountHolderName = typeof payout.account_holder_name === 'string' ? payout.account_holder_name : null;
 
-      if (!bankCode || !accountNumber || !accountHolderName) {
+      if (!bankName || !accountNumber || !accountHolderName) {
         skipped += 1;
         continue;
       }
@@ -82,7 +82,7 @@ export async function POST() {
       const { error: insertErr } = await (admin as any).from('driver_payout_methods').insert({
         driver_id: profile.id,
         method_type: 'bank_account',
-        bank_code: bankCode,
+        bank_code: null,
         account_number_last4: accountNumber.slice(-4) || null,
         account_holder_name: accountHolderName,
         is_default: true,
