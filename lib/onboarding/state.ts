@@ -142,6 +142,6 @@ export const NIGERIAN_BANKS: { code: string; name: string }[] = [
   { code: '090175', name: 'Rubies MFB' },
   { code: '090267', name: 'Kuda Bank' },
   { code: '090405', name: 'MoniePoint' },
-  { code: '090405', name: 'Opay' },
+  { code: '100004', name: 'Opay' },
   { code: '090317', name: 'PalmPay' },
 ];
