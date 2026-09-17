@@ -102,7 +102,7 @@ export interface ExperienceData {
 }
 
 export interface PayoutData {
-  bank_name?: string; // Simplifies database payloads
+  bank_name?: string;
   account_number?: string;
   account_holder_name?: string;
 }
@@ -117,10 +117,12 @@ export interface OnboardingState {
   last_step_completed?: OnboardingStep;
 }
 
-// Nigerian banks — Clean string array for form dropdown menus
+// Nigerian banks — used in the payout step dropdown. We don't do live
+// account-name verification against any provider, so there's no need to
+// carry provider bank codes through onboarding — the driver just picks
+// their bank by name, and that's what gets stored.
 export const NIGERIAN_BANKS: string[] = [
   'Access Bank',
-  'Access Bank (Diamond)',
   'Ecobank',
   'Fidelity Bank',
   'First Bank of Nigeria',
@@ -128,12 +130,7 @@ export const NIGERIAN_BANKS: string[] = [
   'Guaranty Trust Bank',
   'Heritage Bank',
   'Keystone Bank',
-  'Kuda Bank',
-  'MoniePoint MFB',
-  'Opay',
-  'PalmPay',
   'Polaris Bank',
-  'Rubies MFB',
   'Stanbic IBTC Bank',
   'Standard Chartered',
   'Sterling Bank',
@@ -143,4 +140,9 @@ export const NIGERIAN_BANKS: string[] = [
   'Unity Bank',
   'Wema Bank',
   'Zenith Bank',
+  'Rubies MFB',
+  'Kuda Bank',
+  'MoniePoint',
+  'Opay',
+  'PalmPay',
 ];
