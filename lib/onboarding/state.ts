@@ -102,8 +102,7 @@ export interface ExperienceData {
 }
 
 export interface PayoutData {
-  bank_name?: string;
-  bank_code?: string;
+  bank_name?: string; // Simplifies database payloads
   account_number?: string;
   account_holder_name?: string;
 }
@@ -118,30 +117,30 @@ export interface OnboardingState {
   last_step_completed?: OnboardingStep;
 }
 
-// Nigerian banks — mapped to standard API routing values
-export const NIGERIAN_BANKS: { code: string; name: string }[] = [
-  { code: '044', name: 'Access Bank' },
-  { code: '063', name: 'Access Bank (Diamond)' },
-  { code: '050', name: 'Ecobank' },
-  { code: '070', name: 'Fidelity Bank' },
-  { code: '011', name: 'First Bank of Nigeria' },
-  { code: '214', name: 'First City Monument Bank' },
-  { code: '058', name: 'Guaranty Trust Bank' },
-  { code: '030', name: 'Heritage Bank' },
-  { code: '082', name: 'Keystone Bank' },
-  { code: '076', name: 'Polaris Bank' },
-  { code: '221', name: 'Stanbic IBTC Bank' },
-  { code: '068', name: 'Standard Chartered' },
-  { code: '232', name: 'Sterling Bank' },
-  { code: '100', name: 'Suntrust Bank' },
-  { code: '032', name: 'Union Bank' },
-  { code: '033', name: 'United Bank for Africa' },
-  { code: '215', name: 'Unity Bank' },
-  { code: '035', name: 'Wema Bank' },
-  { code: '057', name: 'Zenith Bank' },
-  { code: '120001', name: 'Rubies MFB' },
-  { code: '50211', name: 'Kuda Bank' },
-  { code: '50515', name: 'MoniePoint MFB' },
-  { code: '999992', name: 'OPay Digital Services Limited (OPay)' },
-  { code: '999991', name: 'PalmPay' },
+// Nigerian banks — Clean string array for form dropdown menus
+export const NIGERIAN_BANKS: string[] = [
+  'Access Bank',
+  'Access Bank (Diamond)',
+  'Ecobank',
+  'Fidelity Bank',
+  'First Bank of Nigeria',
+  'First City Monument Bank',
+  'Guaranty Trust Bank',
+  'Heritage Bank',
+  'Keystone Bank',
+  'Kuda Bank',
+  'MoniePoint MFB',
+  'Opay',
+  'PalmPay',
+  'Polaris Bank',
+  'Rubies MFB',
+  'Stanbic IBTC Bank',
+  'Standard Chartered',
+  'Sterling Bank',
+  'Suntrust Bank',
+  'Union Bank',
+  'United Bank for Africa',
+  'Unity Bank',
+  'Wema Bank',
+  'Zenith Bank',
 ];
