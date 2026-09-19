@@ -68,7 +68,7 @@ export async function POST() {
         continue;
       }
 
-          const payout = (profile.onboarding_state ?? {}).payout ?? {};
+      const payout = (profile.onboarding_state ?? {}).payout ?? {};
       const bankName = typeof payout.bank_name === 'string' ? payout.bank_name : null;
       const accountNumber = typeof payout.account_number === 'string' ? payout.account_number : '';
       const accountHolderName = typeof payout.account_holder_name === 'string' ? payout.account_holder_name : null;

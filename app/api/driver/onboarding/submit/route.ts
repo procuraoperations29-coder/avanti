@@ -170,7 +170,7 @@ export async function POST() {
       if (insErr) console.error('[submit] documents self-heal insert failed:', doc.kind, insErr);
     }
 
-      // ---- Payout method ----
+    // ---- Payout method ----
     // Columns must match the real schema: account_number_last4 (for display) +
     // account_holder_name. The full number is NOT stored plainly — there is
     // no bank_name/account_number/is_verified column. bank_code is left null:

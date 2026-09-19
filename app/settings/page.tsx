@@ -92,7 +92,7 @@ export default async function SettingsPage() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: dp } = await (admin as any)
       .from('driver_profiles')
-      .select('id')
+      .select('id, onboarding_state')
       .eq('user_id', user.id)
       .single();
     if (dp) {
@@ -105,8 +105,14 @@ export default async function SettingsPage() {
         .order('is_default', { ascending: false })
         .limit(1)
         .maybeSingle();
+      // The driver picks their bank by name (no live account verification,
+      // so no provider bank code is collected) — that name lives in
+      // onboarding_state.payout.bank_name, not on driver_payout_methods,
+      // which only carries a code for older records or a real disbursement
+      // integration to fill in later.
+      const bankName = (dp.onboarding_state as { payout?: { bank_name?: string } } | null)?.payout?.bank_name ?? null;
       driverPayout = pm
-        ? { bank: pm.bank_code, last4: pm.account_number_last4, holder: pm.account_holder_name, kyc: pm.kyc_status }
+        ? { bank: bankName ?? pm.bank_code, last4: pm.account_number_last4, holder: pm.account_holder_name, kyc: pm.kyc_status }
         : { bank: null, last4: null, holder: null, kyc: 'none' };
     }
   }
