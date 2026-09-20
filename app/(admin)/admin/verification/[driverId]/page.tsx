@@ -54,8 +54,21 @@ export default async function DriverVerificationReviewPage({
   const licence = state.licence ?? {};
   const address = state.address ?? {};
   const background = state.background ?? {};
-  const experience = state.experience ?? {};
   const payout = state.payout ?? {};
+
+  // Experience data can come from onboarding_state (during the wizard) or from
+  // driver_profiles columns (after submission). Prefer onboarding_state if filled,
+  // otherwise fall back to the submitted columns.
+  const experienceFromState = state.experience ?? {};
+  const experience = {
+    years_experience: experienceFromState.years_experience ?? profile.years_experience,
+    vehicle_classes: experienceFromState.vehicle_classes ?? profile.vehicle_class_experience,
+    transmission_experience: experienceFromState.transmission_experience ?? profile.transmission_experience,
+    languages: experienceFromState.languages ?? profile.languages,
+    can_drive_at_night: experienceFromState.can_drive_at_night,
+    has_smartphone: experienceFromState.has_smartphone,
+    service_radius_km: experienceFromState.service_radius_km ?? profile.service_radius_km,
+  };
 
   const onDemand = Boolean(profile.available_on_demand);
   const permanent = Boolean(profile.available_permanent);
@@ -85,7 +98,7 @@ export default async function DriverVerificationReviewPage({
         backLabel="Queue"
         title={profile.users?.full_name ?? 'Driver'}
         subtitle={`${profile.users?.phone ?? '—'} · ${profile.users?.country_code ?? '—'}`}
-                actions={
+        actions={
           <div className="flex items-start gap-3">
             <DriverEditForm
               driverId={driverId}
