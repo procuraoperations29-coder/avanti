@@ -212,7 +212,7 @@ export function DriverEditForm({ driverId, initial }: { driverId: string; initia
             <h3 className="mb-2 font-body text-[13px] font-semibold text-admin-text">Experience</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Years experience"><input type="number" min={0} className={inputCls} value={yearsExperience} onChange={(e) => setYearsExperience(e.target.value)} /></Field>
-              <Field label="Service radius (km)"><input type="number" min={0} className={inputCls} value={serviceRadius} onChange={(e) => setServiceRadius(e.target.value)} /></Field>
+                           <Field label="Service radius (km)"><input type="number" min={0} max={1000} className={inputCls} value={serviceRadius} onChange={(e) => setServiceRadius(e.target.value)} /></Field>
               <Field label="Vehicle classes (comma-separated)"><input className={inputCls} value={vehicleClasses} onChange={(e) => setVehicleClasses(e.target.value)} /></Field>
               <Field label="Transmissions (comma-separated)"><input className={inputCls} value={transmissions} onChange={(e) => setTransmissions(e.target.value)} /></Field>
               <Field label="Languages (comma-separated)"><input className={inputCls} value={languages} onChange={(e) => setLanguages(e.target.value)} /></Field>
