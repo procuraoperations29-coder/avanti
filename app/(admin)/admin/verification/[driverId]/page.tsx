@@ -85,7 +85,7 @@ export default async function DriverVerificationReviewPage({
         backLabel="Queue"
         title={profile.users?.full_name ?? 'Driver'}
         subtitle={`${profile.users?.phone ?? '—'} · ${profile.users?.country_code ?? '—'}`}
-        actions={
+                actions={
           <div className="flex items-start gap-3">
             <DriverEditForm
               driverId={driverId}
