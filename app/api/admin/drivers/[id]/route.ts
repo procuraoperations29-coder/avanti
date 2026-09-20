@@ -123,6 +123,20 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
         if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
       }
 
+      // Also update driver_profiles columns for experience data (so quote matching sees it)
+      const driverColumnsUpdate: Record<string, unknown> = { updated_at: now };
+      if (body.experience) {
+        if (body.experience.vehicle_classes !== undefined) driverColumnsUpdate.vehicle_class_experience = body.experience.vehicle_classes;
+        if (body.experience.transmission_experience !== undefined) driverColumnsUpdate.transmission_experience = body.experience.transmission_experience;
+        if (body.experience.languages !== undefined) driverColumnsUpdate.languages = body.experience.languages;
+        if (body.experience.years_experience !== undefined) driverColumnsUpdate.years_experience = body.experience.years_experience;
+        if (body.experience.service_radius_km !== undefined) driverColumnsUpdate.service_radius_km = body.experience.service_radius_km;
+      }
+      if (Object.keys(driverColumnsUpdate).length > 1) {
+        const { error } = await A.from('driver_profiles').update(driverColumnsUpdate).eq('id', id);
+        if (error) return NextResponse.json({ error: 'update_failed', message: error.message }, { status: 500 });
+      }
+
       try {
         await A.from('audit_logs').insert({
           actor_user_id: user.id, actor_role: user.activeRole, entity_type: 'driver_profiles', entity_id: id,
