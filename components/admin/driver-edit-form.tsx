@@ -106,7 +106,10 @@ export function DriverEditForm({ driverId, initial }: { driverId: string; initia
 
       const experienceObj: Record<string, unknown> = {};
       if (yearsExperience) experienceObj.years_experience = Number(yearsExperience);
-      if (serviceRadius) experienceObj.service_radius_km = Number(serviceRadius);
+            if (serviceRadius) {
+        const radius = Number(serviceRadius);
+        if (radius <= 1000) experienceObj.service_radius_km = radius;
+      }
       experienceObj.can_drive_at_night = canDriveAtNight;
       experienceObj.has_smartphone = hasSmartphone;
       const vc = toList(vehicleClasses);
