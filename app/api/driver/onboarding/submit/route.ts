@@ -195,10 +195,24 @@ export async function POST() {
     }
 
     // ---- Mirror experience state into real driver_profiles columns ----
-    // Only writing to columns confirmed to exist: vehicle_class_experience,
-    // transmission_experience, languages, years_experience, service_radius_km.
-    // Identity fields (legal_name, DOB, gender) live on public.users, not
-    // driver_profiles.
+    // Ensure arrays are always arrays, never strings. If somehow stored as
+    // "sedan, suv", convert to ["sedan", "suv"] so dropdowns work correctly.
+    const vehicleClasses = Array.isArray(experience.vehicle_classes)
+      ? experience.vehicle_classes
+      : typeof experience.vehicle_classes === 'string'
+        ? experience.vehicle_classes.split(',').map((v: string) => v.trim()).filter(Boolean)
+        : [];
+    const transmissions = Array.isArray(experience.transmission_experience)
+      ? experience.transmission_experience
+      : typeof experience.transmission_experience === 'string'
+        ? experience.transmission_experience.split(',').map((v: string) => v.trim()).filter(Boolean)
+        : [];
+    const langs = Array.isArray(experience.languages)
+      ? experience.languages
+      : typeof experience.languages === 'string'
+        ? experience.languages.split(',').map((v: string) => v.trim()).filter(Boolean)
+        : [];
+    
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: updateErr } = await (admin as any)
       .from('driver_profiles')
@@ -206,9 +220,9 @@ export async function POST() {
         verification_status: 'submitted',
         onboarding_submitted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        vehicle_class_experience: experience.vehicle_classes ?? [],
-        transmission_experience: experience.transmission_experience ?? [],
-        languages: experience.languages ?? [],
+        vehicle_class_experience: vehicleClasses,
+        transmission_experience: transmissions,
+        languages: langs,
         years_experience: experience.years_experience ?? 0,
         service_radius_km: experience.service_radius_km ?? null,
         next_of_kin_name: typeof identity.next_of_kin_name === 'string' ? identity.next_of_kin_name : null,
