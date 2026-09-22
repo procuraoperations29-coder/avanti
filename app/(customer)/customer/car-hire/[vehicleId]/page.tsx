@@ -51,10 +51,15 @@ export default async function CarHireVehiclePage({ params }: { params: Promise<{
 
   return (
     <div className="mx-auto max-w-5xl px-6 pt-8 pb-20">
-      <Link href="/customer/car-hire" className="mb-8 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text">
-        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        All cars
-      </Link>
+      <div className="mb-8 flex items-center gap-4">
+        <Link href="/customer/car-hire" className="inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text">
+          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
+          All cars
+        </Link>
+        <Link href="/customer/car-hire/bookings" className="inline-flex items-center gap-1.5 font-body text-[13px] font-medium text-admin-text transition-colors hover:text-admin-green">
+          Your requests
+        </Link>
+      </div>
 
       <div className="grid gap-10 md:grid-cols-5 md:gap-12">
         {/* Left: photo + specs */}
