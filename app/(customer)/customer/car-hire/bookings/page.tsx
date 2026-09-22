@@ -44,10 +44,15 @@ export default async function MyCarHirePage() {
 
   return (
     <div className="mx-auto max-w-3xl px-6 pt-8 pb-20">
-      <Link href="/customer/car-hire" className="mb-4 inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text">
-        <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
-        Car hire
-      </Link>
+      <div className="mb-4 flex items-center gap-4">
+        <Link href="/customer" className="inline-flex items-center gap-1.5 font-body text-[13px] text-admin-text-muted transition-colors hover:text-admin-text">
+          <ChevronLeft className="h-3.5 w-3.5" strokeWidth={2} />
+          Home
+        </Link>
+        <Link href="/customer/car-hire" className="inline-flex items-center gap-1.5 font-body text-[13px] font-medium text-admin-text transition-colors hover:text-admin-green">
+          Browse cars
+        </Link>
+      </div>
 
       <div className="mb-8">
         <AdminSectionLabel>Car hire</AdminSectionLabel>
