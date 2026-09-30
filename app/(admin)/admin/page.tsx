@@ -326,10 +326,19 @@ export default async function AdminHomePage() {
           <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.14em] text-admin-text-muted">
             Jump to
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {canVerify && (
-              <ModuleCard
-                href="/admin/verification"
+            <div className="grid gap-3 sm:grid-cols-2">
+     {canSupport && (
+       <ModuleCard
+         href="/admin/transactions/create"
+         Icon={DollarSign}
+         title="Create transaction"
+         description="Book driver or car for customer"
+         emphasis
+       />
+     )}
+     {canVerify && (
+       <ModuleCard
+         href="/admin/verification"
                 Icon={ClipboardList}
                 title="Verification queue"
                 description={`${queueCount ?? 0} pending`}
