@@ -4,11 +4,11 @@ import { getAuthUser, hasPermission } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { generateQuote as generateDriverQuote } from '@/lib/pricing/quote';
 import { getQuoteForVehicle } from '@/lib/carhire/quote';
-import { sendEmail } from '@/lib/email/resend';
+import { sendEmail } from '@/lib/email';
 
 const CreateTransactionSchema = z.object({
   customer_user_id: z.string().uuid(),
-  booking_type: z.enum(['driver', 'car_hire']),
+  booking_type: z.enum(['driver', 'car_hire', 'permanent_placement']),
   
   // For driver bookings
   driver_id: z.string().uuid().optional(),
@@ -19,6 +19,13 @@ const CreateTransactionSchema = z.object({
   // For car hire bookings
   vehicle_id: z.string().uuid().optional(),
   rental_days: z.number().min(1).max(365).optional(),
+  
+  // For permanent placements
+  driver_id_placement: z.string().uuid().optional(),
+  monthly_salary: z.number().min(0).optional(),
+  placement_start_date: z.string().optional(),
+  placement_duration_months: z.number().min(1).optional(),
+  placement_role: z.string().optional(),
   
   // Common
   starts_at: z.string().datetime(),
@@ -123,7 +130,7 @@ export async function POST(req: Request) {
       };
       emailSubject = `Your ${data.engagement_type === 'hourly' ? 'hourly' : 'daily'} driver booking quote from Avanti`;
       emailTemplate = generateDriverBookingEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
-    } else {
+    } else if (data.booking_type === 'car_hire') {
       // ---- Car hire booking ----
       if (!data.vehicle_id || !data.rental_days) {
         return NextResponse.json({ error: 'invalid_car_hire_data' }, { status: 400 });
@@ -175,6 +182,62 @@ export async function POST(req: Request) {
       };
       emailSubject = `Your car hire quote from Avanti — ${vehicle.make} ${vehicle.model}`;
       emailTemplate = generateCarHireBookingEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
+    } else {
+      // ---- Permanent placement ----
+      if (!data.driver_id_placement || !data.monthly_salary || !data.placement_start_date || !data.placement_duration_months) {
+        return NextResponse.json({ error: 'invalid_placement_data' }, { status: 400 });
+      }
+
+      const { data: driver, error: driverErr } = await A
+        .from('driver_profiles')
+        .select('id, users!inner(full_name, phone)')
+        .eq('id', data.driver_id_placement)
+        .single();
+
+      if (driverErr || !driver) {
+        return NextResponse.json({ error: 'driver_not_found' }, { status: 404 });
+      }
+
+      const discountAmount = data.base_price * ((data.discount_percent || 0) / 100);
+      const finalPrice = data.base_price - discountAmount;
+
+      const placementData = {
+        customer_user_id: data.customer_user_id,
+        driver_id: data.driver_id_placement,
+        status: 'quoted',
+        monthly_salary: data.monthly_salary,
+        start_date: data.placement_start_date,
+        duration_months: data.placement_duration_months,
+        role_title: data.placement_role || 'Driver',
+        total_contract_value: finalPrice,
+        created_by_admin: user.id,
+        admin_notes: data.discount_reason || null,
+        expires_at: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        created_at: now,
+        updated_at: now,
+      };
+
+      const { data: placement, error: placementErr } = await A
+        .from('placement_enquiries')
+        .insert(placementData)
+        .select('id')
+        .single();
+
+      if (placementErr || !placement) {
+        return NextResponse.json({ error: 'placement_creation_failed' }, { status: 500 });
+      }
+
+      bookingId = placement.id;
+      bookingDetails = {
+        driver: driver.users?.full_name || 'Driver',
+        driverPhone: driver.users?.phone,
+        role: data.placement_role || 'Driver',
+        salary: data.monthly_salary,
+        duration: `${data.placement_duration_months} month${data.placement_duration_months > 1 ? 's' : ''}`,
+        startDate: data.placement_start_date,
+      };
+      emailSubject = `Your permanent placement quote from Avanti`;
+      emailTemplate = generatePermanentPlacementEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
     }
 
     // ---- Send email notification ----
@@ -291,6 +354,49 @@ function generateCarHireBookingEmail(
           <a href="${acceptLink}" style="display: inline-block; background: #00d084; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: bold; margin: 20px 0;">View My Car Hire Bookings</a>
 
           <p>This quote expires in 24 hours.</p>
+          <p>Best,<br>The Avanti Team</p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
+function generatePermanentPlacementEmail(
+  customer: { full_name: string; email: string },
+  details: { driver: string; driverPhone?: string; role: string; salary: number; duration: string; startDate: string },
+  basePrice: number,
+  discount: number,
+  total: number,
+): string {
+  const acceptLink = `${process.env.NEXT_PUBLIC_APP_URL}/customer`;
+
+  return `
+    <html>
+      <body style="font-family: system-ui, sans-serif; line-height: 1.6; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h1>Your Permanent Placement Quote</h1>
+          <p>Hi ${customer.full_name},</p>
+          <p>We have a driver available for your permanent placement:</p>
+          
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Driver:</strong> ${details.driver}</p>
+            ${details.driverPhone ? `<p><strong>Contact:</strong> ${details.driverPhone}</p>` : ''}
+            <p><strong>Role:</strong> ${details.role}</p>
+            <p><strong>Monthly Salary:</strong> ₦${details.salary.toLocaleString()}</p>
+            <p><strong>Duration:</strong> ${details.duration}</p>
+            <p><strong>Start Date:</strong> ${details.startDate}</p>
+          </div>
+
+          <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>Base Quote:</strong> ₦${basePrice.toLocaleString()}</p>
+            ${discount > 0 ? `<p><strong>Discount:</strong> -₦${discount.toLocaleString()}</p>` : ''}
+            <p style="font-size: 18px; font-weight: bold; color: #000;"><strong>Total Contract Value:</strong> ₦${total.toLocaleString()}</p>
+          </div>
+
+          <p>To accept this placement, please visit your Avanti app or contact our team:</p>
+          <a href="${acceptLink}" style="display: inline-block; background: #00d084; color: white; padding: 12px 24px; border-radius: 24px; text-decoration: none; font-weight: bold; margin: 20px 0;">Review Placement</a>
+
+          <p>This quote expires in 24 hours. Once accepted, we'll initiate the onboarding process.</p>
           <p>Best,<br>The Avanti Team</p>
         </div>
       </body>
