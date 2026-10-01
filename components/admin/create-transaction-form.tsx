@@ -125,15 +125,16 @@ export function CreateTransactionForm() {
       } else if (bookingType === 'car_hire') {
         payload.vehicle_id = selectedVehicle.id;
         payload.rental_days = parseInt(rentalDays);
-               } else {
+          } else {
         payload.driver_id_placement = selectedDriver.id;
         payload.placement_role = placementRole;
         payload.monthly_salary = parseFloat(monthlySalary);
         payload.placement_start_date = placementStartDate;
         payload.placement_duration_months = parseInt(placementDurationMonths);
-        payload.starts_at = new Date().toISOString(); // Use current date for API, not important for placement
+        payload.starts_at = new Date().toISOString();
+        // Auto-calculate upfront as 50% of monthly salary
+        payload.base_price = parseFloat(monthlySalary) * 0.5;
       }
-
       const res = await fetch('/api/admin/transactions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
