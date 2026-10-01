@@ -185,8 +185,8 @@ if (!canSupport) {
       };
       emailSubject = `Your car hire quote from Avanti — ${vehicle.make} ${vehicle.model}`;
       emailTemplate = generateCarHireBookingEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
-    } else {
-          // ---- Permanent placement ----
+      } else {
+      // ---- Permanent placement ----
       if (!data.driver_id_placement || !data.monthly_salary || !data.placement_duration_months) {
         return NextResponse.json({ error: 'invalid_placement_data' }, { status: 400 });
       }
@@ -201,33 +201,30 @@ if (!canSupport) {
         return NextResponse.json({ error: 'driver_not_found' }, { status: 404 });
       }
 
-      const discountAmount = data.base_price * ((data.discount_percent || 0) / 100);
-      const finalPrice = data.base_price - discountAmount;
+      // For permanent placement: upfront = 50% of monthly salary
+      const upfrontPrice = data.monthly_salary * 0.5;
+      const discountAmount = upfrontPrice * ((data.discount_percent || 0) / 100);
+      const finalPrice = upfrontPrice - discountAmount;
 
       const placementData = {
-        customer_user_id: data.customer_user_id,
         driver_id: data.driver_id_placement,
-        status: 'quoted',
+        customer_user_id: data.customer_user_id,
         monthly_salary: data.monthly_salary,
+        currency: 'NGN',
         start_date: data.placement_start_date,
-        duration_months: data.placement_duration_months,
-        role_title: data.placement_role || 'Driver',
-        total_contract_value: finalPrice,
-        created_by_admin: user.id,
-        admin_notes: data.discount_reason || null,
-        expires_at: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending', // pending until customer accepts quote
         created_at: now,
         updated_at: now,
       };
 
       const { data: placement, error: placementErr } = await A
-        .from('placement_enquiries')
+        .from('placements')
         .insert(placementData)
         .select('id')
         .single();
 
       if (placementErr || !placement) {
-        return NextResponse.json({ error: 'placement_creation_failed' }, { status: 500 });
+        return NextResponse.json({ error: 'placement_creation_failed', details: placementErr }, { status: 500 });
       }
 
       bookingId = placement.id;
@@ -238,9 +235,10 @@ if (!canSupport) {
         salary: data.monthly_salary,
         duration: `${data.placement_duration_months} month${data.placement_duration_months > 1 ? 's' : ''}`,
         startDate: data.placement_start_date,
+        upfrontPrice: upfrontPrice,
       };
       emailSubject = `Your permanent placement quote from Avanti`;
-      emailTemplate = generatePermanentPlacementEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
+      emailTemplate = generatePermanentPlacementEmail(customer, bookingDetails as any, upfrontPrice, discountAmount, finalPrice);
     }
 
     // ---- Send email notification ----
