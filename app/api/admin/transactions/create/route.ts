@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAuthUser, hasPermission } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { generateQuote as generateDriverQuote } from '@/lib/pricing/quote';
 import { getQuoteForVehicle } from '@/lib/carhire/quote';
@@ -36,11 +36,14 @@ const CreateTransactionSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-    if (!hasPermission(user.roles, 'bookings.create_admin')) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
+  const user = await getAuthUser();
+if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+
+const isSuper = user.roles.includes('super_admin');
+const canSupport = user.roles.includes('admin_support') || isSuper;
+if (!canSupport) {
+  return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+}
 
     const body = await req.json();
     const data = CreateTransactionSchema.parse(body);
