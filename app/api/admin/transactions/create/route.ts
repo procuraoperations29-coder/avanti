@@ -28,7 +28,7 @@ const CreateTransactionSchema = z.object({
   placement_role: z.string().optional(),
   
   // Common
-  starts_at: z.string().datetime(),
+  starts_at: z.string().datetime().optional(),
   base_price: z.number().min(0),
   discount_percent: z.number().min(0).max(50).optional(),
   discount_reason: z.string().optional(),
@@ -186,8 +186,8 @@ if (!canSupport) {
       emailSubject = `Your car hire quote from Avanti — ${vehicle.make} ${vehicle.model}`;
       emailTemplate = generateCarHireBookingEmail(customer, bookingDetails as any, data.base_price, discountAmount, finalPrice);
     } else {
-      // ---- Permanent placement ----
-      if (!data.driver_id_placement || !data.monthly_salary || !data.placement_start_date || !data.placement_duration_months) {
+          // ---- Permanent placement ----
+      if (!data.driver_id_placement || !data.monthly_salary || !data.placement_duration_months) {
         return NextResponse.json({ error: 'invalid_placement_data' }, { status: 400 });
       }
 
