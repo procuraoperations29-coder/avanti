@@ -125,12 +125,13 @@ export function CreateTransactionForm() {
       } else if (bookingType === 'car_hire') {
         payload.vehicle_id = selectedVehicle.id;
         payload.rental_days = parseInt(rentalDays);
-      } else {
+           } else {
         payload.driver_id_placement = selectedDriver.id;
         payload.placement_role = placementRole;
         payload.monthly_salary = parseFloat(monthlySalary);
         payload.placement_start_date = placementStartDate;
         payload.placement_duration_months = parseInt(placementDurationMonths);
+        payload.starts_at = placementStartDate ? `${placementStartDate}T00:00:00` : '';
       }
 
       const res = await fetch('/api/admin/transactions/create', {
