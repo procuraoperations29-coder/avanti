@@ -4,7 +4,7 @@ import { getAuthUser, hasPermission } from '@/lib/auth';
 import { createServiceRoleClient } from '@/lib/supabase/server';
 import { generateQuote as generateDriverQuote } from '@/lib/pricing/quote';
 import { getQuoteForVehicle } from '@/lib/carhire/quote';
-import { sendEmail } from '@/lib/email';
+import { sendEmail } from '@/lib/email/resend';
 
 const CreateTransactionSchema = z.object({
   customer_user_id: z.string().uuid(),
