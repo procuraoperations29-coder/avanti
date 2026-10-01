@@ -1,12 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, Search, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronRight } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
 import { createClient } from '@/lib/supabase/client';
 
 type Step = 'select-customer' | 'select-type' | 'select-resource' | 'set-pricing' | 'review';
-type BookingType = 'driver' | 'car_hire';
+type BookingType = 'driver' | 'car_hire' | 'permanent_placement';
 
 export function CreateTransactionForm() {
   const supabase = createClient();
@@ -31,6 +31,12 @@ export function CreateTransactionForm() {
   const [rentalDays, setRentalDays] = useState('1');
   const [engagementType, setEngagementType] = useState<'hourly' | 'full_day'>('hourly');
   const [vehicleClass, setVehicleClass] = useState('sedan');
+
+  // Permanent placement specific
+  const [placementRole, setPlacementRole] = useState('');
+  const [monthlySalary, setMonthlySalary] = useState('');
+  const [placementStartDate, setPlacementStartDate] = useState('');
+  const [placementDurationMonths, setPlacementDurationMonths] = useState('1');
 
   // Step 4: Pricing
   const [basePrice, setBasePrice] = useState('');
@@ -116,9 +122,15 @@ export function CreateTransactionForm() {
         payload.engagement_type = engagementType;
         payload.vehicle_class = vehicleClass;
         payload.duration_hours = parseInt(durationHours);
-      } else {
+      } else if (bookingType === 'car_hire') {
         payload.vehicle_id = selectedVehicle.id;
         payload.rental_days = parseInt(rentalDays);
+      } else {
+        payload.driver_id_placement = selectedDriver.id;
+        payload.placement_role = placementRole;
+        payload.monthly_salary = parseFloat(monthlySalary);
+        payload.placement_start_date = placementStartDate;
+        payload.placement_duration_months = parseInt(placementDurationMonths);
       }
 
       const res = await fetch('/api/admin/transactions/create', {
@@ -142,6 +154,10 @@ export function CreateTransactionForm() {
       setBasePrice('');
       setDiscountPercent('0');
       setDiscountReason('');
+      setPlacementRole('');
+      setMonthlySalary('');
+      setPlacementStartDate('');
+      setPlacementDurationMonths('1');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Creation failed');
     } finally {
@@ -238,6 +254,23 @@ export function CreateTransactionForm() {
               </div>
               <ChevronRight className="h-4 w-4 shrink-0 text-admin-text-muted" />
             </button>
+
+            <button
+              onClick={() => {
+                setBookingType('permanent_placement');
+                fetchDrivers();
+                setStep('select-resource');
+              }}
+              className="flex w-full items-center gap-4 rounded-xl border-2 border-admin-border p-4 text-left hover:border-admin-green/40"
+            >
+              <div>
+                <div className="font-body font-medium text-admin-text">Permanent Placement</div>
+                <div className="font-body text-xs text-admin-text-muted">
+                  Long-term staffing solution with monthly salary
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-admin-text-muted" />
+            </button>
           </div>
           <button
             onClick={() => setStep('select-customer')}
@@ -248,12 +281,11 @@ export function CreateTransactionForm() {
         </div>
       )}
 
-      {/* Step 3: Resource Selection */}
+      {/* Step 3: Resource Selection - On-Demand Driver */}
       {step === 'select-resource' && selectedCustomer && bookingType === 'driver' && (
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Select Driver & Details</h2>
           <div className="space-y-4">
-            {/* Driver selection */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Driver
@@ -275,7 +307,6 @@ export function CreateTransactionForm() {
               </select>
             </div>
 
-            {/* Engagement type */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Engagement Type
@@ -290,7 +321,6 @@ export function CreateTransactionForm() {
               </select>
             </div>
 
-            {/* Vehicle class */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Vehicle Class
@@ -308,7 +338,6 @@ export function CreateTransactionForm() {
               </select>
             </div>
 
-            {/* Duration */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Duration (hours)
@@ -323,7 +352,6 @@ export function CreateTransactionForm() {
               />
             </div>
 
-            {/* Start time */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Start Date & Time
@@ -353,11 +381,11 @@ export function CreateTransactionForm() {
         </div>
       )}
 
+      {/* Step 3: Resource Selection - Car Hire */}
       {step === 'select-resource' && selectedCustomer && bookingType === 'car_hire' && (
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Select Vehicle & Details</h2>
           <div className="space-y-4">
-            {/* Vehicle selection */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Vehicle
@@ -379,7 +407,6 @@ export function CreateTransactionForm() {
               </select>
             </div>
 
-            {/* Rental days */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Rental Days
@@ -394,7 +421,6 @@ export function CreateTransactionForm() {
               />
             </div>
 
-            {/* Start date */}
             <div>
               <label className="mb-2 block font-body text-sm font-medium text-admin-text">
                 Start Date
@@ -412,6 +438,102 @@ export function CreateTransactionForm() {
             <button
               onClick={() => setStep('set-pricing')}
               disabled={!selectedVehicle || !startsAt}
+              className="mt-4 w-full rounded-xl bg-admin-green px-4 py-2 font-body font-medium text-white disabled:opacity-50"
+            >
+              Continue to Pricing →
+            </button>
+          </div>
+          <button
+            onClick={() => setStep('select-type')}
+            className="mt-4 text-admin-text-muted hover:text-admin-text"
+          >
+            ← Back
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Resource Selection - Permanent Placement */}
+      {step === 'select-resource' && selectedCustomer && bookingType === 'permanent_placement' && (
+        <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold">Select Driver & Placement Terms</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                Driver
+              </label>
+              <select
+                value={selectedDriver?.id || ''}
+                onChange={(e) => {
+                  const d = drivers.find((d) => d.id === e.target.value);
+                  setSelectedDriver(d);
+                }}
+                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+              >
+                <option value="">Select a driver...</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.users?.full_name} · {d.verification_tier || 'Tier 0'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                Position/Role
+              </label>
+              <input
+                type="text"
+                placeholder="e.g., Executive Driver, Personal Assistant"
+                value={placementRole}
+                onChange={(e) => setPlacementRole(e.target.value)}
+                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                Monthly Salary (₦)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="10000"
+                value={monthlySalary}
+                onChange={(e) => setMonthlySalary(e.target.value)}
+                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={placementStartDate}
+                onChange={(e) => setPlacementStartDate(e.target.value)}
+                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                Duration (months)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="36"
+                value={placementDurationMonths}
+                onChange={(e) => setPlacementDurationMonths(e.target.value)}
+                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+              />
+            </div>
+
+            <button
+              onClick={() => setStep('set-pricing')}
+              disabled={!selectedDriver || !placementRole || !monthlySalary || !placementStartDate}
               className="mt-4 w-full rounded-xl bg-admin-green px-4 py-2 font-body font-medium text-white disabled:opacity-50"
             >
               Continue to Pricing →
@@ -537,6 +659,16 @@ export function CreateTransactionForm() {
                   </div>
                   <div className="font-body text-xs text-admin-text-muted">
                     {rentalDays} days · {startsAt}
+                  </div>
+                </div>
+              )}
+
+              {bookingType === 'permanent_placement' && selectedDriver && (
+                <div className="pb-4 border-b border-admin-border">
+                  <div className="font-body text-sm text-admin-text-muted">Placement</div>
+                  <div className="font-body font-medium text-admin-text">{selectedDriver.users?.full_name}</div>
+                  <div className="font-body text-xs text-admin-text-muted">
+                    {placementRole} · ₦{parseInt(monthlySalary).toLocaleString()}/month · {placementDurationMonths} months · {placementStartDate}
                   </div>
                 </div>
               )}
