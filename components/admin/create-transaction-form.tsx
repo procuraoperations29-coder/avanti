@@ -665,12 +665,17 @@ export function CreateTransactionForm() {
                 </div>
               )}
 
-              {bookingType === 'permanent_placement' && selectedDriver && (
+                           {bookingType === 'permanent_placement' && selectedDriver && (
                 <div className="pb-4 border-b border-admin-border">
                   <div className="font-body text-sm text-admin-text-muted">Placement</div>
                   <div className="font-body font-medium text-admin-text">{selectedDriver.users?.full_name}</div>
                   <div className="font-body text-xs text-admin-text-muted">
-                    {placementRole} · ₦{parseInt(monthlySalary).toLocaleString()}/month · {placementDurationMonths} months · {placementStartDate}
+                    {placementRole} · ₦{parseInt(monthlySalary).toLocaleString()}/month · {placementDurationMonths} months · Start: {placementStartDate}
+                  </div>
+                  <div className="font-body text-xs text-admin-text-muted mt-2">
+                    <div>Monthly Salary: ₦{parseInt(monthlySalary).toLocaleString()}</div>
+                    <div>Total Contract Value: ₦{(parseInt(monthlySalary) * parseInt(placementDurationMonths)).toLocaleString()}</div>
+                    <div>Upfront Quote (50%): ₦{(parseInt(monthlySalary) * 0.5).toLocaleString()}</div>
                   </div>
                 </div>
               )}
