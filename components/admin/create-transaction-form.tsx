@@ -64,19 +64,18 @@ export function CreateTransactionForm() {
     }
   }
 
-  async function fetchDrivers() {
+   async function fetchDrivers() {
     setBusy(true);
     try {
       const { data, error } = await supabase
         .from('driver_profiles')
-        .select(
-          'id, users(full_name, phone), verification_tier, vehicle_class_experience'
-        )
+        .select('id, verification_tier')
         .limit(20);
 
       if (error) throw error;
       setDrivers(data || []);
     } catch (err) {
+      console.error('Fetch error:', err);
       toast.error('Failed to load drivers');
     } finally {
       setBusy(false);
