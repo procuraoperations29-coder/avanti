@@ -72,7 +72,7 @@ export function CreateTransactionForm() {
         .select(
           'id, users(full_name, phone), verification_tier, vehicle_class_experience'
         )
-        .in('verification_status', ['submitted', 'verified', 'approved'])
+      .or('verification_status.eq.submitted,verification_status.eq.verified,verification_status.eq.approved')
         .limit(20);
 
       if (error) throw error;
