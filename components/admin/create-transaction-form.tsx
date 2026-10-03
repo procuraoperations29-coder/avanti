@@ -38,40 +38,11 @@ export function CreateTransactionForm() {
   const [placementStartDate, setPlacementStartDate] = useState('');
   const [placementDurationMonths, setPlacementDurationMonths] = useState('1');
 
-      {/* Step 4: Pricing */}
-      {step === 'set-pricing' && selectedCustomer && (
-        <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
-          <h2 className="mb-4 font-display text-lg font-semibold">Set Pricing</h2>
-          <div className="space-y-4">
-            {bookingType !== 'permanent_placement' && (
-              <div>
-                <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                  Base Price (₦)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={basePrice}
-                  onChange={(e) => setBasePrice(e.target.value)}
-                  className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
-                />
-              </div>
-            )}
+  // Step 4: Pricing
+  const [basePrice, setBasePrice] = useState('');
+  const [discountPercent, setDiscountPercent] = useState('0');
+  const [discountReason, setDiscountReason] = useState('');
 
-            {bookingType === 'permanent_placement' && (
-              <div className="rounded-xl bg-admin-bg p-4">
-                <div className="font-body text-sm text-admin-text-muted">Auto-calculated Upfront Price</div>
-                <div className="font-display text-2xl font-semibold text-admin-text">
-                  ₦{(parseInt(monthlySalary) * 0.5).toLocaleString()}
-                </div>
-                <div className="font-body text-xs text-admin-text-muted mt-2">
-                  50% of ₦{parseInt(monthlySalary).toLocaleString()}/month
-                </div>
-              </div>
-            )}
-
-  // Search customers
   async function handleSearchCustomers() {
     if (!customerSearch.trim()) return;
     setBusy(true);
@@ -93,7 +64,6 @@ export function CreateTransactionForm() {
     }
   }
 
-  // Get drivers for selection
   async function fetchDrivers() {
     setBusy(true);
     try {
@@ -114,7 +84,6 @@ export function CreateTransactionForm() {
     }
   }
 
-  // Get vehicles for selection
   async function fetchVehicles() {
     setBusy(true);
     try {
@@ -153,16 +122,16 @@ export function CreateTransactionForm() {
       } else if (bookingType === 'car_hire') {
         payload.vehicle_id = selectedVehicle.id;
         payload.rental_days = parseInt(rentalDays);
-          } else {
+      } else {
         payload.driver_id_placement = selectedDriver.id;
         payload.placement_role = placementRole;
         payload.monthly_salary = parseFloat(monthlySalary);
         payload.placement_start_date = placementStartDate;
         payload.placement_duration_months = parseInt(placementDurationMonths);
         payload.starts_at = new Date().toISOString();
-        // Auto-calculate upfront as 50% of monthly salary
         payload.base_price = parseFloat(monthlySalary) * 0.5;
       }
+
       const res = await fetch('/api/admin/transactions/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,7 +144,6 @@ export function CreateTransactionForm() {
       }
 
       toast.success('Transaction created! Email sent to customer.');
-      // Reset form
       setStep('select-customer');
       setSelectedCustomer(null);
       setBookingType('driver');
@@ -311,15 +279,13 @@ export function CreateTransactionForm() {
         </div>
       )}
 
-      {/* Step 3: Resource Selection - On-Demand Driver */}
+      {/* Step 3: Driver Selection */}
       {step === 'select-resource' && selectedCustomer && bookingType === 'driver' && (
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Select Driver & Details</h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Driver
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Driver</label>
               <select
                 value={selectedDriver?.id || ''}
                 onChange={(e) => {
@@ -338,9 +304,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Engagement Type
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Engagement Type</label>
               <select
                 value={engagementType}
                 onChange={(e) => setEngagementType(e.target.value as 'hourly' | 'full_day')}
@@ -352,9 +316,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Vehicle Class
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Vehicle Class</label>
               <select
                 value={vehicleClass}
                 onChange={(e) => setVehicleClass(e.target.value)}
@@ -369,9 +331,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Duration (hours)
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Duration (hours)</label>
               <input
                 type="number"
                 min="1"
@@ -383,9 +343,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Start Date & Time
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Start Date & Time</label>
               <input
                 type="datetime-local"
                 value={startsAt}
@@ -411,15 +369,13 @@ export function CreateTransactionForm() {
         </div>
       )}
 
-      {/* Step 3: Resource Selection - Car Hire */}
+      {/* Step 3: Car Hire Selection */}
       {step === 'select-resource' && selectedCustomer && bookingType === 'car_hire' && (
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Select Vehicle & Details</h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Vehicle
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Vehicle</label>
               <select
                 value={selectedVehicle?.id || ''}
                 onChange={(e) => {
@@ -438,9 +394,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Rental Days
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Rental Days</label>
               <input
                 type="number"
                 min="1"
@@ -452,9 +406,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Start Date
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Start Date</label>
               <input
                 type="date"
                 value={startsAt.split('T')[0] || ''}
@@ -482,15 +434,13 @@ export function CreateTransactionForm() {
         </div>
       )}
 
-      {/* Step 3: Resource Selection - Permanent Placement */}
+      {/* Step 3: Permanent Placement Selection */}
       {step === 'select-resource' && selectedCustomer && bookingType === 'permanent_placement' && (
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Select Driver & Placement Terms</h2>
           <div className="space-y-4">
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Driver
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Driver</label>
               <select
                 value={selectedDriver?.id || ''}
                 onChange={(e) => {
@@ -509,9 +459,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Position/Role
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Position/Role</label>
               <input
                 type="text"
                 placeholder="e.g., Executive Driver, Personal Assistant"
@@ -522,9 +470,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Monthly Salary (₦)
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Monthly Salary (₦)</label>
               <input
                 type="number"
                 min="0"
@@ -536,9 +482,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Start Date
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Start Date</label>
               <input
                 type="date"
                 value={placementStartDate}
@@ -548,9 +492,7 @@ export function CreateTransactionForm() {
             </div>
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Duration (months)
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Duration (months)</label>
               <input
                 type="number"
                 min="1"
@@ -583,24 +525,34 @@ export function CreateTransactionForm() {
         <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
           <h2 className="mb-4 font-display text-lg font-semibold">Set Pricing</h2>
           <div className="space-y-4">
-            <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Base Price (₦)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="100"
-                value={basePrice}
-                onChange={(e) => setBasePrice(e.target.value)}
-                className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
-              />
-            </div>
+            {bookingType !== 'permanent_placement' && (
+              <div>
+                <label className="mb-2 block font-body text-sm font-medium text-admin-text">Base Price (₦)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={basePrice}
+                  onChange={(e) => setBasePrice(e.target.value)}
+                  className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+                />
+              </div>
+            )}
+
+            {bookingType === 'permanent_placement' && (
+              <div className="rounded-xl bg-admin-bg p-4">
+                <div className="font-body text-sm text-admin-text-muted">Auto-calculated Upfront Price</div>
+                <div className="font-display text-2xl font-semibold text-admin-text">
+                  ₦{(parseInt(monthlySalary) * 0.5).toLocaleString()}
+                </div>
+                <div className="font-body text-xs text-admin-text-muted mt-2">
+                  50% of ₦{parseInt(monthlySalary).toLocaleString()}/month
+                </div>
+              </div>
+            )}
 
             <div>
-              <label className="mb-2 block font-body text-sm font-medium text-admin-text">
-                Discount (%)
-              </label>
+              <label className="mb-2 block font-body text-sm font-medium text-admin-text">Discount (%)</label>
               <input
                 type="number"
                 min="0"
@@ -693,17 +645,12 @@ export function CreateTransactionForm() {
                 </div>
               )}
 
-                           {bookingType === 'permanent_placement' && selectedDriver && (
+              {bookingType === 'permanent_placement' && selectedDriver && (
                 <div className="pb-4 border-b border-admin-border">
                   <div className="font-body text-sm text-admin-text-muted">Placement</div>
                   <div className="font-body font-medium text-admin-text">{selectedDriver.users?.full_name}</div>
                   <div className="font-body text-xs text-admin-text-muted">
-                    {placementRole} · ₦{parseInt(monthlySalary).toLocaleString()}/month · {placementDurationMonths} months · Start: {placementStartDate}
-                  </div>
-                  <div className="font-body text-xs text-admin-text-muted mt-2">
-                    <div>Monthly Salary: ₦{parseInt(monthlySalary).toLocaleString()}</div>
-                    <div>Total Contract Value: ₦{(parseInt(monthlySalary) * parseInt(placementDurationMonths)).toLocaleString()}</div>
-                    <div>Upfront Quote (50%): ₦{(parseInt(monthlySalary) * 0.5).toLocaleString()}</div>
+                    {placementRole} · ₦{parseInt(monthlySalary).toLocaleString()}/month · {placementDurationMonths} months · {placementStartDate}
                   </div>
                 </div>
               )}
