@@ -38,10 +38,38 @@ export function CreateTransactionForm() {
   const [placementStartDate, setPlacementStartDate] = useState('');
   const [placementDurationMonths, setPlacementDurationMonths] = useState('1');
 
-  // Step 4: Pricing
-  const [basePrice, setBasePrice] = useState('');
-  const [discountPercent, setDiscountPercent] = useState('0');
-  const [discountReason, setDiscountReason] = useState('');
+      {/* Step 4: Pricing */}
+      {step === 'set-pricing' && selectedCustomer && (
+        <div className="rounded-2xl border border-admin-border bg-admin-card p-6 shadow-admin-sm">
+          <h2 className="mb-4 font-display text-lg font-semibold">Set Pricing</h2>
+          <div className="space-y-4">
+            {bookingType !== 'permanent_placement' && (
+              <div>
+                <label className="mb-2 block font-body text-sm font-medium text-admin-text">
+                  Base Price (₦)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="100"
+                  value={basePrice}
+                  onChange={(e) => setBasePrice(e.target.value)}
+                  className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
+                />
+              </div>
+            )}
+
+            {bookingType === 'permanent_placement' && (
+              <div className="rounded-xl bg-admin-bg p-4">
+                <div className="font-body text-sm text-admin-text-muted">Auto-calculated Upfront Price</div>
+                <div className="font-display text-2xl font-semibold text-admin-text">
+                  ₦{(parseInt(monthlySalary) * 0.5).toLocaleString()}
+                </div>
+                <div className="font-body text-xs text-admin-text-muted mt-2">
+                  50% of ₦{parseInt(monthlySalary).toLocaleString()}/month
+                </div>
+              </div>
+            )}
 
   // Search customers
   async function handleSearchCustomers() {
@@ -74,7 +102,7 @@ export function CreateTransactionForm() {
         .select(
           'id, users(full_name, phone), verification_tier, vehicle_class_experience'
         )
-        .eq('verification_status', 'submitted')
+        .in('verification_status', ['submitted', 'verified', 'approved'])
         .limit(20);
 
       if (error) throw error;
