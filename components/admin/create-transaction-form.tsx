@@ -293,9 +293,9 @@ export function CreateTransactionForm() {
                 className="w-full rounded-xl border border-admin-border bg-admin-bg px-3 py-2 font-body text-sm outline-none focus:border-admin-green focus:ring-2 focus:ring-admin-green/20"
               >
                 <option value="">Select a driver...</option>
-                {drivers.map((d) => (
+                            {drivers.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.users?.full_name} · {d.verification_tier || 'Tier 0'}
+                    Driver {d.id.slice(0, 8)} · Tier {d.verification_tier || '0'}
                   </option>
                 ))}
               </select>
